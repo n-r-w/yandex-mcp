@@ -1,0 +1,43 @@
+version: "3"
+
+# go-task Taskfile
+# https://taskfile.dev
+
+dotenv:
+  - .env
+
+tasks:
+  default:
+    desc: "List available tasks"
+    cmds:
+      - task --list
+
+  lint:
+    desc: "Run code linters"
+    cmds:
+      - golangci-lint-v2 run --config ./.golangci.yml
+
+  test:
+    desc: "Run unit tests"
+    cmds:
+      - go test -race ./...
+
+  fmt:
+    desc: "Format the codebase"
+    cmds:
+      - go fmt ./...
+
+  vet:
+    desc: "Run go vet"
+    cmds:
+      - go vet ./...
+
+  generate:
+    desc: Generate code
+    cmds:
+      - go generate ./...
+
+  build:
+    desc: "Build the project"
+    cmds:
+      - go build -o bin/yandex-mcp ./cmd/yandex-mcp
