@@ -61,7 +61,7 @@ Require `--tracker-write` (write operations):
 ### Claude Code
 
 ```bash
-claude mcp add -s user -e YANDEX_CLOUD_ORG_ID={yandex organization id} --transport stdio standards /path/to/yandex-mcp
+claude mcp add -s user -e YANDEX_CLOUD_ORG_ID={yandex organization id} --transport stdio yandex /path/to/yandex-mcp
 ```
 
 ### VS Code, RooCode, etc.
