@@ -2,7 +2,6 @@ package itest
 
 import (
 	"context"
-	"slices"
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -72,10 +71,7 @@ func TestServerIntegration_ReadOnlyToolsRegistered(t *testing.T) {
 		expectedTools = append(expectedTools, tool.String())
 	}
 
-	assert.Len(t, toolNames, len(expectedTools), "should have exactly %d tools", len(expectedTools))
-	for _, expected := range expectedTools {
-		assert.True(t, slices.Contains(toolNames, expected), "tool %q should be registered", expected)
-	}
+	assert.ElementsMatch(t, expectedTools, toolNames)
 }
 
 func TestServerIntegration_AllowlistGating_ReducedList(t *testing.T) {
@@ -85,7 +81,6 @@ func TestServerIntegration_AllowlistGating_ReducedList(t *testing.T) {
 	wikiMock := wikitools.NewMockIWikiAdapter(ctrl)
 	trackerMock := trackertools.NewMockITrackerAdapter(ctrl)
 
-	// Register only a subset of tools.
 	wikiTools := []domain.WikiTool{domain.WikiToolPageGetBySlug}
 	trackerTools := []domain.TrackerTool{domain.TrackerToolIssueGet}
 
@@ -99,15 +94,13 @@ func TestServerIntegration_AllowlistGating_ReducedList(t *testing.T) {
 
 	toolNames := listToolNames(t, srv)
 
-	// Only the allowed tools should be registered.
 	assert.ElementsMatch(t, []string{
 		domain.WikiToolPageGetBySlug.String(),
 		domain.TrackerToolIssueGet.String(),
 	}, toolNames)
 
-	// Verify excluded tools are not present.
-	assert.False(t, slices.Contains(toolNames, domain.WikiToolPageGetByID.String()))
-	assert.False(t, slices.Contains(toolNames, domain.TrackerToolIssueSearch.String()))
+	assert.NotContains(t, toolNames, domain.WikiToolPageGetByID.String())
+	assert.NotContains(t, toolNames, domain.TrackerToolIssueSearch.String())
 }
 
 func TestServerIntegration_EmptyAllowlist_NoToolsRegistered(t *testing.T) {

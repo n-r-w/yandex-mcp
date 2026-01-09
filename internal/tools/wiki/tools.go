@@ -1,4 +1,3 @@
-// Package wiki provides MCP tool handlers for Yandex Wiki operations.
 package wiki
 
 import (
@@ -14,7 +13,7 @@ import (
 // GetPageBySlug retrieves a Wiki page by its slug.
 func (r *Registrator) GetPageBySlug(ctx context.Context, input GetPageBySlugInput) (*PageOutput, error) {
 	if input.Slug == "" {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("slug is required"))
+		return nil, r.logError(ctx, errors.New("slug is required"))
 	}
 
 	opts := domain.WikiGetPageOpts{
@@ -25,7 +24,7 @@ func (r *Registrator) GetPageBySlug(ctx context.Context, input GetPageBySlugInpu
 
 	page, err := r.adapter.GetPageBySlug(ctx, input.Slug, opts)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, err, "wiki")
+		return nil, helpers.ToSafeError(ctx, domain.ServiceWiki, err)
 	}
 
 	return mapPageToOutput(page), nil
@@ -34,7 +33,7 @@ func (r *Registrator) GetPageBySlug(ctx context.Context, input GetPageBySlugInpu
 // GetPageByID retrieves a Wiki page by its ID.
 func (r *Registrator) GetPageByID(ctx context.Context, input GetPageByIDInput) (*PageOutput, error) {
 	if input.PageID <= 0 {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("page_id must be positive"))
+		return nil, r.logError(ctx, errors.New("page_id must be positive"))
 	}
 
 	opts := domain.WikiGetPageOpts{
@@ -45,7 +44,7 @@ func (r *Registrator) GetPageByID(ctx context.Context, input GetPageByIDInput) (
 
 	page, err := r.adapter.GetPageByID(ctx, input.PageID, opts)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, err, "wiki")
+		return nil, helpers.ToSafeError(ctx, domain.ServiceWiki, err)
 	}
 
 	return mapPageToOutput(page), nil
@@ -54,15 +53,15 @@ func (r *Registrator) GetPageByID(ctx context.Context, input GetPageByIDInput) (
 // ListResources lists resources (attachments, grids) for a page.
 func (r *Registrator) ListResources(ctx context.Context, input ListResourcesInput) (*ResourcesListOutput, error) {
 	if input.PageID <= 0 {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("page_id must be positive"))
+		return nil, r.logError(ctx, errors.New("page_id must be positive"))
 	}
 
 	if input.PageSize < 0 {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("page_size must be non-negative"))
+		return nil, r.logError(ctx, errors.New("page_size must be non-negative"))
 	}
 
 	if input.PageSize > maxPageSize {
-		return nil, helpers.ErrorLogWrapper(ctx, fmt.Errorf("page_size must not exceed %d", maxPageSize))
+		return nil, r.logError(ctx, fmt.Errorf("page_size must not exceed %d", maxPageSize))
 	}
 
 	opts := domain.WikiListResourcesOpts{
@@ -77,7 +76,7 @@ func (r *Registrator) ListResources(ctx context.Context, input ListResourcesInpu
 
 	result, err := r.adapter.ListPageResources(ctx, input.PageID, opts)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, err, "wiki")
+		return nil, helpers.ToSafeError(ctx, domain.ServiceWiki, err)
 	}
 
 	return mapResourcesPageToOutput(result), nil
@@ -86,15 +85,15 @@ func (r *Registrator) ListResources(ctx context.Context, input ListResourcesInpu
 // ListGrids lists dynamic tables (grids) for a page.
 func (r *Registrator) ListGrids(ctx context.Context, input ListGridsInput) (*GridsListOutput, error) {
 	if input.PageID <= 0 {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("page_id must be positive"))
+		return nil, r.logError(ctx, errors.New("page_id must be positive"))
 	}
 
 	if input.PageSize < 0 {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("page_size must be non-negative"))
+		return nil, r.logError(ctx, errors.New("page_size must be non-negative"))
 	}
 
 	if input.PageSize > maxPageSize {
-		return nil, helpers.ErrorLogWrapper(ctx, fmt.Errorf("page_size must not exceed %d", maxPageSize))
+		return nil, r.logError(ctx, fmt.Errorf("page_size must not exceed %d", maxPageSize))
 	}
 
 	opts := domain.WikiListGridsOpts{
@@ -107,7 +106,7 @@ func (r *Registrator) ListGrids(ctx context.Context, input ListGridsInput) (*Gri
 
 	result, err := r.adapter.ListPageGrids(ctx, input.PageID, opts)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, err, "wiki")
+		return nil, helpers.ToSafeError(ctx, domain.ServiceWiki, err)
 	}
 
 	return mapGridsPageToOutput(result), nil
@@ -116,7 +115,7 @@ func (r *Registrator) ListGrids(ctx context.Context, input ListGridsInput) (*Gri
 // GetGrid retrieves a dynamic table by its ID.
 func (r *Registrator) GetGrid(ctx context.Context, input GetGridInput) (*GridOutput, error) {
 	if input.GridID == "" {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("grid_id is required"))
+		return nil, r.logError(ctx, errors.New("grid_id is required"))
 	}
 
 	opts := domain.WikiGetGridOpts{
@@ -130,7 +129,7 @@ func (r *Registrator) GetGrid(ctx context.Context, input GetGridInput) (*GridOut
 
 	grid, err := r.adapter.GetGridByID(ctx, input.GridID, opts)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, err, "wiki")
+		return nil, helpers.ToSafeError(ctx, domain.ServiceWiki, err)
 	}
 
 	return mapGridToOutput(grid), nil
@@ -139,15 +138,15 @@ func (r *Registrator) GetGrid(ctx context.Context, input GetGridInput) (*GridOut
 // CreatePage creates a new wiki page.
 func (r *Registrator) CreatePage(ctx context.Context, input CreatePageInput) (*PageOutput, error) {
 	if input.Slug == "" {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("slug is required"))
+		return nil, r.logError(ctx, errors.New("slug is required"))
 	}
 
 	if input.Title == "" {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("title is required"))
+		return nil, r.logError(ctx, errors.New("title is required"))
 	}
 
 	if input.PageType == "" {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("page_type is required"))
+		return nil, r.logError(ctx, errors.New("page_type is required"))
 	}
 
 	req := &domain.WikiPageCreateRequest{ //nolint:exhaustruct // CloudPage set conditionally
@@ -169,7 +168,7 @@ func (r *Registrator) CreatePage(ctx context.Context, input CreatePageInput) (*P
 
 	result, err := r.adapter.CreatePage(ctx, req)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, err, "wiki")
+		return nil, helpers.ToSafeError(ctx, domain.ServiceWiki, err)
 	}
 
 	return mapPageToOutput(&result.Page), nil
@@ -178,11 +177,11 @@ func (r *Registrator) CreatePage(ctx context.Context, input CreatePageInput) (*P
 // UpdatePage updates an existing wiki page.
 func (r *Registrator) UpdatePage(ctx context.Context, input UpdatePageInput) (*PageOutput, error) {
 	if input.PageID <= 0 {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("page_id must be positive"))
+		return nil, r.logError(ctx, errors.New("page_id must be positive"))
 	}
 
 	if input.Title == "" && input.Content == "" && input.Redirect == nil {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("at least one of title, content, or redirect is required"))
+		return nil, r.logError(ctx, errors.New("at least one of title, content, or redirect is required"))
 	}
 
 	req := &domain.WikiPageUpdateRequest{ //nolint:exhaustruct // Redirect set conditionally
@@ -203,7 +202,7 @@ func (r *Registrator) UpdatePage(ctx context.Context, input UpdatePageInput) (*P
 
 	result, err := r.adapter.UpdatePage(ctx, req)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, err, "wiki")
+		return nil, helpers.ToSafeError(ctx, domain.ServiceWiki, err)
 	}
 
 	return mapPageToOutput(&result.Page), nil
@@ -212,11 +211,11 @@ func (r *Registrator) UpdatePage(ctx context.Context, input UpdatePageInput) (*P
 // AppendPage appends content to an existing wiki page.
 func (r *Registrator) AppendPage(ctx context.Context, input AppendPageInput) (*PageOutput, error) {
 	if input.PageID <= 0 {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("page_id must be positive"))
+		return nil, r.logError(ctx, errors.New("page_id must be positive"))
 	}
 
 	if input.Content == "" {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("content is required"))
+		return nil, r.logError(ctx, errors.New("content is required"))
 	}
 
 	req := &domain.WikiPageAppendRequest{ //nolint:exhaustruct // Body, Section, Anchor set conditionally
@@ -249,7 +248,7 @@ func (r *Registrator) AppendPage(ctx context.Context, input AppendPageInput) (*P
 
 	result, err := r.adapter.AppendPage(ctx, req)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, err, "wiki")
+		return nil, helpers.ToSafeError(ctx, domain.ServiceWiki, err)
 	}
 
 	return mapPageToOutput(&result.Page), nil
@@ -258,25 +257,25 @@ func (r *Registrator) AppendPage(ctx context.Context, input AppendPageInput) (*P
 // CreateGrid creates a new dynamic table (grid).
 func (r *Registrator) CreateGrid(ctx context.Context, input CreateGridInput) (*GridOutput, error) {
 	if input.Page.ID <= 0 && input.Page.Slug == "" {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("page.id or page.slug is required"))
+		return nil, r.logError(ctx, errors.New("page.id or page.slug is required"))
 	}
 
 	if input.Title == "" {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("title is required"))
+		return nil, r.logError(ctx, errors.New("title is required"))
 	}
 
 	if len(input.Columns) == 0 {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("at least one column is required"))
+		return nil, r.logError(ctx, errors.New("at least one column is required"))
 	}
 
 	columns := make([]domain.WikiColumnDefinition, 0, len(input.Columns))
 	for _, col := range input.Columns {
 		if col.Slug == "" {
-			return nil, helpers.ErrorLogWrapper(ctx, errors.New("column slug is required"))
+			return nil, r.logError(ctx, errors.New("column slug is required"))
 		}
 
 		if col.Title == "" {
-			return nil, helpers.ErrorLogWrapper(ctx, errors.New("column title is required"))
+			return nil, r.logError(ctx, errors.New("column title is required"))
 		}
 
 		columns = append(columns, domain.WikiColumnDefinition{
@@ -295,7 +294,7 @@ func (r *Registrator) CreateGrid(ctx context.Context, input CreateGridInput) (*G
 			RaiseOnRedirect: false,
 		})
 		if err != nil {
-			return nil, helpers.ToSafeError(ctx, err, "wiki")
+			return nil, helpers.ToSafeError(ctx, domain.ServiceWiki, err)
 		}
 		pageID = page.ID
 	}
@@ -311,7 +310,7 @@ func (r *Registrator) CreateGrid(ctx context.Context, input CreateGridInput) (*G
 
 	result, err := r.adapter.CreateGrid(ctx, req)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, err, "wiki")
+		return nil, helpers.ToSafeError(ctx, domain.ServiceWiki, err)
 	}
 
 	return mapGridToOutput(&result.Grid), nil
@@ -320,26 +319,26 @@ func (r *Registrator) CreateGrid(ctx context.Context, input CreateGridInput) (*G
 // UpdateGridCells updates cells in a dynamic table (grid).
 func (r *Registrator) UpdateGridCells(ctx context.Context, input UpdateGridCellsInput) (*GridOutput, error) {
 	if input.GridID == "" {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("grid_id is required"))
+		return nil, r.logError(ctx, errors.New("grid_id is required"))
 	}
 
 	if len(input.Cells) == 0 {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("at least one cell is required"))
+		return nil, r.logError(ctx, errors.New("at least one cell is required"))
 	}
 
 	cells := make([]domain.WikiCellUpdate, 0, len(input.Cells))
 	for i, cell := range input.Cells {
 		if cell.RowID <= 0 {
-			return nil, helpers.ErrorLogWrapper(ctx, fmt.Errorf("cell[%d]: row_id must be positive", i))
+			return nil, r.logError(ctx, fmt.Errorf("cell[%d]: row_id must be positive", i))
 		}
 
 		if cell.ColumnSlug == "" {
-			return nil, helpers.ErrorLogWrapper(ctx, fmt.Errorf("cell[%d]: column_slug is required", i))
+			return nil, r.logError(ctx, fmt.Errorf("cell[%d]: column_slug is required", i))
 		}
 
 		value, ok := cell.Value.(string)
 		if !ok {
-			return nil, helpers.ErrorLogWrapper(ctx, fmt.Errorf("cell[%d]: value must be a string", i))
+			return nil, r.logError(ctx, fmt.Errorf("cell[%d]: value must be a string", i))
 		}
 
 		cells = append(cells, domain.WikiCellUpdate{
@@ -357,7 +356,7 @@ func (r *Registrator) UpdateGridCells(ctx context.Context, input UpdateGridCells
 
 	result, err := r.adapter.UpdateGridCells(ctx, req)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, err, "wiki")
+		return nil, helpers.ToSafeError(ctx, domain.ServiceWiki, err)
 	}
 
 	return mapGridToOutput(&result.Grid), nil

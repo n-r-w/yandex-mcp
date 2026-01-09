@@ -11,9 +11,9 @@ import (
 )
 
 const (
-	defaultTrackerBaseURL       = "https://api.tracker.yandex.net"
-	defaultWikiBaseURL          = "https://api.wiki.yandex.net"
-	defaultIAMTokenRefreshHours = 10
+	defaultTrackerBaseURL = "https://api.tracker.yandex.net"
+	defaultWikiBaseURL    = "https://api.wiki.yandex.net"
+	defaultRefreshHours   = 10
 )
 
 // Config holds static application configuration loaded from environment variables.
@@ -29,14 +29,18 @@ type Config struct {
 
 	// IAMTokenRefreshPeriod is the period after which the IAM token should be refreshed.
 	IAMTokenRefreshPeriod time.Duration
+
+	// HTTPTimeout is the timeout for HTTP requests to Yandex APIs.
+	HTTPTimeout time.Duration
 }
 
 // envConfig is an intermediate struct for parsing environment variables.
 type envConfig struct {
-	WikiBaseURL              string `env:"YANDEX_WIKI_BASE_URL"`
-	TrackerBaseURL           string `env:"YANDEX_TRACKER_BASE_URL"`
-	CloudOrgID               string `env:"YANDEX_CLOUD_ORG_ID,required"`
-	IAMTokenRefreshPeriodHrs int    `env:"YANDEX_IAM_TOKEN_REFRESH_PERIOD" envDefault:"10"`
+	WikiBaseURL        string `env:"YANDEX_WIKI_BASE_URL"`
+	TrackerBaseURL     string `env:"YANDEX_TRACKER_BASE_URL"`
+	CloudOrgID         string `env:"YANDEX_CLOUD_ORG_ID,required"`
+	RefreshPeriodHours int    `env:"YANDEX_IAM_TOKEN_REFRESH_PERIOD" envDefault:"10"`
+	HTTPTimeoutSeconds int    `env:"YANDEX_HTTP_TIMEOUT" envDefault:"30"`
 }
 
 // Load parses configuration from environment variables and validates it.
@@ -48,22 +52,11 @@ func Load() (*Config, error) {
 	}
 
 	cfg := &Config{
-		WikiBaseURL:           ec.WikiBaseURL,
-		TrackerBaseURL:        ec.TrackerBaseURL,
+		WikiBaseURL:           applyDefault(ec.WikiBaseURL, defaultWikiBaseURL),
+		TrackerBaseURL:        applyDefault(ec.TrackerBaseURL, defaultTrackerBaseURL),
 		CloudOrgID:            ec.CloudOrgID,
-		IAMTokenRefreshPeriod: time.Duration(ec.IAMTokenRefreshPeriodHrs) * time.Hour,
-	}
-
-	if cfg.TrackerBaseURL == "" {
-		cfg.TrackerBaseURL = defaultTrackerBaseURL
-	}
-
-	if cfg.WikiBaseURL == "" {
-		cfg.WikiBaseURL = defaultWikiBaseURL
-	}
-
-	if cfg.IAMTokenRefreshPeriod <= 0 {
-		cfg.IAMTokenRefreshPeriod = defaultIAMTokenRefreshHours * time.Hour
+		IAMTokenRefreshPeriod: resolveRefreshPeriod(ec.RefreshPeriodHours),
+		HTTPTimeout:           time.Duration(ec.HTTPTimeoutSeconds) * time.Second,
 	}
 
 	if err := cfg.validate(); err != nil {
@@ -73,13 +66,25 @@ func Load() (*Config, error) {
 	return cfg, nil
 }
 
+func applyDefault(value, defaultValue string) string {
+	if value == "" {
+		return defaultValue
+	}
+	return value
+}
+
+func resolveRefreshPeriod(hours int) time.Duration {
+	if hours <= 0 {
+		return defaultRefreshHours * time.Hour
+	}
+	return time.Duration(hours) * time.Hour
+}
+
 func (c *Config) validate() error {
 	var errs []error
 
-	if c.WikiBaseURL != "" {
-		if err := validateHTTPSURL(c.WikiBaseURL, "YANDEX_WIKI_BASE_URL"); err != nil {
-			errs = append(errs, err)
-		}
+	if err := validateHTTPSURL(c.WikiBaseURL, "YANDEX_WIKI_BASE_URL"); err != nil {
+		errs = append(errs, err)
 	}
 
 	if err := validateHTTPSURL(c.TrackerBaseURL, "YANDEX_TRACKER_BASE_URL"); err != nil {

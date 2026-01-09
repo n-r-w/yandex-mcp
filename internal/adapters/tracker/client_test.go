@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/n-r-w/yandex-mcp/internal/adapters/apihelpers"
 	"github.com/n-r-w/yandex-mcp/internal/config"
 	"github.com/n-r-w/yandex-mcp/internal/domain"
 	"github.com/stretchr/testify/assert"
@@ -26,7 +27,7 @@ func TestClient_HeaderInjection(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	const (
 		testToken = "test-iam-token"
@@ -50,8 +51,8 @@ func TestClient_HeaderInjection(t *testing.T) {
 	_, err := client.GetIssue(context.Background(), "TEST-1", domain.TrackerGetIssueOpts{})
 	require.NoError(t, err)
 
-	assert.Equal(t, "Bearer "+testToken, capturedHeaders.Get(headerAuthorization))
-	assert.Equal(t, testOrgID, capturedHeaders.Get(headerCloudOrgID))
+	assert.Equal(t, "Bearer "+testToken, capturedHeaders.Get(apihelpers.HeaderAuthorization))
+	assert.Equal(t, testOrgID, capturedHeaders.Get(apihelpers.HeaderCloudOrgID))
 	assert.Equal(t, "en", capturedHeaders.Get(headerAcceptLanguage))
 }
 
@@ -59,7 +60,7 @@ func TestClient_HeaderInjection_POST(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	const (
 		testToken = "test-iam-token"
@@ -83,17 +84,17 @@ func TestClient_HeaderInjection_POST(t *testing.T) {
 	_, err := client.SearchIssues(context.Background(), domain.TrackerSearchIssuesOpts{})
 	require.NoError(t, err)
 
-	assert.Equal(t, "Bearer "+testToken, capturedHeaders.Get(headerAuthorization))
-	assert.Equal(t, testOrgID, capturedHeaders.Get(headerCloudOrgID))
+	assert.Equal(t, "Bearer "+testToken, capturedHeaders.Get(apihelpers.HeaderAuthorization))
+	assert.Equal(t, testOrgID, capturedHeaders.Get(apihelpers.HeaderCloudOrgID))
 	assert.Equal(t, "en", capturedHeaders.Get(headerAcceptLanguage))
-	assert.Equal(t, "application/json", capturedHeaders.Get(headerContentType))
+	assert.Equal(t, "application/json", capturedHeaders.Get(apihelpers.HeaderContentType))
 }
 
 func TestClient_RetryOnce_ForceRefreshCalled(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	const (
 		staleToken = "stale-token"
@@ -104,7 +105,7 @@ func TestClient_RetryOnce_ForceRefreshCalled(t *testing.T) {
 	var requestCount atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		count := requestCount.Add(1)
-		authHeader := r.Header.Get(headerAuthorization)
+		authHeader := r.Header.Get(apihelpers.HeaderAuthorization)
 
 		if count == 1 {
 			assert.Equal(t, "Bearer "+staleToken, authHeader)
@@ -139,7 +140,7 @@ func TestClient_RetryOnce_POST_ForceRefreshCalled(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	const (
 		staleToken = "stale-token"
@@ -150,7 +151,7 @@ func TestClient_RetryOnce_POST_ForceRefreshCalled(t *testing.T) {
 	var requestCount atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		count := requestCount.Add(1)
-		authHeader := r.Header.Get(headerAuthorization)
+		authHeader := r.Header.Get(apihelpers.HeaderAuthorization)
 
 		if count == 1 {
 			assert.Equal(t, "Bearer "+staleToken, authHeader)
@@ -185,7 +186,7 @@ func TestClient_Non2xx_ReturnsUpstreamError_Sanitized(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
@@ -215,7 +216,7 @@ func TestClient_Non2xx_FallbackMessage(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -242,7 +243,7 @@ func TestClient_RetryOnce_StillFailsAfterRefresh(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	var requestCount atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -275,7 +276,7 @@ func TestClient_GetIssue_WithExpand(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	var capturedURL string
 	var capturedMethod string
@@ -306,7 +307,7 @@ func TestClient_SearchIssues_StandardPagination(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	var capturedURL string
 	var capturedMethod string
@@ -360,7 +361,7 @@ func TestClient_SearchIssues_ScrollPagination(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	var capturedURL string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -403,7 +404,7 @@ func TestClient_SearchIssues_ScrollPagination_SubsequentRequest(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	var capturedURL string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -435,7 +436,7 @@ func TestClient_CountIssues_WithFilter(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	var capturedURL string
 	var capturedMethod string
@@ -470,7 +471,7 @@ func TestClient_CountIssues_WithQuery(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	var capturedBody map[string]any
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -498,7 +499,7 @@ func TestClient_ListIssueTransitions(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	var capturedURL string
 	var capturedMethod string
@@ -542,7 +543,7 @@ func TestClient_ListQueues_WithPagination(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	var capturedURL string
 	var capturedMethod string
@@ -587,7 +588,7 @@ func TestClient_ListIssueComments_WithPagination(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	var capturedURL string
 	var capturedMethod string
@@ -631,7 +632,7 @@ func TestClient_UpstreamError_NoTokenLeak(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	const secretToken = "super-secret-iam-token-that-must-not-leak"
 
@@ -658,7 +659,7 @@ func TestClient_ErrorCodes_401(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	var requestCount atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -689,7 +690,7 @@ func TestClient_ErrorCodes_403(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
@@ -715,7 +716,7 @@ func TestClient_ErrorCodes_404(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
@@ -741,7 +742,7 @@ func TestClient_ErrorCodes_422(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnprocessableEntity)
@@ -767,7 +768,7 @@ func TestClient_ErrorCodes_429(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusTooManyRequests)
@@ -793,7 +794,7 @@ func TestClient_IssueID_PathEscaping(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	var capturedRawURL string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -820,7 +821,7 @@ func TestClient_SearchIssues_QueryLanguage(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	var capturedBody map[string]any
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -848,7 +849,7 @@ func TestClient_ErrorResponse_WithErrorsArray(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)

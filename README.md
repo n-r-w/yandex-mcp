@@ -9,16 +9,18 @@ The project is not an official MCP from Yandex.
 
 ## Development Status
 
-- This project is in early development. 
-- Read operations are tested and working on production Yandex Tracker and Wiki instances.
-- Write operations are not tested on real production environments, i'm not that brave :)
+- This project is in early development.
+- Read operations have been tested against production instances of Yandex Tracker and Yandex Wiki.
+- Write operations have not been validated against production instances, i'm not that brave :)
 
 ## Tools
 
-For full parameter and schema documentation, see:
+For the full tool list and a parameter overview, see:
 
 - [docs/tracker-tools.md](docs/tracker-tools.md)
 - [docs/wiki-tools.md](docs/wiki-tools.md)
+
+Exact JSON schemas (including validation rules) are also available via MCP tool introspection at runtime.
 
 ### Yandex Wiki tools
 
@@ -110,26 +112,30 @@ After these steps, the executable will be permanently allowed to run on your sys
 ## Environment variables
 
 - `YANDEX_CLOUD_ORG_ID` (required)
-  - Yandex Cloud Organization ID.
-  - Used to set the organization header required by Yandex APIs.
-  - Run `yc organization-manager organization list` to get your organization ID.
+  * Yandex Cloud Organization ID.
+  * Used to set the organization header required by Yandex APIs.
+  * Run `yc organization-manager organization list` to get your organization ID.
 
 - `YANDEX_WIKI_BASE_URL` (optional, default: `https://api.wiki.yandex.net`)
-  - Base URL for Yandex Wiki API.
-  - Must be an `https://` URL.
+  * Base URL for Yandex Wiki API.
+  * Must be an `https://` URL.
 
 - `YANDEX_TRACKER_BASE_URL` (optional, default: `https://api.tracker.yandex.net`)
-  - Base URL for Yandex Tracker API.
-  - Must be an `https://` URL.
+  * Base URL for Yandex Tracker API.
+  * Must be an `https://` URL.
 
 - `YANDEX_IAM_TOKEN_REFRESH_PERIOD` (optional, default: `10`)
-  - IAM token refresh period in **hours**.
-  - The server caches the token and refreshes it when the cached token is older than this period.
-  - IAM tokens are valid for **no more than 12 hours**, so set this value to `12` or lower.
+  * IAM token refresh period in **hours**.
+  * The server caches the token and refreshes it when the cached token is older than this period.
+  * IAM tokens are valid for **no more than 12 hours**; this refresh period should not exceed `12`.
+
+- `YANDEX_API_HTTP_TIMEOUT` (optional, default: `30s`)
+  * HTTP timeout for Yandex API requests.
+  * Accepts Go duration strings (e.g., `30s`, `1m`).
 
 ## Authentication
 
-The project supports only one authentication method - via IAM token and the Yandex Cloud CLI (`yc`).
+The project supports IAM token authentication via the Yandex Cloud CLI (`yc`) only.
 
 **IAM token acquisition (`yc` prerequisites)**
 
@@ -143,9 +149,9 @@ That means:
 - You must have the **Yandex Cloud CLI** (`yc`) installed and available in `PATH`.
 - You must have an initialized/authenticated `yc` profile (typically via `yc init`).
 
-Important behavior to be aware of:
+Notes:
 
-- Yandex IAM tokens are valid for **no more than 12 hours**, so you should expect token refresh to happen **at least once every 12 hours**.
+- Yandex IAM tokens are valid for **no more than 12 hours**, so long-running use requires periodic refresh.
 - The server refreshes the token periodically based on `YANDEX_IAM_TOKEN_REFRESH_PERIOD` (by default every **10 hours**; you can set it to `12` to refresh roughly every 12 hours).
 - When the refresh happens, the server calls `yc iam create-token` again. If your `yc` session/profile requires interactive authentication, `yc` may open your **default browser** and ask you to log in.
 

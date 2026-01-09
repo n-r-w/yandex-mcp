@@ -76,7 +76,7 @@ func TestTools_GetPageBySlug(t *testing.T) {
 
 		_, err := reg.GetPageBySlug(context.Background(), GetPageBySlugInput{Slug: "missing"})
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "wiki")
+		assert.Contains(t, err.Error(), domain.ServiceWiki)
 		assert.Contains(t, err.Error(), "GetPageBySlug")
 		assert.Contains(t, err.Error(), "HTTP 404")
 		assert.NotContains(t, err.Error(), "token")
@@ -631,7 +631,7 @@ func TestTools_ErrorShaping(t *testing.T) {
 		_, err := reg.GetPageBySlug(context.Background(), GetPageBySlugInput{Slug: "test"})
 		require.Error(t, err)
 		errStr := err.Error()
-		assert.Contains(t, errStr, "wiki")
+		assert.Contains(t, errStr, domain.ServiceWiki)
 		assert.Contains(t, errStr, "HTTP 500")
 		assert.NotContains(t, errStr, "Bearer")
 		assert.NotContains(t, errStr, "xyz123")
@@ -890,7 +890,7 @@ func TestTools_CreatePage(t *testing.T) {
 		})
 		require.Error(t, err)
 		errStr := err.Error()
-		assert.Contains(t, errStr, "wiki")
+		assert.Contains(t, errStr, domain.ServiceWiki)
 		assert.Contains(t, errStr, "HTTP 400")
 		assert.NotContains(t, errStr, "Bearer")
 		assert.NotContains(t, errStr, "secret")
@@ -1108,7 +1108,7 @@ func TestTools_UpdatePage(t *testing.T) {
 		})
 		require.Error(t, err)
 		errStr := err.Error()
-		assert.Contains(t, errStr, "wiki")
+		assert.Contains(t, errStr, domain.ServiceWiki)
 		assert.Contains(t, errStr, "HTTP 404")
 	})
 }
@@ -1386,7 +1386,7 @@ func TestTools_AppendPage(t *testing.T) {
 		})
 		require.Error(t, err)
 		errStr := err.Error()
-		assert.Contains(t, errStr, "wiki")
+		assert.Contains(t, errStr, domain.ServiceWiki)
 		assert.Contains(t, errStr, "HTTP 409")
 	})
 }
@@ -1660,7 +1660,7 @@ func TestTools_CreateGrid(t *testing.T) {
 		})
 		require.Error(t, err)
 		errStr := err.Error()
-		assert.Contains(t, errStr, "wiki")
+		assert.Contains(t, errStr, domain.ServiceWiki)
 		assert.Contains(t, errStr, "HTTP 400")
 	})
 
@@ -1692,7 +1692,7 @@ func TestTools_CreateGrid(t *testing.T) {
 		})
 		require.Error(t, err)
 		errStr := err.Error()
-		assert.Contains(t, errStr, "wiki")
+		assert.Contains(t, errStr, domain.ServiceWiki)
 		assert.Contains(t, errStr, "HTTP 404")
 	})
 }
@@ -1949,7 +1949,7 @@ func TestTools_UpdateGridCells(t *testing.T) {
 		})
 		require.Error(t, err)
 		errStr := err.Error()
-		assert.Contains(t, errStr, "wiki")
+		assert.Contains(t, errStr, domain.ServiceWiki)
 		assert.Contains(t, errStr, "HTTP 409")
 	})
 }

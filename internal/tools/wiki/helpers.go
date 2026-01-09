@@ -1,4 +1,3 @@
-// Package wiki provides MCP tool handlers for Yandex Wiki operations.
 package wiki
 
 import (

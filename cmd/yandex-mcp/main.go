@@ -57,10 +57,9 @@ func main() {
 	info := getBuildInfo()
 
 	if *showVersion {
+		//nolint:exhaustruct // stdlib struct with optional fields
 		logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-			AddSource:   false,
-			Level:       slog.LevelInfo,
-			ReplaceAttr: nil,
+			Level: slog.LevelInfo,
 		}))
 		logger.Info("yandex-mcp version info",
 			"version", info.version,

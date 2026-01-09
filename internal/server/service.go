@@ -7,19 +7,18 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// Server wraps the MCP server and handles tool registration.
+// Server encapsulates an MCP server instance.
 type Server struct {
 	mcpServer *mcp.Server
 }
 
-// New creates a new MCP server with the provided tool registrators.
-// Each registrator is responsible for registering its own tools with the MCP server.
+// New initializes an MCP server with the given registrators.
 func New(serverVersion string, registrators []IToolsRegistrator) (*Server, error) {
 	mcpServer := mcp.NewServer(
 		&mcp.Implementation{ //nolint:exhaustruct // optional fields use defaults
 			Name:    serverName,
 			Version: serverVersion,
-			Title:   setverTitle,
+			Title:   serverTitle,
 		},
 		//nolint:exhaustruct // optional fields use defaults
 		&mcp.ServerOptions{
@@ -36,14 +35,22 @@ func New(serverVersion string, registrators []IToolsRegistrator) (*Server, error
 	return &Server{mcpServer: mcpServer}, nil
 }
 
-// Run starts the MCP server using the provided transport.
-// This method blocks until the context is cancelled or an error occurs.
+// Run starts the server on the given transport.
 func (s *Server) Run(ctx context.Context, transport mcp.Transport) error {
 	return s.mcpServer.Run(ctx, transport)
 }
 
-// Connect connects the server to a transport.
-// Useful for testing with in-memory transports.
+// Connect attaches the server to a transport for testing.
 func (s *Server) Connect(ctx context.Context, transport mcp.Transport) (*mcp.ServerSession, error) {
 	return s.mcpServer.Connect(ctx, transport, nil)
+}
+
+// MakeHandler adapts a tool function to the mcp.AddTool signature.
+func MakeHandler[In, Out any](
+	fn func(context.Context, In) (*Out, error),
+) func(context.Context, *mcp.CallToolRequest, In) (*mcp.CallToolResult, *Out, error) {
+	return func(ctx context.Context, _ *mcp.CallToolRequest, input In) (*mcp.CallToolResult, *Out, error) {
+		output, err := fn(ctx, input)
+		return nil, output, err
+	}
 }

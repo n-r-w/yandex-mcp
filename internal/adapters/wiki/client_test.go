@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/n-r-w/yandex-mcp/internal/adapters/apihelpers"
 	"github.com/n-r-w/yandex-mcp/internal/config"
 	"github.com/n-r-w/yandex-mcp/internal/domain"
 	"github.com/stretchr/testify/assert"
@@ -28,7 +29,7 @@ func TestClient_HeaderInjection(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	const (
 		testToken = "test-iam-token"
@@ -51,16 +52,16 @@ func TestClient_HeaderInjection(t *testing.T) {
 	_, err := client.GetPageBySlug(context.Background(), "test/page", domain.WikiGetPageOpts{})
 	require.NoError(t, err)
 
-	assert.Equal(t, "Bearer "+testToken, capturedHeaders.Get(headerAuthorization))
-	assert.Equal(t, testOrgID, capturedHeaders.Get(headerCloudOrgID))
-	assert.Contains(t, capturedHeaders.Get(headerContentType), "application/json")
+	assert.Equal(t, "Bearer "+testToken, capturedHeaders.Get(apihelpers.HeaderAuthorization))
+	assert.Equal(t, testOrgID, capturedHeaders.Get(apihelpers.HeaderCloudOrgID))
+	assert.Contains(t, capturedHeaders.Get(apihelpers.HeaderContentType), "application/json")
 }
 
 func TestClient_RetryOnce_ForceRefreshCalled(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	const (
 		staleToken = "stale-token"
@@ -71,7 +72,7 @@ func TestClient_RetryOnce_ForceRefreshCalled(t *testing.T) {
 	var requestCount atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		count := requestCount.Add(1)
-		authHeader := r.Header.Get(headerAuthorization)
+		authHeader := r.Header.Get(apihelpers.HeaderAuthorization)
 
 		if count == 1 {
 			assert.Equal(t, "Bearer "+staleToken, authHeader)
@@ -105,7 +106,7 @@ func TestClient_Non2xx_ReturnsUpstreamError_Sanitized(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
@@ -135,7 +136,7 @@ func TestClient_Non2xx_FallbackMessage(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -161,7 +162,7 @@ func TestClient_GetPageBySlug_Fields(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	var capturedURL string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -188,7 +189,7 @@ func TestClient_ListPageResources_Pagination(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	var capturedURL string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -238,7 +239,7 @@ func TestClient_ListPageResources_EnforcesMaxPageSize(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	var capturedURL string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -274,7 +275,7 @@ func TestClient_ListPageResources_ResourceUnionMapping(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -373,7 +374,7 @@ func TestClient_ListPageGrids_Pagination(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	var capturedURL string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -417,7 +418,7 @@ func TestClient_GetGridByID_WithOptions(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	var capturedURL string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -461,7 +462,7 @@ func TestClient_RetryOnce_StillFailsAfterRefresh(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	var requestCount atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -493,7 +494,7 @@ func TestClient_GetPageByID_Success(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	var capturedURL string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -528,7 +529,7 @@ func TestClient_UpstreamError_NoTokenLeak(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	const secretToken = "super-secret-iam-token-that-must-not-leak"
 
@@ -554,7 +555,7 @@ func TestClient_FullConfig(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	tokenProvider := NewMockITokenProvider(ctrl)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

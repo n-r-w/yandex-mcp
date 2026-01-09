@@ -2,18 +2,22 @@
 package domain
 
 import (
+	"context"
+	"log/slog"
 	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
 )
 
-// MaxSanitizedBodySize is the maximum size of sanitized upstream response body.
-// Limited to prevent large error messages in logs and responses.
-const MaxSanitizedBodySize = 4 * 1024 // 4 KiB
+const (
+	// MaxSanitizedBodySize is the maximum size of sanitized upstream response body.
+	// Limited to prevent large error messages in logs and responses.
+	MaxSanitizedBodySize = 4 * 1024 // 4 KiB
 
-// httpStatusUnauthorized is the HTTP status code for unauthorized requests.
-const httpStatusUnauthorized = 401
+	// httpStatusUnauthorized is the HTTP status code for unauthorized requests.
+	httpStatusUnauthorized = 401
+)
 
 // Service represents the upstream Yandex service.
 type Service string
@@ -172,4 +176,14 @@ func truncateToValidUTF8(s string, maxLen int) string {
 	}
 
 	return s[:maxLen]
+}
+
+// LogError logs the error with context and returns it unchanged.
+func LogError(ctx context.Context, errType string, err error) error {
+	if err == nil {
+		return nil
+	}
+
+	slog.ErrorContext(ctx, errType, "error", err)
+	return err
 }

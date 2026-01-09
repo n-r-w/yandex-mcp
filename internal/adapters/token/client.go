@@ -9,8 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/n-r-w/yandex-mcp/internal/adapters/tracker"
-	"github.com/n-r-w/yandex-mcp/internal/adapters/wiki"
+	"github.com/n-r-w/yandex-mcp/internal/adapters/apihelpers"
 	"github.com/n-r-w/yandex-mcp/internal/config"
 )
 
@@ -28,26 +27,21 @@ type Provider struct {
 	inflight    bool
 	inflightCh  chan struct{}
 	inflightErr error
+
+	tokenRegex *regexp.Regexp
 }
 
 // Compile-time interface assertions.
-var (
-	_ tracker.ITokenProvider = (*Provider)(nil)
-	_ wiki.ITokenProvider    = (*Provider)(nil)
-)
+var _ apihelpers.ITokenProvider = (*Provider)(nil)
 
 // NewProvider creates a new token provider.
 func NewProvider(cfg *config.Config) *Provider {
+	//nolint:exhaustruct // cache and sync fields intentionally start with zero values
 	return &Provider{
 		executor:      newCommandExecutor(),
 		refreshPeriod: cfg.IAMTokenRefreshPeriod,
 		nowFunc:       time.Now,
-		mu:            sync.RWMutex{},
-		cachedToken:   "",
-		refreshedAt:   time.Time{},
-		inflight:      false,
-		inflightCh:    nil,
-		inflightErr:   nil,
+		tokenRegex:    regexp.MustCompile(tokenRegexPattern),
 	}
 }
 
@@ -105,7 +99,7 @@ func (p *Provider) refreshToken(ctx context.Context, force bool) (string, error)
 		case <-ch:
 			return p.getInflightResult()
 		case <-ctx.Done():
-			return "", errorLogWrapper(ctx, fmt.Errorf("token refresh: %w", ctx.Err()))
+			return "", p.logError(ctx, fmt.Errorf("token refresh: %w", ctx.Err()))
 		}
 	}
 
@@ -139,7 +133,7 @@ func (p *Provider) refreshToken(ctx context.Context, force bool) (string, error)
 	p.mu.Unlock()
 
 	if err != nil {
-		return "", errorLogWrapper(ctx, err)
+		return "", p.logError(ctx, err)
 	}
 
 	return token, nil
@@ -168,22 +162,19 @@ func (p *Provider) executeYC(ctx context.Context) (string, error) {
 	if err != nil {
 		// Check context errors before sanitizing (sanitizeError breaks error chain)
 		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-			return "", errorLogWrapper(ctx, fmt.Errorf("token fetch canceled or timed out: %w", err))
+			return "", p.logError(ctx, fmt.Errorf("token fetch canceled or timed out: %w", err))
 		}
 
-		//nolint:errorlint // wrap for sentinel comparison
-		return "", errorLogWrapper(ctx, fmt.Errorf("%w: %v", errTokenFetchFailed, sanitizeError(err)))
+		return "", p.logError(ctx, fmt.Errorf("%w: %s", errTokenFetchFailed, p.sanitizeError(err).Error()))
 	}
 
 	if len(output) == 0 {
-		return "", errorLogWrapper(ctx, errEmptyToken)
+		return "", p.logError(ctx, errEmptyToken)
 	}
 
-	// Extract token using regex
-	re := regexp.MustCompile(tokenRegexPattern)
-	match := re.Find(output)
+	match := p.tokenRegex.Find(output)
 	if match == nil {
-		return "", errorLogWrapper(ctx, errTokenNotFound)
+		return "", p.logError(ctx, errTokenNotFound)
 	}
 
 	return string(match), nil

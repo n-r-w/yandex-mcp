@@ -31,7 +31,7 @@ func TestLoad_TrackerBaseURLUsesDefault(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, defaultTrackerBaseURL, cfg.TrackerBaseURL)
-	assert.Equal(t, defaultIAMTokenRefreshHours*time.Hour, cfg.IAMTokenRefreshPeriod)
+	assert.Equal(t, defaultRefreshHours*time.Hour, cfg.IAMTokenRefreshPeriod)
 }
 
 func TestLoad_WikiBaseURLIsOptional(t *testing.T) {
@@ -52,7 +52,7 @@ func TestLoad_DefaultRefreshPeriod(t *testing.T) {
 	cfg, err := Load()
 
 	require.NoError(t, err)
-	assert.Equal(t, 10*time.Hour, cfg.IAMTokenRefreshPeriod)
+	assert.Equal(t, defaultRefreshHours*time.Hour, cfg.IAMTokenRefreshPeriod)
 }
 
 func TestLoad_MissingCloudOrgID(t *testing.T) {
@@ -116,7 +116,7 @@ func TestLoad_NegativeRefreshPeriodUsesDefault(t *testing.T) {
 	cfg, err := Load()
 
 	require.NoError(t, err)
-	assert.Equal(t, 10*time.Hour, cfg.IAMTokenRefreshPeriod)
+	assert.Equal(t, defaultRefreshHours*time.Hour, cfg.IAMTokenRefreshPeriod)
 }
 
 func TestLoad_ZeroRefreshPeriodUsesDefault(t *testing.T) {
@@ -126,7 +126,7 @@ func TestLoad_ZeroRefreshPeriodUsesDefault(t *testing.T) {
 	cfg, err := Load()
 
 	require.NoError(t, err)
-	assert.Equal(t, 10*time.Hour, cfg.IAMTokenRefreshPeriod)
+	assert.Equal(t, defaultRefreshHours*time.Hour, cfg.IAMTokenRefreshPeriod)
 }
 
 func TestLoad_DefaultTrackerURL(t *testing.T) {

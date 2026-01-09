@@ -3,8 +3,8 @@ package token
 import (
 	"context"
 	"errors"
-	"log/slog"
-	"regexp"
+
+	"github.com/n-r-w/yandex-mcp/internal/domain"
 )
 
 var (
@@ -13,29 +13,16 @@ var (
 	errTokenNotFound    = errors.New("token not found in yc output")
 )
 
-func errorLogWrapper(ctx context.Context, err error) error {
+// sanitizeError redacts IAM token patterns from error messages.
+func (p *Provider) sanitizeError(err error) error {
 	if err == nil {
 		return nil
 	}
 
-	slog.ErrorContext(ctx, "token adapter error", "error", err)
-	return err
+	errMsg := p.tokenRegex.ReplaceAllString(err.Error(), "[REDACTED_TOKEN]")
+	return errors.New(errMsg)
 }
 
-// sanitizeError removes sensitive data (tokens, command output) from error messages.
-func sanitizeError(err error) error {
-	if err == nil {
-		return nil
-	}
-
-	// Get the error message
-	errMsg := err.Error()
-
-	// Remove any IAM tokens (pattern: t1.xxx.yyy)
-	re := regexp.MustCompile(tokenRegexPattern)
-	errMsg = re.ReplaceAllString(errMsg, "[REDACTED_TOKEN]")
-
-	// Return a new error with sanitized message
-	// This prevents leaking sensitive command output
-	return errors.New(errMsg)
+func (p *Provider) logError(ctx context.Context, err error) error {
+	return domain.LogError(ctx, "token", err)
 }

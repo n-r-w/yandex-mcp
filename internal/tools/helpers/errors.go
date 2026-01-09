@@ -11,20 +11,14 @@ import (
 	"github.com/n-r-w/yandex-mcp/internal/domain"
 )
 
-// ErrorLogWrapper logs the error with context and returns it.
-func ErrorLogWrapper(ctx context.Context, err error) error {
+// ToSafeError converts errors to safe tool errors that do not leak sensitive information.
+func ToSafeError(ctx context.Context, serviceName domain.Service, err error) (errOut error) {
 	if err == nil {
 		return nil
 	}
 
-	slog.ErrorContext(ctx, "tools error", "error", err)
-	return err
-}
-
-// ToSafeError converts errors to safe tool errors that do not leak sensitive information.
-func ToSafeError(ctx context.Context, err error, serviceName string) (errOut error) {
 	defer func() {
-		errOut = ErrorLogWrapper(ctx, errOut)
+		errOut = domain.LogError(ctx, string(serviceName), errOut)
 	}()
 
 	var upstreamErr domain.UpstreamError
@@ -37,58 +31,31 @@ func ToSafeError(ctx context.Context, err error, serviceName string) (errOut err
 		)
 	}
 
-	// For other errors, extract useful context from error message
-	// while avoiding sensitive data leakage
 	errMsg := err.Error()
+	lowerMsg := strings.ToLower(errMsg)
 
-	// Check for common error patterns that are safe to expose
-	safePrefixes := []string{
-		"decode response:",
-		"read response body:",
-		"parse base url:",
-		"create request:",
-		"marshal request body:",
-		"execute request:",
-		"get token:",
+	if isSafeError(lowerMsg) {
+		return fmt.Errorf("%s: %s", serviceName, errMsg)
 	}
 
-	safeContains := []string{
-		"unsupported protocol scheme",
-		"unprocessable entity",
-	}
+	slog.ErrorContext(ctx, "unhandled error pattern", "service", serviceName)
 
+	return fmt.Errorf("%s: internal error", serviceName)
+}
+
+// isSafeError checks if the error message matches known safe patterns.
+func isSafeError(lowerMsg string) bool {
 	for _, prefix := range safePrefixes {
-		if strings.HasPrefix(strings.ToLower(errMsg), prefix) {
-			// These are technical error messages that don't contain sensitive data
-			return fmt.Errorf("%s: %s", serviceName, errMsg)
+		if strings.HasPrefix(lowerMsg, prefix) {
+			return true
 		}
 	}
 
 	for _, substr := range safeContains {
-		if strings.Contains(strings.ToLower(errMsg), substr) {
-			// These are known safe error messages
-			return fmt.Errorf("%s: %s", serviceName, errMsg)
+		if strings.Contains(lowerMsg, substr) {
+			return true
 		}
 	}
 
-	slog.ErrorContext(ctx, "unhandled error pattern", "error", errMsg)
-
-	// For any other errors, return a generic safe message to avoid leaking sensitive data
-	return fmt.Errorf("%s: internal error", serviceName)
-}
-
-// ConvertFilterToStringMap converts a map[string]any filter to map[string]string.
-func ConvertFilterToStringMap(ctx context.Context, filter map[string]any) (map[string]string, error) {
-	if filter == nil {
-		return nil, nil //nolint:nilnil // nil filter means no filter, not an error
-	}
-	result := make(map[string]string, len(filter))
-	for k, v := range filter {
-		s, ok := v.(string)
-		if !ok {
-			return nil, ErrorLogWrapper(ctx, fmt.Errorf("filter value for key %q must be a string, got %T", k, v))
-		}
-		result[k] = s
-	}
-	return result, nil
+	return false
 }

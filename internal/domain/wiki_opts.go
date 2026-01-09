@@ -1,4 +1,3 @@
-// Package domain defines cross-layer models and errors used between adapters and tools.
 package domain
 
 // WikiListResourcesOpts represents options for listing Wiki page resources.
@@ -29,4 +28,11 @@ type WikiGetGridOpts struct {
 	OnlyRows string
 	Revision int
 	Sort     string
+}
+
+// WikiGetPageOpts represents options for getting a Wiki page.
+type WikiGetPageOpts struct {
+	Fields          []string
+	RevisionID      int
+	RaiseOnRedirect bool
 }

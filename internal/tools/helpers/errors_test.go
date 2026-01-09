@@ -15,7 +15,7 @@ func TestToSafeError(t *testing.T) {
 	tests := []struct {
 		name         string
 		err          error
-		serviceName  string
+		serviceName  domain.Service
 		wantContains string
 	}{
 		{
@@ -28,55 +28,55 @@ func TestToSafeError(t *testing.T) {
 				"server error",
 				"",
 			),
-			serviceName:  "tracker",
+			serviceName:  domain.ServiceTracker,
 			wantContains: "HTTP 500",
 		},
 		{
 			name:         "decode response error",
 			err:          errors.New("decode response: json: cannot unmarshal number into Go struct field Queue.id of type string"),
-			serviceName:  "tracker",
+			serviceName:  domain.ServiceTracker,
 			wantContains: "decode response:",
 		},
 		{
 			name:         "read response body error",
 			err:          errors.New("read response body: unexpected EOF"),
-			serviceName:  "wiki",
+			serviceName:  domain.ServiceWiki,
 			wantContains: "read response body:",
 		},
 		{
 			name:         "parse base URL error",
 			err:          errors.New("parse base URL: invalid URL"),
-			serviceName:  "tracker",
+			serviceName:  domain.ServiceTracker,
 			wantContains: "parse base URL:",
 		},
 		{
 			name:         "create request error",
 			err:          errors.New("create request: invalid method"),
-			serviceName:  "wiki",
+			serviceName:  domain.ServiceWiki,
 			wantContains: "create request:",
 		},
 		{
 			name:         "marshal request body error",
 			err:          errors.New("marshal request body: unsupported type"),
-			serviceName:  "tracker",
+			serviceName:  domain.ServiceTracker,
 			wantContains: "marshal request body:",
 		},
 		{
 			name:         "execute request error",
 			err:          errors.New("execute request: connection refused"),
-			serviceName:  "tracker",
+			serviceName:  domain.ServiceTracker,
 			wantContains: "execute request:",
 		},
 		{
 			name:         "get token error",
 			err:          errors.New("get token: token expired"),
-			serviceName:  "tracker",
+			serviceName:  domain.ServiceTracker,
 			wantContains: "get token:",
 		},
 		{
 			name:         "unknown error",
 			err:          errors.New("something went wrong"),
-			serviceName:  "tracker",
+			serviceName:  domain.ServiceTracker,
 			wantContains: "internal error",
 		},
 	}
@@ -84,8 +84,15 @@ func TestToSafeError(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			result := ToSafeError(context.Background(), tt.err, tt.serviceName)
+			result := ToSafeError(context.Background(), tt.serviceName, tt.err)
 			assert.Contains(t, result.Error(), tt.wantContains)
 		})
 	}
+}
+
+func TestToSafeError_WithNilError(t *testing.T) {
+	t.Parallel()
+
+	result := ToSafeError(context.Background(), "test-service", nil)
+	assert.NoError(t, result, "ToSafeError should return nil when given nil error")
 }

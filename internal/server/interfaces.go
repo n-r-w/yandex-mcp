@@ -5,8 +5,7 @@ package server
 
 import "github.com/modelcontextprotocol/go-sdk/mcp"
 
-// IToolsRegistrator defines the contract for registering tools with an MCP server.
-// Implementations are provided by tool packages and passed via dependency injection.
+// IToolsRegistrator abstracts tool registration for dependency injection.
 type IToolsRegistrator interface {
 	Register(srv *mcp.Server) error
 }

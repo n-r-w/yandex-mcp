@@ -5,13 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 
+	"github.com/n-r-w/yandex-mcp/internal/adapters/apihelpers"
 	"github.com/n-r-w/yandex-mcp/internal/config"
 	"github.com/n-r-w/yandex-mcp/internal/domain"
 	wikitools "github.com/n-r-w/yandex-mcp/internal/tools/wiki"
@@ -19,25 +18,31 @@ import (
 
 // Client implements IWikiClient for Yandex Wiki API.
 type Client struct {
-	httpClient    *http.Client
-	tokenProvider ITokenProvider
-	baseURL       string
-	orgID         string
+	apiClient *apihelpers.APIClient
+	baseURL   string
 }
 
 // Compile-time check that Client implements the tools interface.
 var _ wikitools.IWikiAdapter = (*Client)(nil)
 
 // NewClient creates a new Wiki API client.
-func NewClient(cfg *config.Config, tokenProvider ITokenProvider) *Client {
-	return &Client{
-		httpClient: &http.Client{ //nolint:exhaustruct // optional fields use defaults
-			Timeout: defaultTimeout,
-		},
-		tokenProvider: tokenProvider,
-		baseURL:       strings.TrimSuffix(cfg.WikiBaseURL, "/"),
-		orgID:         cfg.CloudOrgID,
+func NewClient(cfg *config.Config, tokenProvider apihelpers.ITokenProvider) *Client {
+	client := &Client{
+		apiClient: nil, // set below
+		baseURL:   strings.TrimSuffix(cfg.WikiBaseURL, "/"),
 	}
+
+	client.apiClient = apihelpers.NewAPIClient(apihelpers.APIClientConfig{
+		HTTPClient:    nil, // uses default
+		TokenProvider: tokenProvider,
+		OrgID:         cfg.CloudOrgID,
+		ExtraHeaders:  nil,
+		ServiceName:   string(domain.ServiceWiki),
+		ParseError:    client.parseError,
+		HTTPTimeout:   cfg.HTTPTimeout,
+	})
+
+	return client
 }
 
 // GetPageBySlug retrieves a page by its slug.
@@ -46,7 +51,7 @@ func (c *Client) GetPageBySlug(
 ) (*domain.WikiPage, error) {
 	u, err := url.Parse(c.baseURL + "/v1/pages")
 	if err != nil {
-		return nil, errorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
 	}
 
 	q := u.Query()
@@ -63,7 +68,7 @@ func (c *Client) GetPageBySlug(
 	u.RawQuery = q.Encode()
 
 	var page Page
-	if err := c.doGET(ctx, u.String(), &page, "GetPageBySlug"); err != nil {
+	if _, err := c.apiClient.DoGET(ctx, u.String(), &page, "GetPageBySlug"); err != nil {
 		return nil, err
 	}
 	return pageToWikiPage(&page), nil
@@ -73,7 +78,7 @@ func (c *Client) GetPageBySlug(
 func (c *Client) GetPageByID(ctx context.Context, id int64, opts domain.WikiGetPageOpts) (*domain.WikiPage, error) {
 	u, err := url.Parse(fmt.Sprintf("%s/v1/pages/%d", c.baseURL, id))
 	if err != nil {
-		return nil, errorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
 	}
 
 	q := u.Query()
@@ -89,7 +94,7 @@ func (c *Client) GetPageByID(ctx context.Context, id int64, opts domain.WikiGetP
 	u.RawQuery = q.Encode()
 
 	var page Page
-	if err := c.doGET(ctx, u.String(), &page, "GetPageByID"); err != nil {
+	if _, err := c.apiClient.DoGET(ctx, u.String(), &page, "GetPageByID"); err != nil {
 		return nil, err
 	}
 	return pageToWikiPage(&page), nil
@@ -103,7 +108,7 @@ func (c *Client) ListPageResources(
 ) (*domain.WikiResourcesPage, error) {
 	u, err := url.Parse(fmt.Sprintf("%s/v1/pages/%d/resources", c.baseURL, pageID))
 	if err != nil {
-		return nil, errorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
 	}
 
 	q := u.Query()
@@ -135,7 +140,7 @@ func (c *Client) ListPageResources(
 	u.RawQuery = q.Encode()
 
 	var resp resourcesResponse
-	if err := c.doGET(ctx, u.String(), &resp, "ListPageResources"); err != nil {
+	if _, err := c.apiClient.DoGET(ctx, u.String(), &resp, "ListPageResources"); err != nil {
 		return nil, err
 	}
 
@@ -155,7 +160,7 @@ func (c *Client) ListPageGrids(
 ) (*domain.WikiGridsPage, error) {
 	u, err := url.Parse(fmt.Sprintf("%s/v1/pages/%d/grids", c.baseURL, pageID))
 	if err != nil {
-		return nil, errorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
 	}
 
 	q := u.Query()
@@ -181,7 +186,7 @@ func (c *Client) ListPageGrids(
 	u.RawQuery = q.Encode()
 
 	var resp gridsResponse
-	if err := c.doGET(ctx, u.String(), &resp, "ListPageGrids"); err != nil {
+	if _, err := c.apiClient.DoGET(ctx, u.String(), &resp, "ListPageGrids"); err != nil {
 		return nil, err
 	}
 
@@ -201,7 +206,7 @@ func (c *Client) GetGridByID(
 ) (*domain.WikiGrid, error) {
 	u, err := url.Parse(fmt.Sprintf("%s/v1/grids/%s", c.baseURL, gridID))
 	if err != nil {
-		return nil, errorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
 	}
 
 	q := u.Query()
@@ -226,7 +231,7 @@ func (c *Client) GetGridByID(
 	u.RawQuery = q.Encode()
 
 	var grid Grid
-	if err := c.doGET(ctx, u.String(), &grid, "GetGridByID"); err != nil {
+	if _, err := c.apiClient.DoGET(ctx, u.String(), &grid, "GetGridByID"); err != nil {
 		return nil, err
 	}
 	return gridToWikiGrid(&grid), nil
@@ -255,7 +260,7 @@ func (c *Client) CreatePage(
 
 	u, err := url.Parse(baseURL)
 	if err != nil {
-		return nil, errorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
 	}
 
 	q := u.Query()
@@ -268,7 +273,7 @@ func (c *Client) CreatePage(
 	u.RawQuery = q.Encode()
 
 	var page Page
-	if err := c.doPOST(ctx, u.String(), body, &page, "CreatePage"); err != nil {
+	if _, err := c.apiClient.DoPOST(ctx, u.String(), body, &page, "CreatePage"); err != nil {
 		return nil, err
 	}
 
@@ -299,7 +304,7 @@ func (c *Client) UpdatePage(
 
 	u, err := url.Parse(baseURL)
 	if err != nil {
-		return nil, errorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
 	}
 
 	q := u.Query()
@@ -315,7 +320,7 @@ func (c *Client) UpdatePage(
 	u.RawQuery = q.Encode()
 
 	var page Page
-	if err := c.doPATCH(ctx, u.String(), body, &page, "UpdatePage"); err != nil {
+	if _, err := c.apiClient.DoPATCH(ctx, u.String(), body, &page, "UpdatePage"); err != nil {
 		return nil, err
 	}
 
@@ -357,7 +362,7 @@ func (c *Client) AppendPage(
 
 	u, err := url.Parse(baseURL)
 	if err != nil {
-		return nil, errorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
 	}
 
 	q := u.Query()
@@ -370,7 +375,7 @@ func (c *Client) AppendPage(
 	u.RawQuery = q.Encode()
 
 	var page Page
-	if err := c.doPOST(ctx, u.String(), body, &page, "AppendPage"); err != nil {
+	if _, err := c.apiClient.DoPOST(ctx, u.String(), body, &page, "AppendPage"); err != nil {
 		return nil, err
 	}
 
@@ -404,7 +409,7 @@ func (c *Client) CreateGrid(
 	}
 
 	var grid Grid
-	if err := c.doPOST(ctx, u, body, &grid, "CreateGrid"); err != nil {
+	if _, err := c.apiClient.DoPOST(ctx, u, body, &grid, "CreateGrid"); err != nil {
 		return nil, err
 	}
 
@@ -434,7 +439,7 @@ func (c *Client) UpdateGridCells(
 	}
 
 	var grid Grid
-	if err := c.doPATCH(ctx, u, body, &grid, "UpdateGridCells"); err != nil {
+	if _, err := c.apiClient.DoPATCH(ctx, u, body, &grid, "UpdateGridCells"); err != nil {
 		return nil, err
 	}
 
@@ -443,145 +448,8 @@ func (c *Client) UpdateGridCells(
 	}, nil
 }
 
-// doPOST performs an HTTP POST request with retry on 401.
-func (c *Client) doPOST(ctx context.Context, urlStr string, body any, result any, operation string) error {
-	resp, err := c.executeRequest(ctx, http.MethodPost, urlStr, body, false)
-	if err != nil {
-		return err
-	}
-
-	if resp.StatusCode == http.StatusUnauthorized {
-		_ = resp.Body.Close()
-		resp, err = c.executeRequest(ctx, http.MethodPost, urlStr, body, true)
-		if err != nil {
-			return err
-		}
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	return c.handleResponse(resp, result, operation)
-}
-
-// doPATCH performs an HTTP PATCH request with retry on 401.
-func (c *Client) doPATCH(ctx context.Context, urlStr string, body any, result any, operation string) error {
-	resp, err := c.executeRequest(ctx, http.MethodPatch, urlStr, body, false)
-	if err != nil {
-		return err
-	}
-
-	if resp.StatusCode == http.StatusUnauthorized {
-		_ = resp.Body.Close()
-		resp, err = c.executeRequest(ctx, http.MethodPatch, urlStr, body, true)
-		if err != nil {
-			return err
-		}
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	return c.handleResponse(resp, result, operation)
-}
-
-// executeRequest performs a request with token injection and body encoding.
-func (c *Client) executeRequest(
-	ctx context.Context, method, urlStr string, body any, forceRefresh bool,
-) (*http.Response, error) {
-	var token string
-	var err error
-
-	if forceRefresh {
-		token, err = c.tokenProvider.ForceRefresh(ctx)
-	} else {
-		token, err = c.tokenProvider.Token(ctx)
-	}
-	if err != nil {
-		return nil, errorLogWrapper(ctx, fmt.Errorf("get token: %w", err))
-	}
-
-	bodyBytes, err := json.Marshal(body)
-	if err != nil {
-		return nil, errorLogWrapper(ctx, fmt.Errorf("encode body: %w", err))
-	}
-
-	req, err := http.NewRequestWithContext(ctx, method, urlStr, strings.NewReader(string(bodyBytes)))
-	if err != nil {
-		return nil, errorLogWrapper(ctx, fmt.Errorf("create request: %w", err))
-	}
-
-	req.Header.Set(headerAuthorization, "Bearer "+token)
-	req.Header.Set(headerCloudOrgID, c.orgID)
-	req.Header.Set(headerContentType, contentTypeJSON)
-
-	return c.httpClient.Do(req)
-}
-
-// doGET executes a GET request with token injection and 401 retry logic.
-func (c *Client) doGET(ctx context.Context, urlStr string, result any, operation string) error {
-	resp, err := c.executeGET(ctx, urlStr, false)
-	if err != nil {
-		return err
-	}
-
-	// On 401, force token refresh and retry once
-	if resp.StatusCode == http.StatusUnauthorized {
-		_ = resp.Body.Close()
-		resp, err = c.executeGET(ctx, urlStr, true)
-		if err != nil {
-			return err
-		}
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	return c.handleResponse(resp, result, operation)
-}
-
-// executeGET performs a single GET request with token injection.
-func (c *Client) executeGET(ctx context.Context, urlStr string, forceRefresh bool) (*http.Response, error) {
-	var token string
-	var err error
-
-	if forceRefresh {
-		token, err = c.tokenProvider.ForceRefresh(ctx)
-	} else {
-		token, err = c.tokenProvider.Token(ctx)
-	}
-	if err != nil {
-		return nil, errorLogWrapper(ctx, fmt.Errorf("get token: %w", err))
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlStr, nil)
-	if err != nil {
-		return nil, errorLogWrapper(ctx, fmt.Errorf("create request: %w", err))
-	}
-
-	req.Header.Set(headerAuthorization, "Bearer "+token)
-	req.Header.Set(headerCloudOrgID, c.orgID)
-	req.Header.Set(headerContentType, contentTypeJSON)
-
-	return c.httpClient.Do(req)
-}
-
-// handleResponse processes the HTTP response and decodes the result.
-func (c *Client) handleResponse(resp *http.Response, result any, operation string) error {
-	bodyBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return errorLogWrapper(context.Background(), fmt.Errorf("read response body: %w", err))
-	}
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return c.parseError(resp.StatusCode, bodyBytes, operation)
-	}
-
-	if result != nil && len(bodyBytes) > 0 {
-		if err := json.Unmarshal(bodyBytes, result); err != nil {
-			return errorLogWrapper(context.Background(), fmt.Errorf("decode response: %w", err))
-		}
-	}
-
-	return nil
-}
-
 // parseError converts an HTTP error response into a domain.UpstreamError.
-func (c *Client) parseError(statusCode int, body []byte, operation string) error {
+func (c *Client) parseError(ctx context.Context, statusCode int, body []byte, operation string) error {
 	var errResp errorResponse
 	var code, message string
 
@@ -604,14 +472,5 @@ func (c *Client) parseError(statusCode int, body []byte, operation string) error
 		string(body),
 	)
 
-	return errorLogWrapper(context.Background(), err)
-}
-
-func errorLogWrapper(ctx context.Context, err error) error {
-	if err == nil {
-		return nil
-	}
-
-	slog.ErrorContext(ctx, "wiki adapter error", "error", err)
-	return err
+	return c.apiClient.ErrorLogWrapper(ctx, err)
 }

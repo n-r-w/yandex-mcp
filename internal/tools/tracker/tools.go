@@ -12,7 +12,7 @@ import (
 // GetIssue retrieves a Tracker issue by its ID or key.
 func (r *Registrator) GetIssue(ctx context.Context, input GetIssueInput) (*IssueOutput, error) {
 	if input.IssueID == "" {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("issue_id_or_key is required"))
+		return nil, r.logError(ctx, errors.New("issue_id_or_key is required"))
 	}
 
 	opts := domain.TrackerGetIssueOpts{
@@ -21,7 +21,7 @@ func (r *Registrator) GetIssue(ctx context.Context, input GetIssueInput) (*Issue
 
 	issue, err := r.adapter.GetIssue(ctx, input.IssueID, opts)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, err, "tracker")
+		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
 	}
 
 	return mapIssueToOutput(issue), nil
@@ -30,22 +30,22 @@ func (r *Registrator) GetIssue(ctx context.Context, input GetIssueInput) (*Issue
 // SearchIssues searches for Tracker issues using filter or query.
 func (r *Registrator) SearchIssues(ctx context.Context, input SearchIssuesInput) (*SearchIssuesOutput, error) {
 	if input.PerPage < 0 {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("per_page must be non-negative"))
+		return nil, r.logError(ctx, errors.New("per_page must be non-negative"))
 	}
 	if input.Page < 0 {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("page must be non-negative"))
+		return nil, r.logError(ctx, errors.New("page must be non-negative"))
 	}
 	if input.PerScroll < 0 {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("per_scroll must be non-negative"))
+		return nil, r.logError(ctx, errors.New("per_scroll must be non-negative"))
 	}
 	if input.PerScroll > maxPerScroll {
-		return nil, helpers.ErrorLogWrapper(ctx, fmt.Errorf("per_scroll must not exceed %d", maxPerScroll))
+		return nil, r.logError(ctx, fmt.Errorf("per_scroll must not exceed %d", maxPerScroll))
 	}
 	if input.ScrollTTLMillis < 0 {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("scroll_ttl_millis must be non-negative"))
+		return nil, r.logError(ctx, errors.New("scroll_ttl_millis must be non-negative"))
 	}
 
-	filter, err := helpers.ConvertFilterToStringMap(ctx, input.Filter)
+	filter, err := helpers.ConvertFilterToStringMap(ctx, input.Filter, domain.ServiceTracker)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +65,7 @@ func (r *Registrator) SearchIssues(ctx context.Context, input SearchIssuesInput)
 
 	result, err := r.adapter.SearchIssues(ctx, opts)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, err, "tracker")
+		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
 	}
 
 	return mapSearchResultToOutput(result), nil
@@ -73,7 +73,7 @@ func (r *Registrator) SearchIssues(ctx context.Context, input SearchIssuesInput)
 
 // CountIssues counts Tracker issues matching the filter or query.
 func (r *Registrator) CountIssues(ctx context.Context, input CountIssuesInput) (*CountIssuesOutput, error) {
-	filter, err := helpers.ConvertFilterToStringMap(ctx, input.Filter)
+	filter, err := helpers.ConvertFilterToStringMap(ctx, input.Filter, domain.ServiceTracker)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func (r *Registrator) CountIssues(ctx context.Context, input CountIssuesInput) (
 
 	count, err := r.adapter.CountIssues(ctx, opts)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, err, "tracker")
+		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
 	}
 
 	return &CountIssuesOutput{Count: count}, nil
@@ -94,12 +94,12 @@ func (r *Registrator) CountIssues(ctx context.Context, input CountIssuesInput) (
 // ListTransitions lists available transitions for a Tracker issue.
 func (r *Registrator) ListTransitions(ctx context.Context, input ListTransitionsInput) (*TransitionsListOutput, error) {
 	if input.IssueID == "" {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("issue_id_or_key is required"))
+		return nil, r.logError(ctx, errors.New("issue_id_or_key is required"))
 	}
 
 	transitions, err := r.adapter.ListIssueTransitions(ctx, input.IssueID)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, err, "tracker")
+		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
 	}
 
 	return mapTransitionsToOutput(transitions), nil
@@ -108,10 +108,10 @@ func (r *Registrator) ListTransitions(ctx context.Context, input ListTransitions
 // ListQueues lists all Tracker queues.
 func (r *Registrator) ListQueues(ctx context.Context, input ListQueuesInput) (*QueuesListOutput, error) {
 	if input.PerPage < 0 {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("per_page must be non-negative"))
+		return nil, r.logError(ctx, errors.New("per_page must be non-negative"))
 	}
 	if input.Page < 0 {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("page must be non-negative"))
+		return nil, r.logError(ctx, errors.New("page must be non-negative"))
 	}
 
 	opts := domain.TrackerListQueuesOpts{
@@ -122,7 +122,7 @@ func (r *Registrator) ListQueues(ctx context.Context, input ListQueuesInput) (*Q
 
 	result, err := r.adapter.ListQueues(ctx, opts)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, err, "tracker")
+		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
 	}
 
 	return mapQueuesResultToOutput(result), nil
@@ -131,13 +131,13 @@ func (r *Registrator) ListQueues(ctx context.Context, input ListQueuesInput) (*Q
 // ListComments lists comments for a Tracker issue.
 func (r *Registrator) ListComments(ctx context.Context, input ListCommentsInput) (*CommentsListOutput, error) {
 	if input.IssueID == "" {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("issue_id_or_key is required"))
+		return nil, r.logError(ctx, errors.New("issue_id_or_key is required"))
 	}
 	if input.PerPage < 0 {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("per_page must be non-negative"))
+		return nil, r.logError(ctx, errors.New("per_page must be non-negative"))
 	}
 	if input.ID < 0 {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("id must be non-negative"))
+		return nil, r.logError(ctx, errors.New("id must be non-negative"))
 	}
 
 	opts := domain.TrackerListCommentsOpts{
@@ -148,7 +148,7 @@ func (r *Registrator) ListComments(ctx context.Context, input ListCommentsInput)
 
 	result, err := r.adapter.ListIssueComments(ctx, input.IssueID, opts)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, err, "tracker")
+		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
 	}
 
 	return mapCommentsResultToOutput(result), nil
@@ -157,11 +157,11 @@ func (r *Registrator) ListComments(ctx context.Context, input ListCommentsInput)
 // CreateIssue creates a new Tracker issue.
 func (r *Registrator) CreateIssue(ctx context.Context, input CreateIssueInput) (*IssueOutput, error) {
 	if input.Queue == "" {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("queue is required"))
+		return nil, r.logError(ctx, errors.New("queue is required"))
 	}
 
 	if input.Summary == "" {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("summary is required"))
+		return nil, r.logError(ctx, errors.New("summary is required"))
 	}
 
 	req := &domain.TrackerIssueCreateRequest{
@@ -179,7 +179,7 @@ func (r *Registrator) CreateIssue(ctx context.Context, input CreateIssueInput) (
 
 	result, err := r.adapter.CreateIssue(ctx, req)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, err, "tracker")
+		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
 	}
 
 	return mapIssueToOutput(&result.Issue), nil
@@ -188,11 +188,11 @@ func (r *Registrator) CreateIssue(ctx context.Context, input CreateIssueInput) (
 // UpdateIssue updates an existing Tracker issue.
 func (r *Registrator) UpdateIssue(ctx context.Context, input UpdateIssueInput) (*IssueOutput, error) {
 	if input.IssueID == "" {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("issue_id_or_key is required"))
+		return nil, r.logError(ctx, errors.New("issue_id_or_key is required"))
 	}
 
 	if input.Summary == "" && input.Description == "" && input.Type == "" && input.Priority == "" && input.Assignee == "" {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("at least one field to update is required"))
+		return nil, r.logError(ctx, errors.New("at least one field to update is required"))
 	}
 
 	req := &domain.TrackerIssueUpdateRequest{
@@ -207,7 +207,7 @@ func (r *Registrator) UpdateIssue(ctx context.Context, input UpdateIssueInput) (
 
 	result, err := r.adapter.UpdateIssue(ctx, req)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, err, "tracker")
+		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
 	}
 
 	return mapIssueToOutput(&result.Issue), nil
@@ -218,11 +218,11 @@ func (r *Registrator) ExecuteTransition(
 	ctx context.Context, input ExecuteTransitionInput,
 ) (*TransitionsListOutput, error) {
 	if input.IssueID == "" {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("issue_id_or_key is required"))
+		return nil, r.logError(ctx, errors.New("issue_id_or_key is required"))
 	}
 
 	if input.TransitionID == "" {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("transition_id is required"))
+		return nil, r.logError(ctx, errors.New("transition_id is required"))
 	}
 
 	req := &domain.TrackerTransitionExecuteRequest{
@@ -234,7 +234,7 @@ func (r *Registrator) ExecuteTransition(
 
 	result, err := r.adapter.ExecuteTransition(ctx, req)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, err, "tracker")
+		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
 	}
 
 	return mapTransitionsToOutput(result.Transitions), nil
@@ -243,11 +243,11 @@ func (r *Registrator) ExecuteTransition(
 // AddComment adds a comment to an issue.
 func (r *Registrator) AddComment(ctx context.Context, input AddCommentInput) (*CommentOutput, error) {
 	if input.IssueID == "" {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("issue_id_or_key is required"))
+		return nil, r.logError(ctx, errors.New("issue_id_or_key is required"))
 	}
 
 	if input.Text == "" {
-		return nil, helpers.ErrorLogWrapper(ctx, errors.New("text is required"))
+		return nil, r.logError(ctx, errors.New("text is required"))
 	}
 
 	req := &domain.TrackerCommentAddRequest{
@@ -262,7 +262,7 @@ func (r *Registrator) AddComment(ctx context.Context, input AddCommentInput) (*C
 
 	result, err := r.adapter.AddComment(ctx, req)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, err, "tracker")
+		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
 	}
 
 	return mapCommentToOutput(&result.Comment), nil

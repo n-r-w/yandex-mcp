@@ -1,4 +1,3 @@
-// Package tracker provides MCP tool handlers for Yandex Tracker operations.
 package tracker
 
 import (

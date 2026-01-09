@@ -117,10 +117,3 @@ type WikiAnchorLocation struct {
 	Fallback bool
 	Regex    bool
 }
-
-// WikiGetPageOpts represents options for getting a Wiki page.
-type WikiGetPageOpts struct {
-	Fields          []string
-	RevisionID      int
-	RaiseOnRedirect bool
-}

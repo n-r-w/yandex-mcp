@@ -1,9 +1,9 @@
-//nolint:lll
+//nolint:lll // systemPrompt contains long URLs that must stay on single line for readability
 package server
 
 const (
 	serverName  = "yandex-mcp"
-	setverTitle = "Yandex MCP Server"
+	serverTitle = "Yandex MCP Server"
 
 	systemPrompt = `This MCP server provides access to various tools for interacting with Yandex services.
 YANDEX WIKI rules:

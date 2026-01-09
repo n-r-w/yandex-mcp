@@ -1,6 +1,8 @@
 package tracker
 
 import (
+	"context"
+
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/n-r-w/yandex-mcp/internal/domain"
 	"github.com/n-r-w/yandex-mcp/internal/server"
@@ -101,4 +103,8 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 	}
 
 	return nil
+}
+
+func (r *Registrator) logError(ctx context.Context, err error) error {
+	return domain.LogError(ctx, string(domain.ServiceTracker), err)
 }
