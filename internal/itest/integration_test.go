@@ -59,7 +59,7 @@ func TestServerIntegration_ReadOnlyToolsRegistered(t *testing.T) {
 		trackertools.NewRegistrator(trackerMock, domain.TrackerReadOnlyTools()),
 	}
 
-	srv, err := server.New(registrators)
+	srv, err := server.New("v1.0.0", registrators)
 	require.NoError(t, err)
 
 	toolNames := listToolNames(t, srv)
@@ -94,7 +94,7 @@ func TestServerIntegration_AllowlistGating_ReducedList(t *testing.T) {
 		trackertools.NewRegistrator(trackerMock, trackerTools),
 	}
 
-	srv, err := server.New(registrators)
+	srv, err := server.New("v1.0.0", registrators)
 	require.NoError(t, err)
 
 	toolNames := listToolNames(t, srv)
@@ -122,7 +122,7 @@ func TestServerIntegration_EmptyAllowlist_NoToolsRegistered(t *testing.T) {
 		trackertools.NewRegistrator(trackerMock, nil),
 	}
 
-	srv, err := server.New(registrators)
+	srv, err := server.New("v1.0.0", registrators)
 	require.NoError(t, err)
 
 	toolNames := listToolNames(t, srv)

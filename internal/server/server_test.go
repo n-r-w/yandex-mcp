@@ -78,7 +78,7 @@ func TestServer_ToolsRegistered(t *testing.T) {
 		newTrackerStubRegistrator(ctrl),
 	}
 
-	srv, err := New(registrators)
+	srv, err := New("v1.0.0", registrators)
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -87,7 +87,7 @@ func TestServer_ToolsRegistered(t *testing.T) {
 	client := mcp.NewClient(
 		&mcp.Implementation{ //nolint:exhaustruct // optional fields use defaults
 			Name:    "test-client",
-			Version: "1.0.0",
+			Version: "v1.0.0",
 		},
 		nil,
 	)
@@ -127,7 +127,7 @@ func TestServerCreation(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	srv, err := New([]IToolsRegistrator{newWikiStubRegistrator(ctrl)})
+	srv, err := New("v1.0.0", []IToolsRegistrator{newWikiStubRegistrator(ctrl)})
 	require.NoError(t, err)
 	assert.NotNil(t, srv)
 }
@@ -135,7 +135,7 @@ func TestServerCreation(t *testing.T) {
 func TestServerCreation_EmptyRegistrators(t *testing.T) {
 	t.Parallel()
 
-	srv, err := New(nil)
+	srv, err := New("v1.0.0", nil)
 	require.NoError(t, err)
 	assert.NotNil(t, srv)
 }
@@ -143,17 +143,9 @@ func TestServerCreation_EmptyRegistrators(t *testing.T) {
 func TestServerCreation_NoRegistrators(t *testing.T) {
 	t.Parallel()
 
-	srv, err := New([]IToolsRegistrator{})
+	srv, err := New("v1.0.0", []IToolsRegistrator{})
 	require.NoError(t, err)
 	assert.NotNil(t, srv)
-}
-
-func TestServer_VersionInfo(t *testing.T) {
-	t.Parallel()
-
-	// Verify constants are properly set.
-	assert.Equal(t, "yandex-mcp", serverName)
-	assert.Equal(t, "1.0.0", serverVersion)
 }
 
 func TestServer_RegistrationError(t *testing.T) {
@@ -163,7 +155,7 @@ func TestServer_RegistrationError(t *testing.T) {
 	mockReg := NewMockIToolsRegistrator(ctrl)
 	mockReg.EXPECT().Register(gomock.Any()).Return(assert.AnError)
 
-	_, err := New([]IToolsRegistrator{mockReg})
+	_, err := New("v1.0.0", []IToolsRegistrator{mockReg})
 	require.Error(t, err)
 	assert.ErrorIs(t, err, assert.AnError)
 }

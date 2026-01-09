@@ -20,10 +20,56 @@ import (
 	wikitools "github.com/n-r-w/yandex-mcp/internal/tools/wiki"
 )
 
+// build-time variables that can be set via ldflags
+//
+//nolint:nolintlint // gochecknoglobals is excluded for this file via .golangci.yml
+var (
+	version = "dev"
+	commit  = "unknown"
+	date    = "unknown"
+	builtBy = "unknown"
+)
+
+// buildInfo holds build-time information.
+type buildInfo struct {
+	version string
+	commit  string
+	date    string
+	builtBy string
+}
+
+// getBuildInfo returns build-time information.
+func getBuildInfo() buildInfo {
+	return buildInfo{
+		version: version,
+		commit:  commit,
+		date:    date,
+		builtBy: builtBy,
+	}
+}
+
 func main() {
+	showVersion := flag.Bool("version", false, "Show version information")
 	wikiWrite := flag.Bool("wiki-write", false, "enable write operations for Yandex Wiki tools")
 	trackerWrite := flag.Bool("tracker-write", false, "enable write operations for Yandex Tracker tools")
 	flag.Parse()
+
+	info := getBuildInfo()
+
+	if *showVersion {
+		logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+			AddSource:   false,
+			Level:       slog.LevelInfo,
+			ReplaceAttr: nil,
+		}))
+		logger.Info("yandex-mcp version info",
+			"version", info.version,
+			"commit", info.commit,
+			"built", info.date,
+			"built_by", info.builtBy,
+		)
+		os.Exit(0)
+	}
 
 	//nolint:exhaustruct // SDK struct with optional fields
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
@@ -31,13 +77,13 @@ func main() {
 	}))
 	slog.SetDefault(logger)
 
-	if err := run(*wikiWrite, *trackerWrite); err != nil {
+	if err := run(info.version, *wikiWrite, *trackerWrite); err != nil {
 		slog.Error("server failed", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
 }
 
-func run(wikiWrite, trackerWrite bool) error {
+func run(serverVersion string, wikiWrite, trackerWrite bool) error {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
@@ -64,7 +110,7 @@ func run(wikiWrite, trackerWrite bool) error {
 		trackertools.NewRegistrator(trackerClient, trackerTools),
 	}
 
-	srv, err := server.New(registrators)
+	srv, err := server.New(serverVersion, registrators)
 	if err != nil {
 		return err
 	}

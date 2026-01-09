@@ -14,7 +14,7 @@ type Server struct {
 
 // New creates a new MCP server with the provided tool registrators.
 // Each registrator is responsible for registering its own tools with the MCP server.
-func New(registrators []IToolsRegistrator) (*Server, error) {
+func New(serverVersion string, registrators []IToolsRegistrator) (*Server, error) {
 	mcpServer := mcp.NewServer(
 		&mcp.Implementation{ //nolint:exhaustruct // optional fields use defaults
 			Name:    serverName,

@@ -25,7 +25,7 @@ linters-settings:
   lll:
     line-length: 120
   goimports:
-    local-prefixes: aisupport
+    local-prefixes: github.com/n-r-w/yandex-mcp
   nolintlint:
     require-explanation: true
     require-specific: true
@@ -131,6 +131,10 @@ linters:
           - gocyclo
           - cyclop
         path: _test\.go
+      - linters:
+          - gochecknoglobals
+        path: ^cmd/yandex-mcp/main\.go$
+        text: "^(version|commit|date|builtBy) is a global variable"
 
   exclude-use-default: false
   max-issues-per-linter: 0
