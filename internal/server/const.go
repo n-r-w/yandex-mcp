@@ -2,8 +2,8 @@
 package server
 
 const (
-	serverName    = "yandex-mcp"	
-	setverTitle   = "Yandex MCP Server"
+	serverName  = "yandex-mcp"
+	setverTitle = "Yandex MCP Server"
 
 	systemPrompt = `This MCP server provides access to various tools for interacting with Yandex services.
 YANDEX WIKI rules:
