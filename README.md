@@ -107,40 +107,12 @@ macOS may block execution of downloaded binaries by default due to security sett
 
 After these steps, the executable will be permanently allowed to run on your system.
 
-## Client configuration examples
-
-### Claude Code
-
-```bash
-claude mcp add -s user -e YANDEX_CLOUD_ORG_ID={yandex organization id} --transport stdio yandex /path/to/yandex-mcp
-```
-
-### VS Code, RooCode, etc.
-
-```json
-"yandex": {
-  "command": "/path/to/yandex-mcp",
-  "env": {
-    "YANDEX_CLOUD_ORG_ID": "yandex organization id"
-  }
-}
-```
-
-Notes:
-
-- The `command` must point to the built executable (for this repo, `task build` produces `bin/yandex-mcp`).
-- The server communicates over stdio; clients should use a stdio transport.
-
-## CLI arguments
-
-- `--wiki-write` (default: `false`) — enable write operations for Yandex Wiki tools
-- `--tracker-write` (default: `false`) — enable write operations for Yandex Tracker tools
-
 ## Environment variables
 
 - `YANDEX_CLOUD_ORG_ID` (required)
   - Yandex Cloud Organization ID.
   - Used to set the organization header required by Yandex APIs.
+  - Run `yc organization-manager organization list` to get your organization ID.
 
 - `YANDEX_WIKI_BASE_URL` (optional, default: `https://api.wiki.yandex.net`)
   - Base URL for Yandex Wiki API.
@@ -181,6 +153,35 @@ Official references:
 
 - Tracker IAM token auth + lifetime: https://yandex.ru/support/tracker/en/concepts/access#iam-token
 - Wiki IAM token auth + lifetime: https://yandex.ru/support/wiki/en/api-ref/access#iam-token
+
+## Client configuration examples
+
+### Claude Code
+
+```bash
+claude mcp add -s user -e YANDEX_CLOUD_ORG_ID={yandex organization id} --transport stdio yandex /path/to/yandex-mcp
+```
+
+### VS Code, RooCode, etc.
+
+```json
+"yandex": {
+  "command": "/path/to/yandex-mcp",
+  "env": {
+    "YANDEX_CLOUD_ORG_ID": "yandex organization id"
+  }
+}
+```
+
+Notes:
+
+- The `command` must point to the built executable (for this repo, `task build` produces `bin/yandex-mcp`).
+- The server communicates over stdio; clients should use a stdio transport.
+
+### CLI arguments
+
+- `--wiki-write` (default: `false`) — enable write operations for Yandex Wiki tools
+- `--tracker-write` (default: `false`) — enable write operations for Yandex Tracker tools
 
 ## Yandex API reference (official)
 

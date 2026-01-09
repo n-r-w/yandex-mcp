@@ -41,3 +41,9 @@ tasks:
     desc: "Build the project"
     cmds:
       - go build -o bin/yandex-mcp ./cmd/yandex-mcp
+
+  test-coverage:
+    desc: Run tests with coverage
+    cmds:
+      - go test ./... -coverprofile=coverage.out -v
+      - go tool cover -html=coverage.out -o coverage.html
