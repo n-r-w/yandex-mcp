@@ -6,8 +6,8 @@ NO BACKWARDS COMPATIBILITY! NO FALLBACK! NO DEPRECATIONS! JUST REMOVE OLD CODE/D
 THIS IS A NEW PROJECT, NOT IN PRODUCTION YET. NO DATA IN DATABASE YET. FEEL FREE TO MAKE BREAKING CHANGES AS NEEDED.
 
 ## Yandex Services Supported
-- Yandex Tracker (https://yandex.ru/support/tracker/en/about-api)
-- Yandex Wiki (https://yandex.ru/support/wiki/en/api-ref/access)
+- Yandex Tracker
+- Yandex Wiki
 
 ## Command Line Options
 - `--wiki-write` enable write operations for Yandex Wiki tools (default: false)
@@ -46,7 +46,9 @@ THIS IS A NEW PROJECT, NOT IN PRODUCTION YET. NO DATA IN DATABASE YET. FEEL FREE
 - MUST use `golangci-lint-v2` for linting
 
 ## Documentation
-Yandex API facts: `docs/research/` (read it having doubts about Yandex services behavior).
+- Yandex Tracker Tools: `docs/tracker-tools.md`
+- Yandex Wiki Tools: `docs/wiki-tools.md`
+- Yandex API reference, golang MCP SDK: `docs/research/`
 
 ## Environment Variables (.env)
 - `YANDEX_WIKI_BASE_URL`: Base URL for Yandex Wiki API
