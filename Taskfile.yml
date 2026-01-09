@@ -15,7 +15,7 @@ tasks:
   lint:
     desc: "Run code linters"
     cmds:
-      - golangci-lint-v2 run --config ./.golangci.yml
+      - golangci-lint run --config ./.golangci.yml
 
   test:
     desc: "Run unit tests"

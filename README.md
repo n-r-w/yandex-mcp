@@ -56,6 +56,57 @@ Require `--tracker-write` (write operations):
 - `tracker_issue_transition_execute` — Executes a status transition on a Yandex Tracker issue
 - `tracker_issue_comment_add` — Adds a comment to a Yandex Tracker issue
 
+## Installation
+
+### Binary Releases
+
+Pre-compiled binaries are available for multiple platforms:
+
+- **Linux (AMD64)**: `yandex-mcp-v*-linux-amd64.tar.gz`
+- **macOS (Intel)**: `yandex-mcp-v*-darwin-amd64.tar.gz`
+- **macOS (Apple Silicon)**: `yandex-mcp-v*-darwin-arm64.tar.gz`
+- **Windows (AMD64)**: `yandex-mcp-v*-windows-amd64.zip`
+
+Download the latest release from [GitHub Releases](https://github.com/n-r-w/yandex-mcp/releases).
+
+### Build from Source
+
+```bash
+go build -o yandex-mcp ./cmd/yandex-mcp
+```
+
+or use Task:
+
+```bash
+task build
+```
+
+### macOS Installation Notes
+
+macOS may block execution of downloaded binaries by default due to security settings. To allow the executable to run:
+
+1. **First execution attempt**: Run the executable from terminal
+   ```bash
+   ./yandex-mcp --version
+   ```
+   This will show a security warning. Press **Done**.
+
+2. **Allow execution via System Settings**:
+   - Open **System Settings** → **Privacy & Security** → **Security**
+   - Find the message about the blocked executable
+   - Click **"Allow Anyway"**
+
+3. **Second execution**: Run the executable again
+   ```bash
+   ./yandex-mcp --version
+   ```
+
+4. **Confirm execution**: A dialog will appear asking for confirmation
+   - Click **"Open Anyway"** and enter your password if prompted
+   - The executable will now be allowed to run
+
+After these steps, the executable will be permanently allowed to run on your system.
+
 ## Client configuration examples
 
 ### Claude Code
