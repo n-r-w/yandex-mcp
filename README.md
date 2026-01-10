@@ -32,7 +32,7 @@ Enabled by default (read-only):
 - `wiki_page_grids_list` — Lists dynamic tables (grids) for a Yandex Wiki page
 - `wiki_grid_get` — Retrieves a Yandex Wiki dynamic table (grid) by its ID
 
-Require `--wiki-write` (write operations):
+Require `--wiki-write` (write operations; not tested):
 
 - `wiki_page_create` — Creates a new Yandex Wiki page
 - `wiki_page_update` — Updates an existing Yandex Wiki page
@@ -69,7 +69,7 @@ Enabled by default (read-only):
 - `tracker_issue_changelog` — Retrieves the changelog for a Yandex Tracker issue
 - `tracker_project_comments_list` — Lists comments for a Yandex Tracker project entity
 
-Require `--tracker-write` (write operations):
+Require `--tracker-write` (write operations; not tested):
 
 - `tracker_issue_create` — Creates a new Yandex Tracker issue
 - `tracker_issue_update` — Updates an existing Yandex Tracker issue
