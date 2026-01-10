@@ -5,7 +5,7 @@ package wiki
 
 // getPageBySlugInputDTO is the input for wiki_page_get tool.
 type getPageBySlugInputDTO struct {
-	Slug            string   `json:"slug" jsonschema:"Page slug (URL path),required"`
+	Slug            string   `json:"slug" jsonschema:"Page slug (URL path). Required"`
 	Fields          []string `json:"fields,omitempty" jsonschema:"Additional fields to include in the response. Allowed values: attributes, breadcrumbs, content, redirect"`
 	RevisionID      string   `json:"revision_id,omitempty" jsonschema:"Fetch specific page revision by ID (string)"`
 	RaiseOnRedirect bool     `json:"raise_on_redirect,omitempty" jsonschema:"Return error if page redirects instead of following redirect"`
@@ -13,7 +13,7 @@ type getPageBySlugInputDTO struct {
 
 // getPageByIDInputDTO is the input for wiki_page_get_by_id tool.
 type getPageByIDInputDTO struct {
-	PageID          string   `json:"page_id" jsonschema:"Page ID (string),required"`
+	PageID          string   `json:"page_id" jsonschema:"Page ID (string). Required"`
 	Fields          []string `json:"fields,omitempty" jsonschema:"Additional fields to include in the response. Allowed values: attributes, breadcrumbs, content, redirect"`
 	RevisionID      string   `json:"revision_id,omitempty" jsonschema:"Fetch specific page revision by ID (string)"`
 	RaiseOnRedirect bool     `json:"raise_on_redirect,omitempty" jsonschema:"Return error if page redirects instead of following redirect"`
@@ -21,29 +21,29 @@ type getPageByIDInputDTO struct {
 
 // listResourcesInputDTO is the input for wiki_page_resources_list tool.
 type listResourcesInputDTO struct {
-	PageID         string `json:"page_id" jsonschema:"Page ID (string) to list resources for,required"`
+	PageID         string `json:"page_id" jsonschema:"Page ID (string) to list resources for. Required"`
 	Cursor         string `json:"cursor,omitempty" jsonschema:"Pagination cursor for subsequent requests"`
-	PageSize       int    `json:"page_size,omitempty" jsonschema:"Number of items per page (default: 25, min: 1, max: 50)"`
+	PageSize       int    `json:"page_size,omitempty" jsonschema:"Number of items per page. Valid range: 1-50. Default: 25"`
 	OrderBy        string `json:"order_by,omitempty" jsonschema:"Field to order by. Possible values: name_title, created_at"`
-	OrderDirection string `json:"order_direction,omitempty" jsonschema:"Order direction. Possible values: asc (default), desc"`
-	Q              string `json:"q,omitempty" jsonschema:"Filter resources by title (max 255 chars)"`
+	OrderDirection string `json:"order_direction,omitempty" jsonschema:"Order direction. Possible values: asc, desc. Default: asc"`
+	Q              string `json:"q,omitempty" jsonschema:"Filter resources by title. Maximum: 255 chars"`
 	Types          string `json:"types,omitempty" jsonschema:"Resource types filter. Possible values: attachment, sharepoint_resource, grid. Can be comma-separated for multiple types"`
-	PageIDLegacy   string `json:"page_id_legacy,omitempty" jsonschema:"Legacy page ID (string) for backward-compatibility pagination (default: 1)"`
+	PageIDLegacy   string `json:"page_id_legacy,omitempty" jsonschema:"Legacy page ID (string) for backward-compatibility pagination. Default: 1"`
 }
 
 // listGridsInputDTO is the input for wiki_page_grids_list tool.
 type listGridsInputDTO struct {
-	PageID         string `json:"page_id" jsonschema:"Page ID (string) to list grids for,required"`
+	PageID         string `json:"page_id" jsonschema:"Page ID (string) to list grids for. Required"`
 	Cursor         string `json:"cursor,omitempty" jsonschema:"Pagination cursor for subsequent requests"`
-	PageSize       int    `json:"page_size,omitempty" jsonschema:"Number of items per page (default: 25, min: 1, max: 50)"`
+	PageSize       int    `json:"page_size,omitempty" jsonschema:"Number of items per page. Valid range: 1-50. Default: 25"`
 	OrderBy        string `json:"order_by,omitempty" jsonschema:"Field to order by. Possible values: title, created_at"`
-	OrderDirection string `json:"order_direction,omitempty" jsonschema:"Order direction. Possible values: asc (default), desc"`
-	PageIDLegacy   string `json:"page_id_legacy,omitempty" jsonschema:"Legacy page ID (string) for backward-compatibility pagination (default: 1)"`
+	OrderDirection string `json:"order_direction,omitempty" jsonschema:"Order direction. Possible values: asc, desc. Default: asc"`
+	PageIDLegacy   string `json:"page_id_legacy,omitempty" jsonschema:"Legacy page ID (string) for backward-compatibility pagination. Default: 1"`
 }
 
 // getGridInputDTO is the input for wiki_grid_get tool.
 type getGridInputDTO struct {
-	GridID   string   `json:"grid_id" jsonschema:"Grid ID (UUID string),required"`
+	GridID   string   `json:"grid_id" jsonschema:"Grid ID (UUID string). Required"`
 	Fields   []string `json:"fields,omitempty" jsonschema:"Additional fields to include in the response. Allowed values: attributes, user_permissions"`
 	Filter   string   `json:"filter,omitempty" jsonschema:"Row filter expression to filter grid rows. Syntax: [column_slug] operator value. Operators: ~ (contains), <, >, <=, >=, =, !. Logical: AND, OR, (). Example: [slug] ~ wiki AND [slug2]<32"`
 	OnlyCols string   `json:"only_cols,omitempty" jsonschema:"Return only specified columns (comma-separated column slugs)"`
@@ -56,9 +56,9 @@ type getGridInputDTO struct {
 
 // createPageInputDTO is the input for wiki_page_create tool.
 type createPageInputDTO struct {
-	Slug       string             `json:"slug" jsonschema:"Page slug (URL path),required"`
-	Title      string             `json:"title" jsonschema:"Page title,required"`
-	PageType   string             `json:"page_type" jsonschema:"Page type. Possible values: page, grid, cloud_page, wysiwyg, template,required"`
+	Slug       string             `json:"slug" jsonschema:"Page slug (URL path). Required"`
+	Title      string             `json:"title" jsonschema:"Page title. Required"`
+	PageType   string             `json:"page_type" jsonschema:"Page type. Possible values: page, grid, cloud_page, wysiwyg, template. Required"`
 	Content    string             `json:"content,omitempty" jsonschema:"Page content in wikitext format"`
 	IsSilent   bool               `json:"is_silent,omitempty" jsonschema:"Suppress notifications for this operation"`
 	Fields     []string           `json:"fields,omitempty" jsonschema:"Additional fields to include in the response. Allowed values: attributes, breadcrumbs, content, redirect"`
@@ -68,7 +68,7 @@ type createPageInputDTO struct {
 
 // updatePageInputDTO is the input for wiki_page_update tool.
 type updatePageInputDTO struct {
-	PageID     string            `json:"page_id" jsonschema:"Page ID (string),required"`
+	PageID     string            `json:"page_id" jsonschema:"Page ID (string). Required"`
 	Title      string            `json:"title,omitempty" jsonschema:"Page title"`
 	Content    string            `json:"content,omitempty" jsonschema:"Page content in wikitext format"`
 	AllowMerge bool              `json:"allow_merge,omitempty" jsonschema:"Enable 3-way merge for concurrent edits"`
@@ -79,8 +79,8 @@ type updatePageInputDTO struct {
 
 // appendPageInputDTO is the input for wiki_page_append_content tool.
 type appendPageInputDTO struct {
-	PageID   string              `json:"page_id" jsonschema:"Page ID (string),required"`
-	Content  string              `json:"content" jsonschema:"Content to append in wikitext format,required"`
+	PageID   string              `json:"page_id" jsonschema:"Page ID (string). Required"`
+	Content  string              `json:"content" jsonschema:"Content to append in wikitext format. Required"`
 	IsSilent bool                `json:"is_silent,omitempty" jsonschema:"Suppress notifications for this operation"`
 	Fields   []string            `json:"fields,omitempty" jsonschema:"Additional fields to include in the response. Allowed values: attributes, breadcrumbs, content, redirect"`
 	Body     *bodyLocationDTO    `json:"body,omitempty" jsonschema:"Append to top or bottom of page body"`
@@ -96,37 +96,37 @@ type pageInputDTO struct {
 
 // createGridInputDTO is the input for wiki_grid_create tool.
 type createGridInputDTO struct {
-	Page    pageInputDTO           `json:"page" jsonschema:"Page where grid will be created (provide id or slug),required"`
-	Title   string                 `json:"title" jsonschema:"Grid title,required"`
-	Columns []columnInputCreateDTO `json:"columns" jsonschema:"Grid columns definition,required"`
+	Page    pageInputDTO           `json:"page" jsonschema:"Page where grid will be created (provide id or slug). Required"`
+	Title   string                 `json:"title" jsonschema:"Grid title. Required"`
+	Columns []columnInputCreateDTO `json:"columns" jsonschema:"Grid columns definition. Required"`
 	Fields  string                 `json:"fields,omitempty" jsonschema:"Additional fields to include in the response. Allowed values: attributes, user_permissions"`
 }
 
 // columnInputCreateDTO defines a column for grid creation.
 type columnInputCreateDTO struct {
-	Slug  string `json:"slug" jsonschema:"Column slug (ID string),required"`
-	Title string `json:"title" jsonschema:"Column title,required"`
+	Slug  string `json:"slug" jsonschema:"Column slug (ID string). Required"`
+	Title string `json:"title" jsonschema:"Column title. Required"`
 	Type  string `json:"type" jsonschema:"Column type. Possible values: string, number, date, select, staff, checkbox, ticket, ticket_field"`
 }
 
 // updateGridCellsInputDTO is the input for wiki_grid_update_cells tool.
 type updateGridCellsInputDTO struct {
-	GridID   string               `json:"grid_id" jsonschema:"Grid ID (UUID string),required"`
-	Cells    []cellUpdateInputDTO `json:"cells" jsonschema:"Array of cell updates,required"`
+	GridID   string               `json:"grid_id" jsonschema:"Grid ID (UUID string). Required"`
+	Cells    []cellUpdateInputDTO `json:"cells" jsonschema:"Array of cell updates. Required"`
 	Revision string               `json:"revision,omitempty" jsonschema:"Grid revision for optimistic locking"`
 }
 
 // cellUpdateInputDTO represents a single cell update.
 type cellUpdateInputDTO struct {
-	RowID      string `json:"row_id" jsonschema:"Row ID (string),required"`
-	ColumnSlug string `json:"column_slug" jsonschema:"Column slug,required"`
-	Value      string `json:"value" jsonschema:"Cell value,required"`
+	RowID      string `json:"row_id" jsonschema:"Row ID (string). Required"`
+	ColumnSlug string `json:"column_slug" jsonschema:"Column slug. Required"`
+	Value      string `json:"value" jsonschema:"Cell value. Required"`
 }
 
 // cloudPageInputDTO represents cloud page options for page creation.
 type cloudPageInputDTO struct {
-	Method  string `json:"method" jsonschema:"Method for creating cloud page. Possible values: empty_doc, from_url, upload_doc, finalize_upload, upload_onprem,required"`
-	Doctype string `json:"doctype" jsonschema:"Document type. Possible values: docx, pptx, xlsx,required"`
+	Method  string `json:"method" jsonschema:"Method for creating cloud page. Possible values: empty_doc, from_url, upload_doc, finalize_upload, upload_onprem. Required"`
+	Doctype string `json:"doctype" jsonschema:"Document type. Possible values: docx, pptx, xlsx. Required"`
 }
 
 // redirectInputDTO represents redirect options for page update.
@@ -137,18 +137,18 @@ type redirectInputDTO struct {
 
 // bodyLocationDTO represents body location targeting for content append.
 type bodyLocationDTO struct {
-	Location string `json:"location" jsonschema:"Append location within body. Possible values: top, bottom,required"`
+	Location string `json:"location" jsonschema:"Append location within body. Possible values: top, bottom. Required"`
 }
 
 // sectionLocationDTO represents section location targeting for content append.
 type sectionLocationDTO struct {
-	ID       string `json:"id" jsonschema:"Section ID (string),required"`
-	Location string `json:"location" jsonschema:"Append location within section. Possible values: top, bottom,required"`
+	ID       string `json:"id" jsonschema:"Section ID (string). Required"`
+	Location string `json:"location" jsonschema:"Append location within section. Possible values: top, bottom. Required"`
 }
 
 // anchorLocationDTO represents anchor location targeting for content append.
 type anchorLocationDTO struct {
-	Name     string `json:"name" jsonschema:"Anchor name,required"`
+	Name     string `json:"name" jsonschema:"Anchor name. Required"`
 	Fallback bool   `json:"fallback,omitempty" jsonschema:"Fall back to default behavior if anchor not found"`
 	Regex    bool   `json:"regex,omitempty" jsonschema:"Treat anchor name as regular expression"`
 }
@@ -264,7 +264,7 @@ type gridRowOutputDTO struct {
 
 // deletePageInputDTO is the input for wiki_page_delete.
 type deletePageInputDTO struct {
-	PageID string `json:"page_id" jsonschema:"Page ID (string) to delete,required"`
+	PageID string `json:"page_id" jsonschema:"Page ID (string) to delete. Required"`
 }
 
 // deletePageOutputDTO is the output for wiki_page_delete.
@@ -274,10 +274,10 @@ type deletePageOutputDTO struct {
 
 // clonePageInputDTO is the input for wiki_page_clone.
 type clonePageInputDTO struct {
-	PageID      string `json:"page_id" jsonschema:"Source page ID (string) to clone,required"`
-	Target      string `json:"target" jsonschema:"Target page slug where clone will be created,required"`
+	PageID      string `json:"page_id" jsonschema:"Source page ID (string) to clone. Required"`
+	Target      string `json:"target" jsonschema:"Target page slug where clone will be created. Required"`
 	Title       string `json:"title,omitempty" jsonschema:"New page title after cloning"`
-	SubscribeMe bool   `json:"subscribe_me,omitempty" jsonschema:"Subscribe to changes on the cloned page (default: false)"`
+	SubscribeMe bool   `json:"subscribe_me,omitempty" jsonschema:"Subscribe to changes on the cloned page. Default: false"`
 }
 
 // cloneOperationOutputDTO is the output for clone operations (page/grid).
@@ -290,7 +290,7 @@ type cloneOperationOutputDTO struct {
 
 // deleteGridInputDTO is the input for wiki_grid_delete.
 type deleteGridInputDTO struct {
-	GridID string `json:"grid_id" jsonschema:"Grid ID (UUID string) to delete,required"`
+	GridID string `json:"grid_id" jsonschema:"Grid ID (UUID string) to delete. Required"`
 }
 
 // deleteGridOutputDTO is the output for wiki_grid_delete (empty, 204 No Content).
@@ -298,18 +298,18 @@ type deleteGridOutputDTO struct{}
 
 // cloneGridInputDTO is the input for wiki_grid_clone.
 type cloneGridInputDTO struct {
-	GridID   string `json:"grid_id" jsonschema:"Source grid ID (UUID string) to clone,required"`
-	Target   string `json:"target" jsonschema:"Target page slug where grid will be copied; page created if not exists,required"`
-	Title    string `json:"title,omitempty" jsonschema:"New grid title after copying (1-255 chars)"`
-	WithData bool   `json:"with_data,omitempty" jsonschema:"Copy grid rows (default: false)"`
+	GridID   string `json:"grid_id" jsonschema:"Source grid ID (UUID string) to clone. Required"`
+	Target   string `json:"target" jsonschema:"Target page slug where grid will be copied; page created if not exists. Required"`
+	Title    string `json:"title,omitempty" jsonschema:"New grid title after copying. Valid range: 1-255 chars"`
+	WithData bool   `json:"with_data,omitempty" jsonschema:"Copy grid rows. Default: false"`
 }
 
 // addGridRowsInputDTO is the input for wiki_grid_rows_add.
 type addGridRowsInputDTO struct {
-	GridID     string           `json:"grid_id" jsonschema:"Grid ID (UUID string) to add rows to,required"`
-	Rows       []map[string]any `json:"rows" jsonschema:"Array of row objects; each object is a mapping of column_slug to value,required"`
+	GridID     string           `json:"grid_id" jsonschema:"Grid ID (UUID string) to add rows to. Required"`
+	Rows       []map[string]any `json:"rows" jsonschema:"Array of row objects; each object is a mapping of column_slug to value. Required"`
 	AfterRowID string           `json:"after_row_id,omitempty" jsonschema:"Insert rows after this row ID"`
-	Position   *int             `json:"position,omitempty" jsonschema:"Absolute insertion position (0-based)"`
+	Position   *int             `json:"position,omitempty" jsonschema:"Absolute insertion position. 0-based indexing"`
 	Revision   string           `json:"revision,omitempty" jsonschema:"Current revision for optimistic locking"`
 }
 
@@ -329,8 +329,8 @@ type gridRowResultItemDTO struct {
 
 // deleteGridRowsInputDTO is the input for wiki_grid_rows_delete.
 type deleteGridRowsInputDTO struct {
-	GridID   string   `json:"grid_id" jsonschema:"Grid ID (UUID string) to delete rows from,required"`
-	RowIDs   []string `json:"row_ids" jsonschema:"Row IDs (strings) to delete (minimum 1),required"`
+	GridID   string   `json:"grid_id" jsonschema:"Grid ID (UUID string) to delete rows from. Required"`
+	RowIDs   []string `json:"row_ids" jsonschema:"Row IDs (strings) to delete . Minimum: 1. Required"`
 	Revision string   `json:"revision,omitempty" jsonschema:"Current revision for optimistic locking"`
 }
 
@@ -341,29 +341,29 @@ type revisionOutputDTO struct {
 
 // moveGridRowsInputDTO is the input for wiki_grid_rows_move.
 type moveGridRowsInputDTO struct {
-	GridID     string `json:"grid_id" jsonschema:"Grid ID (UUID string) to move rows in,required"`
-	RowID      string `json:"row_id" jsonschema:"Starting row ID (string) to move,required"`
+	GridID     string `json:"grid_id" jsonschema:"Grid ID (UUID string) to move rows in. Required"`
+	RowID      string `json:"row_id" jsonschema:"Starting row ID (string) to move. Required"`
 	AfterRowID string `json:"after_row_id,omitempty" jsonschema:"Move rows to after this row ID (string)"`
-	Position   *int   `json:"position,omitempty" jsonschema:"Move to absolute position (0-based)"`
-	RowsCount  *int   `json:"rows_count,omitempty" jsonschema:"Number of consecutive rows to move starting from row_id (exclusive min: 0)"`
+	Position   *int   `json:"position,omitempty" jsonschema:"Move to absolute position. 0-based indexing"`
+	RowsCount  *int   `json:"rows_count,omitempty" jsonschema:"Number of consecutive rows to move starting from row_id. Valid range: > 0"`
 	Revision   string `json:"revision,omitempty" jsonschema:"Current revision for optimistic locking"`
 }
 
 // addGridColumnsInputDTO is the input for wiki_grid_columns_add.
 type addGridColumnsInputDTO struct {
-	GridID   string                     `json:"grid_id" jsonschema:"Grid ID (UUID string) to add columns to,required"`
-	Columns  []columnDefinitionInputDTO `json:"columns" jsonschema:"Array of column definitions,required"`
-	Position *int                       `json:"position,omitempty" jsonschema:"Insertion position (0-based)"`
+	GridID   string                     `json:"grid_id" jsonschema:"Grid ID (UUID string) to add columns to. Required"`
+	Columns  []columnDefinitionInputDTO `json:"columns" jsonschema:"Array of column definitions. Required"`
+	Position *int                       `json:"position,omitempty" jsonschema:"Insertion position. 0-based indexing"`
 	Revision string                     `json:"revision,omitempty" jsonschema:"Current revision for optimistic locking"`
 }
 
 // columnDefinitionInputDTO represents a column definition for grid column creation.
 type columnDefinitionInputDTO struct {
-	Slug          string   `json:"slug" jsonschema:"Column identifier (alphanumeric underscores),required"`
-	Title         string   `json:"title" jsonschema:"Column display title (1-255 chars),required"`
-	Type          string   `json:"type" jsonschema:"Column type. Allowed values: string number date select staff checkbox ticket ticket_field,required"`
-	Required      bool     `json:"required" jsonschema:"Whether column value is required,required"`
-	Description   string   `json:"description,omitempty" jsonschema:"Column description (max 1000 chars)"`
+	Slug          string   `json:"slug" jsonschema:"Column identifier (alphanumeric underscores). Required"`
+	Title         string   `json:"title" jsonschema:"Column display title. Valid range: 1-255 chars. Required"`
+	Type          string   `json:"type" jsonschema:"Column type. Allowed values: string number date select staff checkbox ticket ticket_field. Required"`
+	Required      bool     `json:"required" jsonschema:"Whether column value is required. Required"`
+	Description   string   `json:"description,omitempty" jsonschema:"Column description. Maximum: 1000 chars"`
 	Color         string   `json:"color,omitempty" jsonschema:"Column header color. Allowed values: blue yellow pink red green mint grey orange magenta purple copper ocean"`
 	Format        string   `json:"format,omitempty" jsonschema:"Text format for string columns only. Allowed values: yfm wom plain"`
 	SelectOptions []string `json:"select_options,omitempty" jsonschema:"Options for select column type"`
@@ -377,16 +377,16 @@ type columnDefinitionInputDTO struct {
 
 // deleteGridColumnsInputDTO is the input for wiki_grid_columns_delete.
 type deleteGridColumnsInputDTO struct {
-	GridID      string   `json:"grid_id" jsonschema:"Grid ID (UUID string) to delete columns from,required"`
-	ColumnSlugs []string `json:"column_slugs" jsonschema:"Column slugs to delete,required"`
+	GridID      string   `json:"grid_id" jsonschema:"Grid ID (UUID string) to delete columns from. Required"`
+	ColumnSlugs []string `json:"column_slugs" jsonschema:"Column slugs to delete. Required"`
 	Revision    string   `json:"revision,omitempty" jsonschema:"Current revision for optimistic locking"`
 }
 
 // moveGridColumnsInputDTO is the input for wiki_grid_columns_move.
 type moveGridColumnsInputDTO struct {
-	GridID       string `json:"grid_id" jsonschema:"Grid ID (UUID string) to move columns in,required"`
-	ColumnSlug   string `json:"column_slug" jsonschema:"Starting column slug to move,required"`
-	Position     int    `json:"position" jsonschema:"Destination position (0-based),required"`
-	ColumnsCount *int   `json:"columns_count,omitempty" jsonschema:"Number of consecutive columns to move (exclusive min: 0)"`
+	GridID       string `json:"grid_id" jsonschema:"Grid ID (UUID string) to move columns in. Required"`
+	ColumnSlug   string `json:"column_slug" jsonschema:"Starting column slug to move. Required"`
+	Position     int    `json:"position" jsonschema:"Destination position. 0-based indexing. Required"`
+	ColumnsCount *int   `json:"columns_count,omitempty" jsonschema:"Number of consecutive columns to move. Valid range: > 0"`
 	Revision     string `json:"revision,omitempty" jsonschema:"Current revision for optimistic locking"`
 }

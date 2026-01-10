@@ -149,11 +149,3 @@ Uses Tracker adapter via interface `tracker.ITrackerAdapter` for making API call
 ### Authentication
 - Use `IAM_token` for authentication to Yandex services
 - `IAM_token` has limited lifetime and MUST be refreshed if api calls start failing with authentication errors.
-
-## Debugging
-MCP server automatically starts from `bin/yandex-mcp` and tools can be invoked directly.
-
-Recommended way to restart and check MCP after code changes:
-1) Stop running MCP server: `killall yandex-mcp`
-2) Rebuild MCP server: `task build`. `bin/yandex-mcp` will created.
-3) Invoke required `mcp_yandex_*` tools. Server will start automatically if not running
