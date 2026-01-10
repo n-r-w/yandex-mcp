@@ -81,14 +81,14 @@ Returns `IssueOutput`:
 
 - `self` (string)
 - `id` (string)
-- `uid` (integer, optional)
+- `uid` (string, optional)
 - `login` (string, optional)
 - `display` (string, optional)
 - `first_name` (string, optional)
 - `last_name` (string, optional)
 - `email` (string, optional)
 - `cloud_uid` (string, optional)
-- `passport_uid` (integer, optional)
+- `passport_uid` (string, optional)
 
 ## tracker_issue_search
 
@@ -207,8 +207,7 @@ Lists comments for a Yandex Tracker issue.
   - Allowed values: `attachments`, `html`, `all`
 - `per_page` (integer, optional): Number of comments per page.
   - Tool validation: must be non-negative.
-- `id` (integer, optional): Comment numeric id value after which the requested page will begin (for pagination).
-  - Tool validation: must be non-negative.
+- `id` (string, optional): Comment id value after which the requested page will begin (for pagination).
 
 ### Output
 
@@ -219,7 +218,7 @@ Returns `CommentsListOutput`:
 
 `CommentOutput`:
 
-- `id` (integer)
+- `id` (string)
 - `long_id` (string)
 - `self` (string)
 - `text` (string)
@@ -268,9 +267,12 @@ This tool is write-gated and requires `--tracker-write`.
 - `type` (string, optional): Issue type key.
 - `priority` (string, optional): Priority key.
 - `assignee` (string, optional): Assignee login.
+- `project_primary` (integer, optional): Primary project ID.
+- `project_secondary_add` (array of integer, optional): Secondary project IDs to add.
+- `sprint` (array of string, optional): Sprint IDs or keys to assign.
 - `version` (integer, optional): Issue version for optimistic locking.
 
-Note: the tool requires at least one of `summary`, `description`, `type`, `priority`, `assignee` to be provided.
+Note: the tool requires at least one of `summary`, `description`, `type`, `priority`, `assignee`, `project_primary`, `project_secondary_add`, `sprint` to be provided.
 
 ### Output
 
@@ -304,8 +306,7 @@ This tool is write-gated and requires `--tracker-write`.
 - `issue_id_or_key` (string, required): Issue ID or key.
 - `text` (string, required): Comment text.
 - `attachment_ids` (array of string, optional): Attachment IDs to link.
-- `markup_type` (string, optional): Text markup type.
-  - Allowed values: `plain`, `wiki`, `html`
+- `markup_type` (string, optional): Text markup type. Use `md` for YFM markup.
 - `summonees` (array of string, optional): User logins to summon.
 - `maillist_summonees` (array of string, optional): Mailing list addresses to summon.
 - `is_add_to_followers` (boolean, optional): Add summoned users to followers.
@@ -313,3 +314,385 @@ This tool is write-gated and requires `--tracker-write`.
 ### Output
 
 Returns `CommentOutput` (same shape as in `tracker_issue_comments_list`).
+
+## tracker_issue_comment_update
+
+Updates an existing comment on a Yandex Tracker issue.
+
+This tool is write-gated and requires `--tracker-write`.
+
+### Input
+
+- `issue_id_or_key` (string, required): Issue ID or key (for example, `TEST-1`).
+- `comment_id` (string, required): Comment ID.
+- `text` (string, required): Comment text.
+- `attachment_ids` (array of string, optional): Attachment IDs to link.
+- `markup_type` (string, optional): Text markup type. Use `md` for YFM markup.
+- `summonees` (array of string, optional): User logins to summon.
+- `maillist_summonees` (array of string, optional): Mailing list addresses to summon.
+
+### Output
+
+Returns `CommentOutput` (same shape as in `tracker_issue_comments_list`).
+
+## tracker_issue_comment_delete
+
+Deletes a comment from a Yandex Tracker issue.
+
+This tool is write-gated and requires `--tracker-write`.
+
+### Input
+
+- `issue_id_or_key` (string, required): Issue ID or key (for example, `TEST-1`).
+- `comment_id` (string, required): Comment ID.
+
+### Output
+
+Returns `DeleteCommentOutput`:
+
+- `success` (boolean)
+
+## tracker_issue_attachments_list
+
+Lists attachments for a Yandex Tracker issue.
+
+This tool is read-only (available without `--tracker-write`).
+
+### Input
+
+- `issue_id_or_key` (string, required): Issue ID or key (for example, `TEST-1`).
+
+### Output
+
+Returns `AttachmentsListOutput`:
+
+- `attachments` (array of object): array of `AttachmentOutput`
+
+`AttachmentOutput`:
+
+- `id` (string)
+- `name` (string)
+- `content_url` (string)
+- `thumbnail_url` (string, optional)
+- `mimetype` (string, optional)
+- `size` (integer)
+- `created_at` (string, optional)
+- `created_by` (object, optional): `UserOutput`
+- `metadata` (object, optional): `AttachmentMetadataOutput`
+
+`AttachmentMetadataOutput`:
+
+- `size` (string, optional)
+
+## tracker_issue_attachment_delete
+
+Deletes an attachment from a Yandex Tracker issue.
+
+This tool is write-gated and requires `--tracker-write`.
+
+### Input
+
+- `issue_id_or_key` (string, required): Issue ID or key (for example, `TEST-1`).
+- `file_id` (string, required): Attachment file ID.
+
+### Output
+
+Returns `DeleteAttachmentOutput`:
+
+- `success` (boolean)
+
+
+## tracker_queue_get
+
+Gets a Yandex Tracker queue by ID or key.
+
+### Input
+
+- `queue_id_or_key` (string, required): Queue ID or key (for example, `MYQUEUE`).
+- `expand` (string, optional): Additional fields to include in the response.
+  - Allowed values: `projects`, `components`, `versions`, `types`, `team`, `workflows`, `all`
+
+### Output
+
+Returns `QueueDetailOutput`:
+
+- `self` (string)
+- `id` (string)
+- `key` (string)
+- `display` (string, optional)
+- `name` (string, optional)
+- `description` (string, optional)
+- `version` (integer, optional)
+- `lead` (object, optional): `UserOutput`
+- `assign_auto` (boolean, optional)
+- `allow_externals` (boolean, optional)
+- `deny_voting` (boolean, optional)
+- `default_type` (object, optional): `TypeOutput`
+- `default_priority` (object, optional): `PriorityOutput`
+
+## tracker_queue_create
+
+Creates a new Yandex Tracker queue.
+
+This tool is write-gated and requires `--tracker-write`.
+
+### Input
+
+- `key` (string, required): Queue key (for example, `MYQUEUE`).
+- `name` (string, required): Queue name.
+- `lead` (string, required): Queue lead login or user ID.
+- `default_type` (string, required): Default issue type key or ID.
+- `default_priority` (string, required): Default priority key or ID.
+
+### Output
+
+Returns `QueueDetailOutput`.
+
+## tracker_queue_delete
+
+Deletes a Yandex Tracker queue.
+
+This tool is write-gated and requires `--tracker-write`.
+
+### Input
+
+- `queue_id_or_key` (string, required): Queue ID or key (for example, `MYQUEUE`).
+
+### Output
+
+Returns `DeleteQueueOutput`:
+
+- `success` (boolean)
+
+## tracker_queue_restore
+
+Restores a deleted Yandex Tracker queue.
+
+This tool is write-gated and requires `--tracker-write`.
+
+### Input
+
+- `queue_id_or_key` (string, required): Queue ID or key (for example, `MYQUEUE`).
+
+### Output
+
+Returns `QueueDetailOutput`.
+
+## tracker_user_current
+
+Gets the current authenticated Yandex Tracker user.
+
+### Input
+
+No input.
+
+### Output
+
+Returns `UserDetailOutput`:
+
+- `self` (string)
+- `id` (string)
+- `uid` (string, optional)
+- `tracker_uid` (string, optional)
+- `login` (string, optional)
+- `display` (string, optional)
+- `first_name` (string, optional)
+- `last_name` (string, optional)
+- `email` (string, optional)
+- `cloud_uid` (string, optional)
+- `passport_uid` (string, optional)
+- `has_license` (boolean, optional)
+- `dismissed` (boolean, optional)
+- `external` (boolean, optional)
+
+## tracker_users_list
+
+Lists Yandex Tracker users.
+
+### Input
+
+- `per_page` (integer, optional): Number of users per page (default: 50).
+  - Tool validation: must be non-negative.
+- `page` (integer, optional): Page number (default: 1).
+  - Tool validation: must be non-negative.
+
+### Output
+
+Returns `UsersListOutput`:
+
+- `users` (array of object): array of `UserDetailOutput`
+- `total_count` (integer, optional)
+- `total_pages` (integer, optional)
+
+## tracker_user_get
+
+Gets a Yandex Tracker user by ID or login.
+
+### Input
+
+- `user_id` (string, required): User login or ID.
+
+### Output
+
+Returns `UserDetailOutput` (same shape as in `tracker_user_current`).
+
+## tracker_issue_links_list
+
+Lists all links for a Yandex Tracker issue.
+
+### Input
+
+- `issue_id_or_key` (string, required): Issue ID or key (for example, `TEST-1`).
+
+### Output
+
+Returns `LinksListOutput`:
+
+- `links` (array of object): array of `LinkOutput`
+
+`LinkOutput`:
+
+- `id` (string)
+- `self` (string)
+- `type` (object, optional): `LinkTypeOutput`
+- `direction` (string, optional)
+  - Documented values: `inward`, `outward`
+- `object` (object, optional): `LinkedIssueOutput`
+- `created_by` (object, optional): `UserOutput`
+- `updated_by` (object, optional): `UserOutput`
+- `created_at` (string, optional)
+- `updated_at` (string, optional)
+
+`LinkTypeOutput`:
+
+- `id` (string)
+- `inward` (string, optional)
+- `outward` (string, optional)
+
+`LinkedIssueOutput`:
+
+- `self` (string)
+- `id` (string)
+- `key` (string)
+- `display` (string, optional)
+
+## tracker_issue_link_create
+
+Creates a link between Yandex Tracker issues.
+
+This tool is write-gated and requires `--tracker-write`.
+
+### Input
+
+- `issue_id_or_key` (string, required): Issue ID or key (for example, `TEST-1`).
+- `relationship` (string, required): Link type ID (for example, `relates`, `depends`, `duplicates`).
+- `target_issue` (string, required): Target issue ID or key to link to.
+
+### Output
+
+Returns `LinkOutput` (same shape as in `tracker_issue_links_list`).
+
+## tracker_issue_link_delete
+
+Deletes a link from a Yandex Tracker issue.
+
+This tool is write-gated and requires `--tracker-write`.
+
+### Input
+
+- `issue_id_or_key` (string, required): Issue ID or key (for example, `TEST-1`).
+- `link_id` (string, required): Link ID to delete.
+
+### Output
+
+Returns `DeleteLinkOutput`:
+
+- `success` (boolean)
+
+## tracker_issue_changelog
+
+Gets the changelog for a Yandex Tracker issue.
+
+### Input
+
+- `issue_id_or_key` (string, required): Issue ID or key (for example, `TEST-1`).
+- `per_page` (integer, optional): Number of changelog entries per page (default: 50).
+  - Tool validation: must be non-negative.
+
+### Output
+
+Returns `ChangelogOutput`:
+
+- `entries` (array of object): array of `ChangelogEntryOutput`
+
+`ChangelogEntryOutput`:
+
+- `id` (string)
+- `self` (string)
+- `issue` (object, optional): `LinkedIssueOutput`
+- `updated_at` (string, optional)
+- `updated_by` (object, optional): `UserOutput`
+- `type` (string, optional)
+  - Documented values: `IssueCreated`, `IssueUpdated`, `IssueWorkflow`
+- `transport` (string, optional)
+- `fields` (array of object, optional): array of `ChangelogFieldOutput`
+
+`ChangelogFieldOutput`:
+
+- `field` (string)
+- `from` (any, optional)
+- `to` (any, optional)
+
+## tracker_issue_move
+
+Moves a Yandex Tracker issue to another queue.
+
+This tool is write-gated and requires `--tracker-write`.
+
+### Input
+
+- `issue_id_or_key` (string, required): Issue ID or key (for example, `TEST-1`).
+- `queue` (string, required): Target queue key (for example, `NEWQUEUE`).
+- `initial_status` (boolean, optional): Reset issue status to initial value when moving.
+
+### Output
+
+Returns `IssueOutput`.
+
+## tracker_project_comments_list
+
+Lists comments for a Yandex Tracker project entity.
+
+### Input
+
+- `project_id` (string, required): Project ID or short ID.
+- `expand` (string, optional): Additional fields to include.
+  - Allowed values: `all`, `html`, `attachments`, `reactions`
+
+### Output
+
+Returns `ProjectCommentsListOutput`:
+
+- `comments` (array of object): array of `ProjectCommentOutput`
+
+`ProjectCommentOutput`:
+
+- `id` (string)
+- `long_id` (string, optional)
+- `self` (string)
+- `text` (string, optional)
+- `created_at` (string, optional)
+- `updated_at` (string, optional)
+- `created_by` (object, optional): `UserOutput`
+- `updated_by` (object, optional): `UserOutput`
+
+## Planned / Requires Additional Research
+
+Items in this section are not implemented and are not available as MCP tools yet.
+
+- Tracker attachment upload via multipart/form-data (upload a file, then link it to an issue comment or issue attachments).
+  - Requires: MCP-compatible file transfer approach, request/response schema confirmation, limits, and error mapping.
+  - Tentative tool names (not callable): `tracker_attachment_upload`, `tracker_issue_attachment_upload`
+- Tracker agile boards and sprints management (read/write operations on boards, board columns, board sprints, sprint details).
+  - Requires: request/response schemas, pagination behavior, optimistic locking headers (If-Match / ETag), and deletion semantics.
+  - Tentative tool names (not callable): `tracker_boards_list`, `tracker_board_get`, `tracker_board_create`, `tracker_board_update`, `tracker_board_delete`, `tracker_board_columns_list`, `tracker_board_sprints_list`, `tracker_sprint_get`, `tracker_sprint_create`

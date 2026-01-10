@@ -41,6 +41,36 @@ func (m *MockIWikiAdapter) EXPECT() *MockIWikiAdapterMockRecorder {
 	return m.recorder
 }
 
+// AddGridColumns mocks base method.
+func (m *MockIWikiAdapter) AddGridColumns(ctx context.Context, req domain.WikiGridColumnsAddRequest) (*domain.WikiRevisionResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddGridColumns", ctx, req)
+	ret0, _ := ret[0].(*domain.WikiRevisionResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AddGridColumns indicates an expected call of AddGridColumns.
+func (mr *MockIWikiAdapterMockRecorder) AddGridColumns(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddGridColumns", reflect.TypeOf((*MockIWikiAdapter)(nil).AddGridColumns), ctx, req)
+}
+
+// AddGridRows mocks base method.
+func (m *MockIWikiAdapter) AddGridRows(ctx context.Context, req domain.WikiGridRowsAddRequest) (*domain.WikiGridRowsAddResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddGridRows", ctx, req)
+	ret0, _ := ret[0].(*domain.WikiGridRowsAddResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AddGridRows indicates an expected call of AddGridRows.
+func (mr *MockIWikiAdapterMockRecorder) AddGridRows(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddGridRows", reflect.TypeOf((*MockIWikiAdapter)(nil).AddGridRows), ctx, req)
+}
+
 // AppendPage mocks base method.
 func (m *MockIWikiAdapter) AppendPage(ctx context.Context, req *domain.WikiPageAppendRequest) (*domain.WikiPageAppendResponse, error) {
 	m.ctrl.T.Helper()
@@ -54,6 +84,36 @@ func (m *MockIWikiAdapter) AppendPage(ctx context.Context, req *domain.WikiPageA
 func (mr *MockIWikiAdapterMockRecorder) AppendPage(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppendPage", reflect.TypeOf((*MockIWikiAdapter)(nil).AppendPage), ctx, req)
+}
+
+// CloneGrid mocks base method.
+func (m *MockIWikiAdapter) CloneGrid(ctx context.Context, req domain.WikiGridCloneRequest) (*domain.WikiCloneOperationResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CloneGrid", ctx, req)
+	ret0, _ := ret[0].(*domain.WikiCloneOperationResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CloneGrid indicates an expected call of CloneGrid.
+func (mr *MockIWikiAdapterMockRecorder) CloneGrid(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloneGrid", reflect.TypeOf((*MockIWikiAdapter)(nil).CloneGrid), ctx, req)
+}
+
+// ClonePage mocks base method.
+func (m *MockIWikiAdapter) ClonePage(ctx context.Context, req domain.WikiPageCloneRequest) (*domain.WikiCloneOperationResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClonePage", ctx, req)
+	ret0, _ := ret[0].(*domain.WikiCloneOperationResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ClonePage indicates an expected call of ClonePage.
+func (mr *MockIWikiAdapterMockRecorder) ClonePage(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClonePage", reflect.TypeOf((*MockIWikiAdapter)(nil).ClonePage), ctx, req)
 }
 
 // CreateGrid mocks base method.
@@ -86,6 +146,65 @@ func (mr *MockIWikiAdapterMockRecorder) CreatePage(ctx, req any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePage", reflect.TypeOf((*MockIWikiAdapter)(nil).CreatePage), ctx, req)
 }
 
+// DeleteGrid mocks base method.
+func (m *MockIWikiAdapter) DeleteGrid(ctx context.Context, gridID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteGrid", ctx, gridID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteGrid indicates an expected call of DeleteGrid.
+func (mr *MockIWikiAdapterMockRecorder) DeleteGrid(ctx, gridID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteGrid", reflect.TypeOf((*MockIWikiAdapter)(nil).DeleteGrid), ctx, gridID)
+}
+
+// DeleteGridColumns mocks base method.
+func (m *MockIWikiAdapter) DeleteGridColumns(ctx context.Context, req domain.WikiGridColumnsDeleteRequest) (*domain.WikiRevisionResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteGridColumns", ctx, req)
+	ret0, _ := ret[0].(*domain.WikiRevisionResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteGridColumns indicates an expected call of DeleteGridColumns.
+func (mr *MockIWikiAdapterMockRecorder) DeleteGridColumns(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteGridColumns", reflect.TypeOf((*MockIWikiAdapter)(nil).DeleteGridColumns), ctx, req)
+}
+
+// DeleteGridRows mocks base method.
+func (m *MockIWikiAdapter) DeleteGridRows(ctx context.Context, req domain.WikiGridRowsDeleteRequest) (*domain.WikiRevisionResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteGridRows", ctx, req)
+	ret0, _ := ret[0].(*domain.WikiRevisionResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteGridRows indicates an expected call of DeleteGridRows.
+func (mr *MockIWikiAdapterMockRecorder) DeleteGridRows(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteGridRows", reflect.TypeOf((*MockIWikiAdapter)(nil).DeleteGridRows), ctx, req)
+}
+
+// DeletePage mocks base method.
+func (m *MockIWikiAdapter) DeletePage(ctx context.Context, pageID string) (*domain.WikiPageDeleteResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeletePage", ctx, pageID)
+	ret0, _ := ret[0].(*domain.WikiPageDeleteResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeletePage indicates an expected call of DeletePage.
+func (mr *MockIWikiAdapterMockRecorder) DeletePage(ctx, pageID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePage", reflect.TypeOf((*MockIWikiAdapter)(nil).DeletePage), ctx, pageID)
+}
+
 // GetGridByID mocks base method.
 func (m *MockIWikiAdapter) GetGridByID(ctx context.Context, gridID string, opts domain.WikiGetGridOpts) (*domain.WikiGrid, error) {
 	m.ctrl.T.Helper()
@@ -102,7 +221,7 @@ func (mr *MockIWikiAdapterMockRecorder) GetGridByID(ctx, gridID, opts any) *gomo
 }
 
 // GetPageByID mocks base method.
-func (m *MockIWikiAdapter) GetPageByID(ctx context.Context, id int64, opts domain.WikiGetPageOpts) (*domain.WikiPage, error) {
+func (m *MockIWikiAdapter) GetPageByID(ctx context.Context, id string, opts domain.WikiGetPageOpts) (*domain.WikiPage, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetPageByID", ctx, id, opts)
 	ret0, _ := ret[0].(*domain.WikiPage)
@@ -132,7 +251,7 @@ func (mr *MockIWikiAdapterMockRecorder) GetPageBySlug(ctx, slug, opts any) *gomo
 }
 
 // ListPageGrids mocks base method.
-func (m *MockIWikiAdapter) ListPageGrids(ctx context.Context, pageID int64, opts domain.WikiListGridsOpts) (*domain.WikiGridsPage, error) {
+func (m *MockIWikiAdapter) ListPageGrids(ctx context.Context, pageID string, opts domain.WikiListGridsOpts) (*domain.WikiGridsPage, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListPageGrids", ctx, pageID, opts)
 	ret0, _ := ret[0].(*domain.WikiGridsPage)
@@ -147,7 +266,7 @@ func (mr *MockIWikiAdapterMockRecorder) ListPageGrids(ctx, pageID, opts any) *go
 }
 
 // ListPageResources mocks base method.
-func (m *MockIWikiAdapter) ListPageResources(ctx context.Context, pageID int64, opts domain.WikiListResourcesOpts) (*domain.WikiResourcesPage, error) {
+func (m *MockIWikiAdapter) ListPageResources(ctx context.Context, pageID string, opts domain.WikiListResourcesOpts) (*domain.WikiResourcesPage, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListPageResources", ctx, pageID, opts)
 	ret0, _ := ret[0].(*domain.WikiResourcesPage)
@@ -159,6 +278,36 @@ func (m *MockIWikiAdapter) ListPageResources(ctx context.Context, pageID int64, 
 func (mr *MockIWikiAdapterMockRecorder) ListPageResources(ctx, pageID, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPageResources", reflect.TypeOf((*MockIWikiAdapter)(nil).ListPageResources), ctx, pageID, opts)
+}
+
+// MoveGridColumns mocks base method.
+func (m *MockIWikiAdapter) MoveGridColumns(ctx context.Context, req domain.WikiGridColumnsMoveRequest) (*domain.WikiRevisionResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MoveGridColumns", ctx, req)
+	ret0, _ := ret[0].(*domain.WikiRevisionResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MoveGridColumns indicates an expected call of MoveGridColumns.
+func (mr *MockIWikiAdapterMockRecorder) MoveGridColumns(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MoveGridColumns", reflect.TypeOf((*MockIWikiAdapter)(nil).MoveGridColumns), ctx, req)
+}
+
+// MoveGridRows mocks base method.
+func (m *MockIWikiAdapter) MoveGridRows(ctx context.Context, req domain.WikiGridRowsMoveRequest) (*domain.WikiRevisionResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MoveGridRows", ctx, req)
+	ret0, _ := ret[0].(*domain.WikiRevisionResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MoveGridRows indicates an expected call of MoveGridRows.
+func (mr *MockIWikiAdapterMockRecorder) MoveGridRows(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MoveGridRows", reflect.TypeOf((*MockIWikiAdapter)(nil).MoveGridRows), ctx, req)
 }
 
 // UpdateGridCells mocks base method.

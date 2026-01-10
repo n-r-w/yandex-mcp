@@ -1,18 +1,20 @@
 package wiki
 
-// Page represents a Wiki page response.
-type Page struct {
-	ID         int64       `json:"id"`
-	PageType   string      `json:"page_type"`
-	Slug       string      `json:"slug"`
-	Title      string      `json:"title"`
-	Content    string      `json:"content,omitempty"`
-	Attributes *Attributes `json:"attributes,omitempty"`
-	Redirect   *Redirect   `json:"redirect,omitempty"`
+import "github.com/n-r-w/yandex-mcp/internal/adapters/apihelpers"
+
+// pageDTO represents a Wiki page response.
+type pageDTO struct {
+	ID         apihelpers.StringID `json:"id"`
+	PageType   string              `json:"page_type"`
+	Slug       string              `json:"slug"`
+	Title      string              `json:"title"`
+	Content    string              `json:"content,omitempty"`
+	Attributes *attributesDTO      `json:"attributes,omitempty"`
+	Redirect   *redirectDTO        `json:"redirect,omitempty"`
 }
 
-// Attributes contains page metadata.
-type Attributes struct {
+// attributesDTO contains page metadata.
+type attributesDTO struct {
 	CommentsCount   int    `json:"comments_count"`
 	CommentsEnabled bool   `json:"comments_enabled"`
 	CreatedAt       string `json:"created_at"`
@@ -23,199 +25,171 @@ type Attributes struct {
 	IsDraft         bool   `json:"is_draft"`
 }
 
-// Redirect represents page redirect info.
-type Redirect struct {
-	PageID int64  `json:"page_id"`
-	Slug   string `json:"slug"`
+// redirectDTO represents page redirect info.
+type redirectDTO struct {
+	PageID apihelpers.StringID `json:"page_id"`
+	Slug   string              `json:"slug"`
 }
 
-// Resource represents a page resource (attachment, grid, or sharepoint resource).
-type Resource struct {
+// resourceDTO represents a page resource (attachment, grid, or sharepoint resource).
+type resourceDTO struct {
 	Type string `json:"type"`
 	Item any    `json:"item"`
 }
 
-// Attachment represents a file attachment.
-type Attachment struct {
-	ID          int64  `json:"id"`
-	Name        string `json:"name"`
-	Size        int64  `json:"size"`
-	Mimetype    string `json:"mimetype"`
-	DownloadURL string `json:"download_url"`
-	CreatedAt   string `json:"created_at"`
-	HasPreview  bool   `json:"has_preview"`
+// attachmentDTO represents a file attachment.
+type attachmentDTO struct {
+	ID          apihelpers.StringID `json:"id"`
+	Name        string              `json:"name"`
+	Size        int64               `json:"size"`
+	Mimetype    string              `json:"mimetype"`
+	DownloadURL string              `json:"download_url"`
+	CreatedAt   string              `json:"created_at"`
+	HasPreview  bool                `json:"has_preview"`
 }
 
-// PageGridSummary represents a grid summary in page resources.
-type PageGridSummary struct {
-	ID        string `json:"id"`
-	Title     string `json:"title"`
-	CreatedAt string `json:"created_at"`
+// pageGridSummaryDTO represents a grid summary in page resources.
+type pageGridSummaryDTO struct {
+	ID        apihelpers.StringID `json:"id"`
+	Title     string              `json:"title"`
+	CreatedAt string              `json:"created_at"`
 }
 
-// SharepointResource represents a SharePoint/MS365 document.
-type SharepointResource struct {
-	ID        int64  `json:"id"`
-	Title     string `json:"title"`
-	Doctype   string `json:"doctype"`
-	CreatedAt string `json:"created_at"`
+// sharepointResourceDTO represents a SharePoint/MS365 document.
+type sharepointResourceDTO struct {
+	ID        apihelpers.StringID `json:"id"`
+	Title     string              `json:"title"`
+	Doctype   string              `json:"doctype"`
+	CreatedAt string              `json:"created_at"`
 }
 
-// Grid represents a dynamic table (grid) with full details.
-type Grid struct {
-	ID             string      `json:"id"`
-	Title          string      `json:"title"`
-	Structure      []Column    `json:"structure"`
-	Rows           []GridRow   `json:"rows"`
-	Revision       string      `json:"revision"`
-	CreatedAt      string      `json:"created_at"`
-	RichTextFormat string      `json:"rich_text_format"`
-	Attributes     *Attributes `json:"attributes,omitempty"`
+// gridDTO represents a dynamic table (grid) with full details.
+type gridDTO struct {
+	ID             apihelpers.StringID `json:"id"`
+	Title          string              `json:"title"`
+	Structure      []columnDTO         `json:"structure"`
+	Rows           []gridRowDTO        `json:"rows"`
+	Revision       string              `json:"revision"`
+	CreatedAt      string              `json:"created_at"`
+	RichTextFormat string              `json:"rich_text_format"`
+	Attributes     *attributesDTO      `json:"attributes,omitempty"`
 }
 
-// Column represents a grid column definition.
-type Column struct {
+// columnDTO represents a grid column definition.
+type columnDTO struct {
 	Slug  string `json:"slug"`
 	Title string `json:"title"`
 	Type  string `json:"type"`
 }
 
-// GridRow represents a row in a grid.
-type GridRow struct {
-	ID    string         `json:"id"`
-	Cells map[string]any `json:"cells"`
+// gridRowDTO represents a row in a grid.
+type gridRowDTO struct {
+	ID    apihelpers.StringID `json:"id"`
+	Cells map[string]any      `json:"cells"`
 }
 
-// ListResourcesOpts contains options for listing page resources.
-type ListResourcesOpts struct {
-	Cursor         string
-	PageSize       int
-	OrderBy        string
-	OrderDirection string
-	Query          string
-	Types          string
+// resourcesPageDTO represents a paginated list of resources.
+type resourcesPageDTO struct {
+	Resources  []resourceDTO `json:"resources"`
+	NextCursor string        `json:"next_cursor,omitempty"`
+	PrevCursor string        `json:"prev_cursor,omitempty"`
 }
 
-// ListGridsOpts contains options for listing page grids.
-type ListGridsOpts struct {
-	Cursor         string
-	PageSize       int
-	OrderBy        string
-	OrderDirection string
+// gridsPageDTO represents a paginated list of grids.
+type gridsPageDTO struct {
+	Grids      []pageGridSummaryDTO `json:"grids"`
+	NextCursor string               `json:"next_cursor,omitempty"`
+	PrevCursor string               `json:"prev_cursor,omitempty"`
 }
 
-// GetGridOpts contains options for getting a grid.
-type GetGridOpts struct {
-	Fields   []string
-	Filter   string
-	OnlyCols string
-	OnlyRows string
-	Revision int
-	Sort     string
-}
-
-// ResourcesPage represents a paginated list of resources.
-type ResourcesPage struct {
-	Resources  []Resource `json:"resources"`
-	NextCursor string     `json:"next_cursor,omitempty"`
-	PrevCursor string     `json:"prev_cursor,omitempty"`
-}
-
-// GridsPage represents a paginated list of grids.
-type GridsPage struct {
-	Grids      []PageGridSummary `json:"grids"`
-	NextCursor string            `json:"next_cursor,omitempty"`
-	PrevCursor string            `json:"prev_cursor,omitempty"`
-}
-
-// errorResponse represents the Wiki API error format.
-type errorResponse struct {
+// errorResponseDTO represents the Wiki API error format.
+type errorResponseDTO struct {
 	DebugMessage string `json:"debug_message"`
 	ErrorCode    string `json:"error_code"`
 }
 
-// resourcesResponse represents the raw resources list response.
-type resourcesResponse struct {
-	Items      []Resource `json:"items"`
-	NextCursor string     `json:"next_cursor"`
-	PrevCursor string     `json:"prev_cursor"`
+// resourcesResponseDTO represents the raw resources list response.
+type resourcesResponseDTO struct {
+	Items      []resourceDTO `json:"items"`
+	NextCursor string        `json:"next_cursor"`
+	PrevCursor string        `json:"prev_cursor"`
 }
 
-// gridsResponse represents the raw grids list response.
-type gridsResponse struct {
-	Items      []PageGridSummary `json:"items"`
-	NextCursor string            `json:"next_cursor"`
-	PrevCursor string            `json:"prev_cursor"`
+// gridsResponseDTO represents the raw grids list response.
+type gridsResponseDTO struct {
+	Items      []pageGridSummaryDTO `json:"items"`
+	NextCursor string               `json:"next_cursor"`
+	PrevCursor string               `json:"prev_cursor"`
 }
 
 // Write operation request DTOs.
 
-// CreatePageRequest is the request body for page creation.
-type CreatePageRequest struct {
-	Slug       string            `json:"slug"`
-	Title      string            `json:"title"`
-	Content    string            `json:"body,omitempty"`
-	PageType   string            `json:"page_type"`
-	CloudPage  *CloudPageRequest `json:"cloud_page,omitempty"`
-	GridFormat string            `json:"grid_format,omitempty"`
+// createPageRequestDTO is the request body for page creation.
+type createPageRequestDTO struct {
+	Slug       string               `json:"slug"`
+	Title      string               `json:"title"`
+	Content    string               `json:"body,omitempty"`
+	PageType   string               `json:"page_type"`
+	CloudPage  *cloudPageRequestDTO `json:"cloud_page,omitempty"`
+	GridFormat string               `json:"grid_format,omitempty"`
 }
 
-// UpdatePageRequest is the request body for page update.
-type UpdatePageRequest struct {
-	Title    string           `json:"title,omitempty"`
-	Content  string           `json:"body,omitempty"`
-	Redirect *RedirectRequest `json:"redirect,omitempty"`
+// updatePageRequestDTO is the request body for page update.
+type updatePageRequestDTO struct {
+	Title    string              `json:"title,omitempty"`
+	Content  string              `json:"body,omitempty"`
+	Redirect *redirectRequestDTO `json:"redirect,omitempty"`
 }
 
-// AppendPageRequest is the request body for appending content.
-type AppendPageRequest struct {
+// appendPageRequestDTO is the request body for appending content.
+type appendPageRequestDTO struct {
 	Content string               `json:"body"`
 	Body    *BodyLocationRequest `json:"body_location,omitempty"`
-	Section *SectionRequest      `json:"section,omitempty"`
-	Anchor  *AnchorRequest       `json:"anchor,omitempty"`
+	Section *sectionRequestDTO   `json:"section,omitempty"`
+	Anchor  *anchorRequestDTO    `json:"anchor,omitempty"`
 }
 
-// CreateGridRequest is the request body for grid creation.
-type CreateGridRequest struct {
-	Title   string         `json:"title"`
-	Columns []ColumnCreate `json:"columns"`
+// createGridRequestDTO is the request body for grid creation.
+type createGridRequestDTO struct {
+	Title   string            `json:"title"`
+	Columns []columnCreateDTO `json:"columns"`
 }
 
-// ColumnCreate represents a column definition for grid creation.
-type ColumnCreate struct {
+// columnCreateDTO represents a column definition for grid creation.
+type columnCreateDTO struct {
 	Slug  string `json:"slug"`
 	Title string `json:"title"`
 	Type  string `json:"type,omitempty"`
 }
 
-// UpdateGridCellsRequest is the request body for updating grid cells.
-type UpdateGridCellsRequest struct {
-	Cells    []CellUpdate `json:"data"`
-	Revision string       `json:"revision,omitempty"`
+// updateGridCellsRequestDTO is the request body for updating grid cells.
+type updateGridCellsRequestDTO struct {
+	Cells    []cellUpdateDTO `json:"data"`
+	Revision string          `json:"revision,omitempty"`
 }
 
-// CellUpdate represents a single cell update.
-type CellUpdate struct {
-	RowID      string `json:"row_id"`
-	ColumnSlug string `json:"column_id"`
-	Value      string `json:"value"`
+// cellUpdateDTO represents a single cell update.
+type cellUpdateDTO struct {
+	RowID      apihelpers.StringID `json:"row_id"`
+	ColumnSlug string              `json:"column_id"`
+	Value      string              `json:"value"`
 }
 
-// CloudPageRequest represents cloud page options for page creation.
-type CloudPageRequest struct {
+// cloudPageRequestDTO represents cloud page options for page creation.
+type cloudPageRequestDTO struct {
 	Method  string `json:"method"`
 	Doctype string `json:"doctype"`
 }
 
-// RedirectRequest represents redirect options for page update.
-type RedirectRequest struct {
-	Page *PageIdentityRequest `json:"page"`
+// redirectRequestDTO represents redirect options for page update.
+type redirectRequestDTO struct {
+	Page *pageIdentityRequestDTO `json:"page"`
 }
 
-// PageIdentityRequest identifies a page by ID or slug.
-type PageIdentityRequest struct {
-	ID   *int64  `json:"id,omitempty"`
-	Slug *string `json:"slug,omitempty"`
+// pageIdentityRequestDTO identifies a page by ID or slug.
+type pageIdentityRequestDTO struct {
+	ID   *apihelpers.StringID `json:"id,omitempty"`
+	Slug *string              `json:"slug,omitempty"`
 }
 
 // BodyLocationRequest represents body location targeting for content append.
@@ -223,15 +197,128 @@ type BodyLocationRequest struct {
 	Location string `json:"location"`
 }
 
-// SectionRequest represents section location targeting for content append.
-type SectionRequest struct {
-	ID       int    `json:"id"`
-	Location string `json:"location"`
+// sectionRequestDTO represents section location targeting for content append.
+type sectionRequestDTO struct {
+	ID       apihelpers.StringID `json:"id"`
+	Location string              `json:"location"`
 }
 
-// AnchorRequest represents anchor location targeting for content append.
-type AnchorRequest struct {
+// anchorRequestDTO represents anchor location targeting for content append.
+type anchorRequestDTO struct {
 	Name     string `json:"name"`
 	Fallback bool   `json:"fallback,omitempty"`
 	Regex    bool   `json:"regex,omitempty"`
+}
+
+// deletePageResponseDTO is the response from the delete page endpoint.
+type deletePageResponseDTO struct {
+	RecoveryToken string `json:"recovery_token"`
+}
+
+// clonePageRequestDTO is the request body for cloning a wiki page.
+type clonePageRequestDTO struct {
+	Target      string `json:"target"`
+	Title       string `json:"title,omitempty"`
+	SubscribeMe bool   `json:"subscribe_me,omitempty"`
+}
+
+// cloneGridRequestDTO is the request body for cloning a wiki grid.
+type cloneGridRequestDTO struct {
+	Target   string `json:"target"`
+	Title    string `json:"title,omitempty"`
+	WithData bool   `json:"with_data,omitempty"`
+}
+
+// cloneOperationResponseDTO is the response from clone operations (page or grid).
+type cloneOperationResponseDTO struct {
+	Operation operationIdentityDTO `json:"operation"`
+	DryRun    bool                 `json:"dry_run"`
+	StatusURL string               `json:"status_url"`
+}
+
+// operationIdentityDTO contains the identity of an async operation.
+type operationIdentityDTO struct {
+	ID   apihelpers.StringID `json:"id"`
+	Type string              `json:"type"`
+}
+
+// addGridRowsRequestDTO is the request body for adding rows to a grid.
+type addGridRowsRequestDTO struct {
+	Rows       []map[string]any    `json:"rows"`
+	AfterRowID apihelpers.StringID `json:"after_row_id,omitempty"`
+	Position   *int                `json:"position,omitempty"`
+	Revision   string              `json:"revision,omitempty"`
+}
+
+// addGridRowsResponseDTO is the response from adding rows to a grid.
+type addGridRowsResponseDTO struct {
+	Revision string                 `json:"revision"`
+	Results  []gridRowSchemaRespDTO `json:"results"`
+}
+
+// gridRowSchemaRespDTO represents a row in grid row operation responses.
+type gridRowSchemaRespDTO struct {
+	ID     apihelpers.StringID `json:"id"`
+	Row    []any               `json:"row"`
+	Color  string              `json:"color,omitempty"`
+	Pinned bool                `json:"pinned,omitempty"`
+}
+
+// deleteGridRowsRequestDTO is the request body for deleting rows from a grid.
+type deleteGridRowsRequestDTO struct {
+	RowIDs   []apihelpers.StringID `json:"row_ids"`
+	Revision string                `json:"revision,omitempty"`
+}
+
+// revisionResponseDTO is a response containing only revision info.
+type revisionResponseDTO struct {
+	Revision string `json:"revision"`
+}
+
+// moveGridRowsRequestDTO is the request body for moving rows in a grid.
+type moveGridRowsRequestDTO struct {
+	RowID      apihelpers.StringID `json:"row_id"`
+	AfterRowID apihelpers.StringID `json:"after_row_id,omitempty"`
+	Position   *int                `json:"position,omitempty"`
+	RowsCount  *int                `json:"rows_count,omitempty"`
+	Revision   string              `json:"revision,omitempty"`
+}
+
+// addGridColumnsRequestDTO is the request body for adding columns to a grid.
+type addGridColumnsRequestDTO struct {
+	Columns  []newColumnSchemaReqDTO `json:"columns"`
+	Position *int                    `json:"position,omitempty"`
+	Revision string                  `json:"revision,omitempty"`
+}
+
+// newColumnSchemaReqDTO represents a column definition for column creation.
+type newColumnSchemaReqDTO struct {
+	Slug          string   `json:"slug"`
+	Title         string   `json:"title"`
+	Type          string   `json:"type"`
+	Required      bool     `json:"required"`
+	Description   string   `json:"description,omitempty"`
+	Color         string   `json:"color,omitempty"`
+	Format        string   `json:"format,omitempty"`
+	SelectOptions []string `json:"select_options,omitempty"`
+	Multiple      bool     `json:"multiple,omitempty"`
+	MarkRows      bool     `json:"mark_rows,omitempty"`
+	TicketField   string   `json:"ticket_field,omitempty"`
+	Width         *int     `json:"width,omitempty"`
+	WidthUnits    string   `json:"width_units,omitempty"`
+	Pinned        string   `json:"pinned,omitempty"`
+}
+
+// deleteGridColumnsRequestDTO is the request body for deleting columns from a grid.
+type deleteGridColumnsRequestDTO struct {
+	ColumnSlugs []string `json:"column_slugs"`
+	Revision    string   `json:"revision,omitempty"`
+}
+
+// moveGridColumnsRequestDTO is the request body for moving columns in a grid.
+type moveGridColumnsRequestDTO struct {
+	ColumnSlug   string `json:"column_slug"`
+	Position     int    `json:"position"`
+	ColumnsCount *int   `json:"columns_count,omitempty"`
+	Revision     string `json:"revision,omitempty"`
 }

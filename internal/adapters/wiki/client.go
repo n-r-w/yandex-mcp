@@ -59,15 +59,15 @@ func (c *Client) GetPageBySlug(
 	if len(opts.Fields) > 0 {
 		q.Set("fields", strings.Join(opts.Fields, ","))
 	}
-	if opts.RevisionID > 0 {
-		q.Set("revision_id", strconv.Itoa(opts.RevisionID))
+	if opts.RevisionID != "" {
+		q.Set("revision_id", opts.RevisionID)
 	}
 	if opts.RaiseOnRedirect {
 		q.Set("raise_on_redirect", "true")
 	}
 	u.RawQuery = q.Encode()
 
-	var page Page
+	var page pageDTO
 	if _, err := c.apiClient.DoGET(ctx, u.String(), &page, "GetPageBySlug"); err != nil {
 		return nil, err
 	}
@@ -75,8 +75,8 @@ func (c *Client) GetPageBySlug(
 }
 
 // GetPageByID retrieves a page by its ID.
-func (c *Client) GetPageByID(ctx context.Context, id int64, opts domain.WikiGetPageOpts) (*domain.WikiPage, error) {
-	u, err := url.Parse(fmt.Sprintf("%s/v1/pages/%d", c.baseURL, id))
+func (c *Client) GetPageByID(ctx context.Context, id string, opts domain.WikiGetPageOpts) (*domain.WikiPage, error) {
+	u, err := url.Parse(fmt.Sprintf("%s/v1/pages/%s", c.baseURL, id))
 	if err != nil {
 		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
 	}
@@ -85,15 +85,15 @@ func (c *Client) GetPageByID(ctx context.Context, id int64, opts domain.WikiGetP
 	if len(opts.Fields) > 0 {
 		q.Set("fields", strings.Join(opts.Fields, ","))
 	}
-	if opts.RevisionID > 0 {
-		q.Set("revision_id", strconv.Itoa(opts.RevisionID))
+	if opts.RevisionID != "" {
+		q.Set("revision_id", opts.RevisionID)
 	}
 	if opts.RaiseOnRedirect {
 		q.Set("raise_on_redirect", "true")
 	}
 	u.RawQuery = q.Encode()
 
-	var page Page
+	var page pageDTO
 	if _, err := c.apiClient.DoGET(ctx, u.String(), &page, "GetPageByID"); err != nil {
 		return nil, err
 	}
@@ -103,10 +103,10 @@ func (c *Client) GetPageByID(ctx context.Context, id int64, opts domain.WikiGetP
 // ListPageResources lists resources (attachments, grids) for a page.
 func (c *Client) ListPageResources(
 	ctx context.Context,
-	pageID int64,
+	pageID string,
 	opts domain.WikiListResourcesOpts,
 ) (*domain.WikiResourcesPage, error) {
-	u, err := url.Parse(fmt.Sprintf("%s/v1/pages/%d/resources", c.baseURL, pageID))
+	u, err := url.Parse(fmt.Sprintf("%s/v1/pages/%s/resources", c.baseURL, pageID))
 	if err != nil {
 		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
 	}
@@ -134,17 +134,17 @@ func (c *Client) ListPageResources(
 	if opts.Types != "" {
 		q.Set("types", opts.Types)
 	}
-	if opts.PageIDLegacy > 0 {
-		q.Set("page_id", strconv.Itoa(opts.PageIDLegacy))
+	if opts.PageIDLegacy != "" {
+		q.Set("page_id", opts.PageIDLegacy)
 	}
 	u.RawQuery = q.Encode()
 
-	var resp resourcesResponse
+	var resp resourcesResponseDTO
 	if _, err := c.apiClient.DoGET(ctx, u.String(), &resp, "ListPageResources"); err != nil {
 		return nil, err
 	}
 
-	rp := &ResourcesPage{
+	rp := &resourcesPageDTO{
 		Resources:  resp.Items,
 		NextCursor: resp.NextCursor,
 		PrevCursor: resp.PrevCursor,
@@ -155,10 +155,10 @@ func (c *Client) ListPageResources(
 // ListPageGrids lists dynamic tables (grids) for a page.
 func (c *Client) ListPageGrids(
 	ctx context.Context,
-	pageID int64,
+	pageID string,
 	opts domain.WikiListGridsOpts,
 ) (*domain.WikiGridsPage, error) {
-	u, err := url.Parse(fmt.Sprintf("%s/v1/pages/%d/grids", c.baseURL, pageID))
+	u, err := url.Parse(fmt.Sprintf("%s/v1/pages/%s/grids", c.baseURL, pageID))
 	if err != nil {
 		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
 	}
@@ -180,17 +180,17 @@ func (c *Client) ListPageGrids(
 	if opts.OrderDirection != "" {
 		q.Set("order_direction", opts.OrderDirection)
 	}
-	if opts.PageIDLegacy > 0 {
-		q.Set("page_id", strconv.Itoa(opts.PageIDLegacy))
+	if opts.PageIDLegacy != "" {
+		q.Set("page_id", opts.PageIDLegacy)
 	}
 	u.RawQuery = q.Encode()
 
-	var resp gridsResponse
+	var resp gridsResponseDTO
 	if _, err := c.apiClient.DoGET(ctx, u.String(), &resp, "ListPageGrids"); err != nil {
 		return nil, err
 	}
 
-	gp := &GridsPage{
+	gp := &gridsPageDTO{
 		Grids:      resp.Items,
 		NextCursor: resp.NextCursor,
 		PrevCursor: resp.PrevCursor,
@@ -222,15 +222,15 @@ func (c *Client) GetGridByID(
 	if opts.OnlyRows != "" {
 		q.Set("only_rows", opts.OnlyRows)
 	}
-	if opts.Revision > 0 {
-		q.Set("revision", strconv.Itoa(opts.Revision))
+	if opts.Revision != "" {
+		q.Set("revision", opts.Revision)
 	}
 	if opts.Sort != "" {
 		q.Set("sort", opts.Sort)
 	}
 	u.RawQuery = q.Encode()
 
-	var grid Grid
+	var grid gridDTO
 	if _, err := c.apiClient.DoGET(ctx, u.String(), &grid, "GetGridByID"); err != nil {
 		return nil, err
 	}
@@ -243,7 +243,7 @@ func (c *Client) CreatePage(
 ) (*domain.WikiPageCreateResponse, error) {
 	baseURL := c.baseURL + "/v1/pages"
 
-	body := CreatePageRequest{ //nolint:exhaustruct // CloudPage set conditionally
+	body := createPageRequestDTO{ //nolint:exhaustruct // CloudPage set conditionally
 		Slug:       req.Slug,
 		Title:      req.Title,
 		Content:    req.Content,
@@ -252,7 +252,7 @@ func (c *Client) CreatePage(
 	}
 
 	if req.CloudPage != nil {
-		body.CloudPage = &CloudPageRequest{
+		body.CloudPage = &cloudPageRequestDTO{
 			Method:  req.CloudPage.Method,
 			Doctype: req.CloudPage.Doctype,
 		}
@@ -272,7 +272,7 @@ func (c *Client) CreatePage(
 	}
 	u.RawQuery = q.Encode()
 
-	var page Page
+	var page pageDTO
 	if _, err := c.apiClient.DoPOST(ctx, u.String(), body, &page, "CreatePage"); err != nil {
 		return nil, err
 	}
@@ -286,17 +286,17 @@ func (c *Client) CreatePage(
 func (c *Client) UpdatePage(
 	ctx context.Context, req *domain.WikiPageUpdateRequest,
 ) (*domain.WikiPageUpdateResponse, error) {
-	baseURL := fmt.Sprintf("%s/v1/pages/%d", c.baseURL, req.PageID)
+	baseURL := fmt.Sprintf("%s/v1/pages/%s", c.baseURL, req.PageID)
 
-	body := UpdatePageRequest{ //nolint:exhaustruct // Redirect set conditionally
+	body := updatePageRequestDTO{ //nolint:exhaustruct // Redirect set conditionally
 		Title:   req.Title,
 		Content: req.Content,
 	}
 
 	if req.Redirect != nil {
-		body.Redirect = &RedirectRequest{
-			Page: &PageIdentityRequest{
-				ID:   req.Redirect.PageID,
+		body.Redirect = &redirectRequestDTO{
+			Page: &pageIdentityRequestDTO{
+				ID:   apihelpers.StringIDFromPointer(req.Redirect.PageID),
 				Slug: req.Redirect.Slug,
 			},
 		}
@@ -319,7 +319,7 @@ func (c *Client) UpdatePage(
 	}
 	u.RawQuery = q.Encode()
 
-	var page Page
+	var page pageDTO
 	if _, err := c.apiClient.DoPATCH(ctx, u.String(), body, &page, "UpdatePage"); err != nil {
 		return nil, err
 	}
@@ -333,9 +333,9 @@ func (c *Client) UpdatePage(
 func (c *Client) AppendPage(
 	ctx context.Context, req *domain.WikiPageAppendRequest,
 ) (*domain.WikiPageAppendResponse, error) {
-	baseURL := fmt.Sprintf("%s/v1/pages/%d/append-content", c.baseURL, req.PageID)
+	baseURL := fmt.Sprintf("%s/v1/pages/%s/append-content", c.baseURL, req.PageID)
 
-	body := AppendPageRequest{ //nolint:exhaustruct // Body, Section, Anchor set conditionally
+	body := appendPageRequestDTO{ //nolint:exhaustruct // Body, Section, Anchor set conditionally
 		Content: req.Content,
 	}
 
@@ -346,14 +346,14 @@ func (c *Client) AppendPage(
 	}
 
 	if req.Section != nil {
-		body.Section = &SectionRequest{
-			ID:       req.Section.ID,
+		body.Section = &sectionRequestDTO{
+			ID:       apihelpers.StringID(req.Section.ID),
 			Location: req.Section.Location,
 		}
 	}
 
 	if req.Anchor != nil {
-		body.Anchor = &AnchorRequest{
+		body.Anchor = &anchorRequestDTO{
 			Name:     req.Anchor.Name,
 			Fallback: req.Anchor.Fallback,
 			Regex:    req.Anchor.Regex,
@@ -374,7 +374,7 @@ func (c *Client) AppendPage(
 	}
 	u.RawQuery = q.Encode()
 
-	var page Page
+	var page pageDTO
 	if _, err := c.apiClient.DoPOST(ctx, u.String(), body, &page, "AppendPage"); err != nil {
 		return nil, err
 	}
@@ -388,27 +388,27 @@ func (c *Client) AppendPage(
 func (c *Client) CreateGrid(
 	ctx context.Context, req *domain.WikiGridCreateRequest,
 ) (*domain.WikiGridCreateResponse, error) {
-	u := fmt.Sprintf("%s/v1/pages/%d/grids", c.baseURL, req.PageID)
+	u := fmt.Sprintf("%s/v1/pages/%s/grids", c.baseURL, req.PageID)
 
 	if len(req.Fields) > 0 {
 		u += "?fields=" + strings.Join(req.Fields, ",")
 	}
 
-	columns := make([]ColumnCreate, 0, len(req.Columns))
+	columns := make([]columnCreateDTO, 0, len(req.Columns))
 	for _, col := range req.Columns {
-		columns = append(columns, ColumnCreate{
+		columns = append(columns, columnCreateDTO{
 			Slug:  col.Slug,
 			Title: col.Title,
 			Type:  col.Type,
 		})
 	}
 
-	body := CreateGridRequest{
+	body := createGridRequestDTO{
 		Title:   req.Title,
 		Columns: columns,
 	}
 
-	var grid Grid
+	var grid gridDTO
 	if _, err := c.apiClient.DoPOST(ctx, u, body, &grid, "CreateGrid"); err != nil {
 		return nil, err
 	}
@@ -424,21 +424,21 @@ func (c *Client) UpdateGridCells(
 ) (*domain.WikiGridCellsUpdateResponse, error) {
 	u := fmt.Sprintf("%s/v1/grids/%s/cells", c.baseURL, req.GridID)
 
-	cells := make([]CellUpdate, 0, len(req.Cells))
+	cells := make([]cellUpdateDTO, 0, len(req.Cells))
 	for _, cell := range req.Cells {
-		cells = append(cells, CellUpdate{
-			RowID:      strconv.Itoa(cell.RowID),
+		cells = append(cells, cellUpdateDTO{
+			RowID:      apihelpers.StringID(cell.RowID),
 			ColumnSlug: cell.ColumnSlug,
 			Value:      cell.Value,
 		})
 	}
 
-	body := UpdateGridCellsRequest{
+	body := updateGridCellsRequestDTO{
 		Cells:    cells,
 		Revision: req.Revision,
 	}
 
-	var grid Grid
+	var grid gridDTO
 	if _, err := c.apiClient.DoPATCH(ctx, u, body, &grid, "UpdateGridCells"); err != nil {
 		return nil, err
 	}
@@ -448,9 +448,249 @@ func (c *Client) UpdateGridCells(
 	}, nil
 }
 
+// DeletePage deletes a wiki page by its ID.
+func (c *Client) DeletePage(ctx context.Context, pageID string) (*domain.WikiPageDeleteResponse, error) {
+	u := fmt.Sprintf("%s/v1/pages/%s", c.baseURL, pageID)
+
+	var resp deletePageResponseDTO
+	if _, err := c.apiClient.DoRequest(ctx, http.MethodDelete, u, nil, &resp, "DeletePage"); err != nil {
+		return nil, err
+	}
+
+	return &domain.WikiPageDeleteResponse{
+		RecoveryToken: resp.RecoveryToken,
+	}, nil
+}
+
+// ClonePage clones a wiki page to a new location.
+func (c *Client) ClonePage(
+	ctx context.Context, req domain.WikiPageCloneRequest,
+) (*domain.WikiCloneOperationResponse, error) {
+	u := fmt.Sprintf("%s/v1/pages/%s/clone", c.baseURL, req.PageID)
+
+	body := clonePageRequestDTO{
+		Target:      req.Target,
+		Title:       req.Title,
+		SubscribeMe: req.SubscribeMe,
+	}
+
+	var resp cloneOperationResponseDTO
+	if _, err := c.apiClient.DoPOST(ctx, u, body, &resp, "ClonePage"); err != nil {
+		return nil, err
+	}
+
+	return &domain.WikiCloneOperationResponse{
+		OperationID:   resp.Operation.ID.String(),
+		OperationType: resp.Operation.Type,
+		DryRun:        resp.DryRun,
+		StatusURL:     resp.StatusURL,
+	}, nil
+}
+
+// DeleteGrid deletes a wiki grid by its ID.
+func (c *Client) DeleteGrid(ctx context.Context, gridID string) error {
+	u := fmt.Sprintf("%s/v1/grids/%s", c.baseURL, gridID)
+
+	if _, err := c.apiClient.DoDELETE(ctx, u, "DeleteGrid"); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// CloneGrid clones a wiki grid to a new location.
+func (c *Client) CloneGrid(
+	ctx context.Context, req domain.WikiGridCloneRequest,
+) (*domain.WikiCloneOperationResponse, error) {
+	u := fmt.Sprintf("%s/v1/grids/%s/clone", c.baseURL, req.GridID)
+
+	body := cloneGridRequestDTO{
+		Target:   req.Target,
+		Title:    req.Title,
+		WithData: req.WithData,
+	}
+
+	var resp cloneOperationResponseDTO
+	if _, err := c.apiClient.DoPOST(ctx, u, body, &resp, "CloneGrid"); err != nil {
+		return nil, err
+	}
+
+	return &domain.WikiCloneOperationResponse{
+		OperationID:   resp.Operation.ID.String(),
+		OperationType: resp.Operation.Type,
+		DryRun:        resp.DryRun,
+		StatusURL:     resp.StatusURL,
+	}, nil
+}
+
+// AddGridRows adds rows to a grid.
+func (c *Client) AddGridRows(
+	ctx context.Context, req domain.WikiGridRowsAddRequest,
+) (*domain.WikiGridRowsAddResponse, error) {
+	u := fmt.Sprintf("%s/v1/grids/%s/rows", c.baseURL, req.GridID)
+
+	body := addGridRowsRequestDTO{
+		Rows:       req.Rows,
+		AfterRowID: apihelpers.StringID(req.AfterRowID),
+		Position:   req.Position,
+		Revision:   req.Revision,
+	}
+
+	var resp addGridRowsResponseDTO
+	if _, err := c.apiClient.DoPOST(ctx, u, body, &resp, "AddGridRows"); err != nil {
+		return nil, err
+	}
+
+	results := make([]domain.WikiGridRowResult, len(resp.Results))
+	for i, r := range resp.Results {
+		results[i] = domain.WikiGridRowResult{
+			ID:     r.ID.String(),
+			Row:    r.Row,
+			Color:  r.Color,
+			Pinned: r.Pinned,
+		}
+	}
+
+	return &domain.WikiGridRowsAddResponse{
+		Revision: resp.Revision,
+		Results:  results,
+	}, nil
+}
+
+// DeleteGridRows deletes rows from a grid.
+func (c *Client) DeleteGridRows(
+	ctx context.Context, req domain.WikiGridRowsDeleteRequest,
+) (*domain.WikiRevisionResponse, error) {
+	u := fmt.Sprintf("%s/v1/grids/%s/rows", c.baseURL, req.GridID)
+
+	body := deleteGridRowsRequestDTO{
+		RowIDs:   apihelpers.StringsToStringIDs(req.RowIDs),
+		Revision: req.Revision,
+	}
+
+	var resp revisionResponseDTO
+	if _, err := c.apiClient.DoRequest(ctx, http.MethodDelete, u, body, &resp, "DeleteGridRows"); err != nil {
+		return nil, err
+	}
+
+	return &domain.WikiRevisionResponse{
+		Revision: resp.Revision,
+	}, nil
+}
+
+// MoveGridRows moves rows within a grid.
+func (c *Client) MoveGridRows(
+	ctx context.Context, req domain.WikiGridRowsMoveRequest,
+) (*domain.WikiRevisionResponse, error) {
+	u := fmt.Sprintf("%s/v1/grids/%s/rows/move", c.baseURL, req.GridID)
+
+	body := moveGridRowsRequestDTO{
+		RowID:      apihelpers.StringID(req.RowID),
+		AfterRowID: apihelpers.StringID(req.AfterRowID),
+		Position:   req.Position,
+		RowsCount:  req.RowsCount,
+		Revision:   req.Revision,
+	}
+
+	var resp revisionResponseDTO
+	if _, err := c.apiClient.DoPOST(ctx, u, body, &resp, "MoveGridRows"); err != nil {
+		return nil, err
+	}
+
+	return &domain.WikiRevisionResponse{
+		Revision: resp.Revision,
+	}, nil
+}
+
+// AddGridColumns adds columns to a grid.
+func (c *Client) AddGridColumns(
+	ctx context.Context, req domain.WikiGridColumnsAddRequest,
+) (*domain.WikiRevisionResponse, error) {
+	u := fmt.Sprintf("%s/v1/grids/%s/columns", c.baseURL, req.GridID)
+
+	columns := make([]newColumnSchemaReqDTO, len(req.Columns))
+	for i, col := range req.Columns {
+		columns[i] = newColumnSchemaReqDTO{
+			Slug:          col.Slug,
+			Title:         col.Title,
+			Type:          col.Type,
+			Required:      col.Required,
+			Description:   col.Description,
+			Color:         col.Color,
+			Format:        col.Format,
+			SelectOptions: col.SelectOptions,
+			Multiple:      col.Multiple,
+			MarkRows:      col.MarkRows,
+			TicketField:   col.TicketField,
+			Width:         col.Width,
+			WidthUnits:    col.WidthUnits,
+			Pinned:        col.Pinned,
+		}
+	}
+
+	body := addGridColumnsRequestDTO{
+		Columns:  columns,
+		Position: req.Position,
+		Revision: req.Revision,
+	}
+
+	var resp revisionResponseDTO
+	if _, err := c.apiClient.DoPOST(ctx, u, body, &resp, "AddGridColumns"); err != nil {
+		return nil, err
+	}
+
+	return &domain.WikiRevisionResponse{
+		Revision: resp.Revision,
+	}, nil
+}
+
+// DeleteGridColumns deletes columns from a grid.
+func (c *Client) DeleteGridColumns(
+	ctx context.Context, req domain.WikiGridColumnsDeleteRequest,
+) (*domain.WikiRevisionResponse, error) {
+	u := fmt.Sprintf("%s/v1/grids/%s/columns", c.baseURL, req.GridID)
+
+	body := deleteGridColumnsRequestDTO{
+		ColumnSlugs: req.ColumnSlugs,
+		Revision:    req.Revision,
+	}
+
+	var resp revisionResponseDTO
+	if _, err := c.apiClient.DoRequest(ctx, http.MethodDelete, u, body, &resp, "DeleteGridColumns"); err != nil {
+		return nil, err
+	}
+
+	return &domain.WikiRevisionResponse{
+		Revision: resp.Revision,
+	}, nil
+}
+
+// MoveGridColumns moves columns within a grid.
+func (c *Client) MoveGridColumns(
+	ctx context.Context, req domain.WikiGridColumnsMoveRequest,
+) (*domain.WikiRevisionResponse, error) {
+	u := fmt.Sprintf("%s/v1/grids/%s/columns/move", c.baseURL, req.GridID)
+
+	body := moveGridColumnsRequestDTO{
+		ColumnSlug:   req.ColumnSlug,
+		Position:     req.Position,
+		ColumnsCount: req.ColumnsCount,
+		Revision:     req.Revision,
+	}
+
+	var resp revisionResponseDTO
+	if _, err := c.apiClient.DoPOST(ctx, u, body, &resp, "MoveGridColumns"); err != nil {
+		return nil, err
+	}
+
+	return &domain.WikiRevisionResponse{
+		Revision: resp.Revision,
+	}, nil
+}
+
 // parseError converts an HTTP error response into a domain.UpstreamError.
 func (c *Client) parseError(ctx context.Context, statusCode int, body []byte, operation string) error {
-	var errResp errorResponse
+	var errResp errorResponseDTO
 	var code, message string
 
 	// Attempt to parse structured error

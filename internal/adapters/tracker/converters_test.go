@@ -12,7 +12,7 @@ import (
 func TestIssueToTrackerIssue(t *testing.T) {
 	t.Parallel()
 
-	dto := Issue{
+	dto := issueDTO{
 		Self:            "https://api.tracker.yandex.net/v2/issues/QUEUE-1",
 		ID:              "123",
 		Key:             "QUEUE-1",
@@ -23,25 +23,25 @@ func TestIssueToTrackerIssue(t *testing.T) {
 		CreatedAt:       "2024-01-01T09:00:00.000+0000",
 		UpdatedAt:       "2024-01-02T10:00:00.000+0000",
 		ResolvedAt:      "2024-01-03T10:00:00.000+0000",
-		Status: &Status{
+		Status: &statusDTO{
 			Self:    "https://api.tracker.yandex.net/v2/statuses/1",
 			ID:      "1",
 			Key:     "open",
 			Display: "Open",
 		},
-		Type: &Type{
+		Type: &typeDTO{
 			Self:    "https://api.tracker.yandex.net/v2/issuetypes/2",
 			ID:      "2",
 			Key:     "bug",
 			Display: "Bug",
 		},
-		Priority: &Prio{
+		Priority: &prioDTO{
 			Self:    "https://api.tracker.yandex.net/v2/priorities/3",
 			ID:      "3",
 			Key:     "normal",
 			Display: "Normal",
 		},
-		Queue: &Queue{
+		Queue: &queueDTO{
 			Self:           "https://api.tracker.yandex.net/v2/queues/QUEUE",
 			ID:             "10",
 			Key:            "QUEUE",
@@ -53,29 +53,29 @@ func TestIssueToTrackerIssue(t *testing.T) {
 			AllowExternals: false,
 			DenyVoting:     false,
 		},
-		Assignee: &User{
+		Assignee: &userDTO{
 			Self:        "https://api.tracker.yandex.net/v2/users/111",
 			ID:          "111",
-			UID:         0,
+			UID:         "",
 			Login:       "",
 			Display:     "John Doe",
 			FirstName:   "",
 			LastName:    "",
 			Email:       "",
 			CloudUID:    "",
-			PassportUID: 0,
+			PassportUID: "",
 		},
-		CreatedBy: &User{
+		CreatedBy: &userDTO{
 			Self:        "https://api.tracker.yandex.net/v2/users/222",
 			ID:          "222",
-			UID:         0,
+			UID:         "",
 			Login:       "",
 			Display:     "Jane Smith",
 			FirstName:   "",
 			LastName:    "",
 			Email:       "",
 			CloudUID:    "",
-			PassportUID: 0,
+			PassportUID: "",
 		},
 		UpdatedBy: nil,
 		Votes:     10,
@@ -85,7 +85,7 @@ func TestIssueToTrackerIssue(t *testing.T) {
 	result := issueToTrackerIssue(dto)
 
 	assert.Equal(t, dto.Self, result.Self)
-	assert.Equal(t, dto.ID, result.ID)
+	assert.Equal(t, string(dto.ID), result.ID)
 	assert.Equal(t, dto.Key, result.Key)
 	assert.Equal(t, dto.Version, result.Version)
 	assert.Equal(t, dto.Summary, result.Summary)
@@ -119,7 +119,7 @@ func TestIssueToTrackerIssue(t *testing.T) {
 func TestIssueToTrackerIssue_NilNestedObjects(t *testing.T) {
 	t.Parallel()
 
-	dto := Issue{
+	dto := issueDTO{
 		Self:            "https://api.tracker.yandex.net/v2/issues/QUEUE-1",
 		ID:              "123",
 		Key:             "QUEUE-1",
@@ -158,7 +158,7 @@ func TestStatusToTrackerStatus(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		input    *Status
+		input    *statusDTO
 		expected *domain.TrackerStatus
 	}{
 		{
@@ -168,7 +168,7 @@ func TestStatusToTrackerStatus(t *testing.T) {
 		},
 		{
 			name: "full status",
-			input: &Status{
+			input: &statusDTO{
 				Self:    "https://api.tracker.yandex.net/v2/statuses/1",
 				ID:      "1",
 				Key:     "open",
@@ -197,7 +197,7 @@ func TestUserToTrackerUser(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		input    *User
+		input    *userDTO
 		expected *domain.TrackerUser
 	}{
 		{
@@ -207,29 +207,29 @@ func TestUserToTrackerUser(t *testing.T) {
 		},
 		{
 			name: "full user",
-			input: &User{
+			input: &userDTO{
 				Self:        "https://api.tracker.yandex.net/v2/users/123",
 				ID:          "123",
-				UID:         456,
+				UID:         "456",
 				Login:       "john.doe",
 				Display:     "John Doe",
 				FirstName:   "John",
 				LastName:    "Doe",
 				Email:       "john.doe@example.com",
 				CloudUID:    "cloud-789",
-				PassportUID: 1001,
+				PassportUID: "1001",
 			},
 			expected: &domain.TrackerUser{
 				Self:        "https://api.tracker.yandex.net/v2/users/123",
 				ID:          "123",
-				UID:         456,
+				UID:         "456",
 				Login:       "john.doe",
 				Display:     "John Doe",
 				FirstName:   "John",
 				LastName:    "Doe",
 				Email:       "john.doe@example.com",
 				CloudUID:    "cloud-789",
-				PassportUID: 1001,
+				PassportUID: "1001",
 			},
 		},
 	}
@@ -246,22 +246,22 @@ func TestUserToTrackerUser(t *testing.T) {
 func TestQueueToTrackerQueue(t *testing.T) {
 	t.Parallel()
 
-	lead := &User{
+	lead := &userDTO{
 		Self:        "https://api.tracker.yandex.net/v2/users/100",
 		ID:          "100",
-		UID:         0,
+		UID:         "",
 		Login:       "",
 		Display:     "Team Lead",
 		FirstName:   "",
 		LastName:    "",
 		Email:       "",
 		CloudUID:    "",
-		PassportUID: 0,
+		PassportUID: "",
 	}
 
 	tests := []struct {
 		name     string
-		input    *Queue
+		input    *queueDTO
 		expected *domain.TrackerQueue
 	}{
 		{
@@ -271,7 +271,7 @@ func TestQueueToTrackerQueue(t *testing.T) {
 		},
 		{
 			name: "full queue with lead",
-			input: &Queue{
+			input: &queueDTO{
 				Self:           "https://api.tracker.yandex.net/v2/queues/PROJ",
 				ID:             "50",
 				Key:            "PROJ",
@@ -292,15 +292,15 @@ func TestQueueToTrackerQueue(t *testing.T) {
 				Version: 3,
 				Lead: &domain.TrackerUser{
 					Self:        lead.Self,
-					ID:          lead.ID,
-					UID:         0,
+					ID:          lead.ID.String(),
+					UID:         "",
 					Login:       "",
 					Display:     lead.Display,
 					FirstName:   "",
 					LastName:    "",
 					Email:       "",
 					CloudUID:    "",
-					PassportUID: 0,
+					PassportUID: "",
 				},
 				AssignAuto:     true,
 				AllowExternals: false,
@@ -309,7 +309,7 @@ func TestQueueToTrackerQueue(t *testing.T) {
 		},
 		{
 			name: "queue without lead",
-			input: &Queue{
+			input: &queueDTO{
 				Self:           "https://api.tracker.yandex.net/v2/queues/TEST",
 				ID:             "60",
 				Key:            "TEST",
@@ -348,8 +348,8 @@ func TestQueueToTrackerQueue(t *testing.T) {
 func TestCommentToTrackerComment(t *testing.T) {
 	t.Parallel()
 
-	dto := Comment{
-		ID:        999,
+	dto := commentDTO{
+		ID:        "999",
 		LongID:    "long-id-999",
 		Self:      "https://api.tracker.yandex.net/v2/issues/QUEUE-1/comments/999",
 		Text:      "This is a test comment",
@@ -358,36 +358,36 @@ func TestCommentToTrackerComment(t *testing.T) {
 		Transport: "internal",
 		CreatedAt: "2024-01-05T11:00:00.000+0000",
 		UpdatedAt: "2024-01-05T12:00:00.000+0000",
-		CreatedBy: &User{
+		CreatedBy: &userDTO{
 			Self:        "https://api.tracker.yandex.net/v2/users/300",
 			ID:          "300",
-			UID:         0,
+			UID:         "",
 			Login:       "",
 			Display:     "Commenter",
 			FirstName:   "",
 			LastName:    "",
 			Email:       "",
 			CloudUID:    "",
-			PassportUID: 0,
+			PassportUID: "",
 		},
-		UpdatedBy: &User{
+		UpdatedBy: &userDTO{
 			Self:        "https://api.tracker.yandex.net/v2/users/301",
 			ID:          "301",
-			UID:         0,
+			UID:         "",
 			Login:       "",
 			Display:     "Editor",
 			FirstName:   "",
 			LastName:    "",
 			Email:       "",
 			CloudUID:    "",
-			PassportUID: 0,
+			PassportUID: "",
 		},
 	}
 
 	result := commentToTrackerComment(dto)
 
-	assert.Equal(t, dto.ID, result.ID)
-	assert.Equal(t, dto.LongID, result.LongID)
+	assert.Equal(t, string(dto.ID), result.ID)
+	assert.EqualValues(t, dto.LongID, result.LongID)
 	assert.Equal(t, dto.Self, result.Self)
 	assert.Equal(t, dto.Text, result.Text)
 	assert.Equal(t, dto.Version, result.Version)
@@ -406,11 +406,11 @@ func TestCommentToTrackerComment(t *testing.T) {
 func TestTransitionToTrackerTransition(t *testing.T) {
 	t.Parallel()
 
-	dto := Transition{
+	dto := transitionDTO{
 		ID:      "tr-1",
 		Display: "Close",
 		Self:    "https://api.tracker.yandex.net/v2/issues/QUEUE-1/transitions/tr-1",
-		To: &Status{
+		To: &statusDTO{
 			Self:    "https://api.tracker.yandex.net/v2/statuses/closed",
 			ID:      "closed-id",
 			Key:     "closed",
@@ -420,7 +420,7 @@ func TestTransitionToTrackerTransition(t *testing.T) {
 
 	result := transitionToTrackerTransition(dto)
 
-	assert.Equal(t, dto.ID, result.ID)
+	assert.Equal(t, string(dto.ID), result.ID)
 	assert.Equal(t, dto.Display, result.Display)
 	assert.Equal(t, dto.Self, result.Self)
 	require.NotNil(t, result.To)
@@ -431,94 +431,90 @@ func TestTransitionToTrackerTransition(t *testing.T) {
 func TestSearchIssuesResultToTrackerIssuesPage(t *testing.T) {
 	t.Parallel()
 
-	dto := SearchIssuesResult{
-		Issues: []Issue{
-			{
-				Self:            "https://api.tracker.yandex.net/v2/issues/QUEUE-1",
-				ID:              "1",
-				Key:             "QUEUE-1",
-				Version:         0,
-				Summary:         "First issue",
-				Description:     "",
-				StatusStartTime: "",
-				CreatedAt:       "",
-				UpdatedAt:       "",
-				ResolvedAt:      "",
-				Status: &Status{
-					Self:    "https://api.tracker.yandex.net/v2/statuses/open",
-					ID:      "1",
-					Key:     "open",
-					Display: "Open",
-				},
-				Type:      nil,
-				Priority:  nil,
-				Queue:     nil,
-				Assignee:  nil,
-				CreatedBy: nil,
-				UpdatedBy: nil,
-				Votes:     0,
-				Favorite:  false,
+	issues := []issueDTO{
+		{
+			Self:            "https://api.tracker.yandex.net/v2/issues/QUEUE-1",
+			ID:              "1",
+			Key:             "QUEUE-1",
+			Version:         0,
+			Summary:         "First issue",
+			Description:     "",
+			StatusStartTime: "",
+			CreatedAt:       "",
+			UpdatedAt:       "",
+			ResolvedAt:      "",
+			Status: &statusDTO{
+				Self:    "https://api.tracker.yandex.net/v2/statuses/open",
+				ID:      "1",
+				Key:     "open",
+				Display: "Open",
 			},
-			{
-				Self:            "https://api.tracker.yandex.net/v2/issues/QUEUE-2",
-				ID:              "2",
-				Key:             "QUEUE-2",
-				Version:         0,
-				Summary:         "Second issue",
-				Description:     "",
-				StatusStartTime: "",
-				CreatedAt:       "",
-				UpdatedAt:       "",
-				ResolvedAt:      "",
-				Status:          nil,
-				Type:            nil,
-				Priority:        nil,
-				Queue:           nil,
-				Assignee:        nil,
-				CreatedBy:       nil,
-				UpdatedBy:       nil,
-				Votes:           0,
-				Favorite:        false,
-			},
+			Type:      nil,
+			Priority:  nil,
+			Queue:     nil,
+			Assignee:  nil,
+			CreatedBy: nil,
+			UpdatedBy: nil,
+			Votes:     0,
+			Favorite:  false,
 		},
-		TotalCount:  100,
-		TotalPages:  10,
-		ScrollID:    "scroll-abc",
-		ScrollToken: "token-xyz",
-		NextLink:    "https://api.tracker.yandex.net/v2/issues?page=2",
+		{
+			Self:            "https://api.tracker.yandex.net/v2/issues/QUEUE-2",
+			ID:              "2",
+			Key:             "QUEUE-2",
+			Version:         0,
+			Summary:         "Second issue",
+			Description:     "",
+			StatusStartTime: "",
+			CreatedAt:       "",
+			UpdatedAt:       "",
+			ResolvedAt:      "",
+			Status:          nil,
+			Type:            nil,
+			Priority:        nil,
+			Queue:           nil,
+			Assignee:        nil,
+			CreatedBy:       nil,
+			UpdatedBy:       nil,
+			Votes:           0,
+			Favorite:        false,
+		},
 	}
+	totalCount := 100
+	totalPages := 10
+	scrollID := "scroll-abc"
+	scrollToken := "token-xyz"
+	nextLink := "https://api.tracker.yandex.net/v2/issues?page=2"
 
-	result := searchIssuesResultToTrackerIssuesPage(dto)
+	result := searchIssuesResultToTrackerIssuesPage(issues, totalCount, totalPages, scrollID, scrollToken, nextLink)
 
 	assert.Len(t, result.Issues, 2)
-	assert.Equal(t, dto.Issues[0].Key, result.Issues[0].Key)
-	assert.Equal(t, dto.Issues[0].Summary, result.Issues[0].Summary)
+	assert.Equal(t, issues[0].Key, result.Issues[0].Key)
+	assert.Equal(t, issues[0].Summary, result.Issues[0].Summary)
 	require.NotNil(t, result.Issues[0].Status)
-	assert.Equal(t, dto.Issues[0].Status.Display, result.Issues[0].Status.Display)
+	assert.Equal(t, issues[0].Status.Display, result.Issues[0].Status.Display)
 
-	assert.Equal(t, dto.Issues[1].Key, result.Issues[1].Key)
+	assert.Equal(t, issues[1].Key, result.Issues[1].Key)
 	assert.Nil(t, result.Issues[1].Status)
 
-	assert.Equal(t, dto.TotalCount, result.TotalCount)
-	assert.Equal(t, dto.TotalPages, result.TotalPages)
-	assert.Equal(t, dto.ScrollID, result.ScrollID)
-	assert.Equal(t, dto.ScrollToken, result.ScrollToken)
-	assert.Equal(t, dto.NextLink, result.NextLink)
+	assert.Equal(t, totalCount, result.TotalCount)
+	assert.Equal(t, totalPages, result.TotalPages)
+	assert.Equal(t, scrollID, result.ScrollID)
+	assert.Equal(t, scrollToken, result.ScrollToken)
+	assert.Equal(t, nextLink, result.NextLink)
 }
 
 func TestSearchIssuesResultToTrackerIssuesPage_EmptyIssues(t *testing.T) {
 	t.Parallel()
 
-	dto := SearchIssuesResult{
-		Issues:      []Issue{},
-		TotalCount:  0,
-		TotalPages:  0,
-		ScrollID:    "",
-		ScrollToken: "",
-		NextLink:    "",
-	}
+	issues := []issueDTO{}
+	totalCount := 0
+	totalPages := 0
+	scrollID := ""
+	scrollToken := ""
+	nextLink := ""
 
-	result := searchIssuesResultToTrackerIssuesPage(dto)
+	result := searchIssuesResultToTrackerIssuesPage(issues, totalCount, totalPages, scrollID, scrollToken, nextLink)
 
 	assert.Empty(t, result.Issues)
 	assert.Zero(t, result.TotalCount)
@@ -528,63 +524,61 @@ func TestSearchIssuesResultToTrackerIssuesPage_EmptyIssues(t *testing.T) {
 func TestListQueuesResultToTrackerQueuesPage(t *testing.T) {
 	t.Parallel()
 
-	lead := &User{
+	lead := &userDTO{
 		Self:        "https://api.tracker.yandex.net/v2/users/lead",
 		ID:          "lead-id",
-		UID:         0,
+		UID:         "",
 		Login:       "",
 		Display:     "Queue Lead",
 		FirstName:   "",
 		LastName:    "",
 		Email:       "",
 		CloudUID:    "",
-		PassportUID: 0,
+		PassportUID: "",
 	}
 
-	dto := ListQueuesResult{
-		Queues: []Queue{
-			{
-				Self:           "https://api.tracker.yandex.net/v2/queues/PROJ1",
-				ID:             "1",
-				Key:            "PROJ1",
-				Display:        "Project One",
-				Name:           "Project One Name",
-				Version:        5,
-				Lead:           lead,
-				AssignAuto:     false,
-				AllowExternals: false,
-				DenyVoting:     false,
-			},
-			{
-				Self:           "https://api.tracker.yandex.net/v2/queues/PROJ2",
-				ID:             "2",
-				Key:            "PROJ2",
-				Display:        "Project Two",
-				Name:           "",
-				Version:        0,
-				Lead:           nil,
-				AssignAuto:     false,
-				AllowExternals: false,
-				DenyVoting:     false,
-			},
+	queues := []queueDTO{
+		{
+			Self:           "https://api.tracker.yandex.net/v2/queues/PROJ1",
+			ID:             "1",
+			Key:            "PROJ1",
+			Display:        "Project One",
+			Name:           "Project One Name",
+			Version:        5,
+			Lead:           lead,
+			AssignAuto:     false,
+			AllowExternals: false,
+			DenyVoting:     false,
 		},
-		TotalCount: 50,
-		TotalPages: 5,
+		{
+			Self:           "https://api.tracker.yandex.net/v2/queues/PROJ2",
+			ID:             "2",
+			Key:            "PROJ2",
+			Display:        "Project Two",
+			Name:           "",
+			Version:        0,
+			Lead:           nil,
+			AssignAuto:     false,
+			AllowExternals: false,
+			DenyVoting:     false,
+		},
 	}
+	totalCount := 50
+	totalPages := 5
 
-	result := listQueuesResultToTrackerQueuesPage(dto)
+	result := listQueuesResultToTrackerQueuesPage(queues, totalCount, totalPages)
 
 	assert.Len(t, result.Queues, 2)
-	assert.Equal(t, dto.Queues[0].Key, result.Queues[0].Key)
-	assert.Equal(t, dto.Queues[0].Name, result.Queues[0].Name)
+	assert.Equal(t, queues[0].Key, result.Queues[0].Key)
+	assert.Equal(t, queues[0].Name, result.Queues[0].Name)
 	require.NotNil(t, result.Queues[0].Lead)
 	assert.Equal(t, lead.Display, result.Queues[0].Lead.Display)
 
-	assert.Equal(t, dto.Queues[1].Key, result.Queues[1].Key)
+	assert.Equal(t, queues[1].Key, result.Queues[1].Key)
 	assert.Nil(t, result.Queues[1].Lead)
 
-	assert.Equal(t, dto.TotalCount, result.TotalCount)
-	assert.Equal(t, dto.TotalPages, result.TotalPages)
+	assert.Equal(t, totalCount, result.TotalCount)
+	assert.Equal(t, totalPages, result.TotalPages)
 }
 
 func TestQueueUnmarshalJSONWithNumericID(t *testing.T) {
@@ -625,14 +619,14 @@ func TestQueueUnmarshalJSONWithNumericID(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			var q Queue
+			var q queueDTO
 			err := json.Unmarshal([]byte(tt.jsonData), &q)
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), "unsupported queue ID type")
 			} else {
 				require.NoError(t, err)
-				assert.Equal(t, tt.wantID, q.ID)
+				assert.EqualValues(t, tt.wantID, q.ID)
 			}
 		})
 	}
@@ -641,61 +635,59 @@ func TestQueueUnmarshalJSONWithNumericID(t *testing.T) {
 func TestListCommentsResultToTrackerCommentsPage(t *testing.T) {
 	t.Parallel()
 
-	dto := ListCommentsResult{
-		Comments: []Comment{
-			{
-				ID:        1,
-				LongID:    "long-1",
-				Self:      "https://api.tracker.yandex.net/v2/issues/QUEUE-1/comments/1",
-				Text:      "First comment",
-				Version:   0,
-				Type:      "",
-				Transport: "",
-				CreatedAt: "",
-				UpdatedAt: "",
-				CreatedBy: &User{
-					Self:        "https://api.tracker.yandex.net/v2/users/author",
-					ID:          "author-id",
-					UID:         0,
-					Login:       "",
-					Display:     "Author",
-					FirstName:   "",
-					LastName:    "",
-					Email:       "",
-					CloudUID:    "",
-					PassportUID: 0,
-				},
-				UpdatedBy: nil,
+	comments := []commentDTO{
+		{
+			ID:        "1",
+			LongID:    "long-1",
+			Self:      "https://api.tracker.yandex.net/v2/issues/QUEUE-1/comments/1",
+			Text:      "First comment",
+			Version:   0,
+			Type:      "",
+			Transport: "",
+			CreatedAt: "",
+			UpdatedAt: "",
+			CreatedBy: &userDTO{
+				Self:        "https://api.tracker.yandex.net/v2/users/author",
+				ID:          "author-id",
+				UID:         "",
+				Login:       "",
+				Display:     "Author",
+				FirstName:   "",
+				LastName:    "",
+				Email:       "",
+				CloudUID:    "",
+				PassportUID: "",
 			},
-			{
-				ID:        2,
-				LongID:    "long-2",
-				Self:      "https://api.tracker.yandex.net/v2/issues/QUEUE-1/comments/2",
-				Text:      "Second comment",
-				Version:   0,
-				Type:      "",
-				Transport: "",
-				CreatedAt: "",
-				UpdatedAt: "",
-				CreatedBy: nil,
-				UpdatedBy: nil,
-			},
+			UpdatedBy: nil,
 		},
-		NextLink: "https://api.tracker.yandex.net/v2/issues/QUEUE-1/comments?id=3",
+		{
+			ID:        "2",
+			LongID:    "long-2",
+			Self:      "https://api.tracker.yandex.net/v2/issues/QUEUE-1/comments/2",
+			Text:      "Second comment",
+			Version:   0,
+			Type:      "",
+			Transport: "",
+			CreatedAt: "",
+			UpdatedAt: "",
+			CreatedBy: nil,
+			UpdatedBy: nil,
+		},
 	}
+	nextLink := "https://api.tracker.yandex.net/v2/issues/QUEUE-1/comments?id=3"
 
-	result := listCommentsResultToTrackerCommentsPage(dto)
+	result := listCommentsResultToTrackerCommentsPage(comments, nextLink)
 
 	assert.Len(t, result.Comments, 2)
-	assert.Equal(t, dto.Comments[0].ID, result.Comments[0].ID)
-	assert.Equal(t, dto.Comments[0].Text, result.Comments[0].Text)
+	assert.EqualValues(t, comments[0].ID, result.Comments[0].ID)
+	assert.Equal(t, comments[0].Text, result.Comments[0].Text)
 	require.NotNil(t, result.Comments[0].CreatedBy)
-	assert.Equal(t, dto.Comments[0].CreatedBy.Display, result.Comments[0].CreatedBy.Display)
+	assert.Equal(t, comments[0].CreatedBy.Display, result.Comments[0].CreatedBy.Display)
 
-	assert.Equal(t, dto.Comments[1].ID, result.Comments[1].ID)
+	assert.EqualValues(t, comments[1].ID, result.Comments[1].ID)
 	assert.Nil(t, result.Comments[1].CreatedBy)
 
-	assert.Equal(t, dto.NextLink, result.NextLink)
+	assert.Equal(t, nextLink, result.NextLink)
 }
 
 func TestPrioToTrackerPriority(t *testing.T) {
@@ -703,7 +695,7 @@ func TestPrioToTrackerPriority(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		input    *Prio
+		input    *prioDTO
 		expected *domain.TrackerPriority
 	}{
 		{
@@ -713,7 +705,7 @@ func TestPrioToTrackerPriority(t *testing.T) {
 		},
 		{
 			name: "full priority",
-			input: &Prio{
+			input: &prioDTO{
 				Self:    "https://api.tracker.yandex.net/v2/priorities/critical",
 				ID:      "critical-id",
 				Key:     "critical",
@@ -742,7 +734,7 @@ func TestTypeToTrackerIssueType(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		input    *Type
+		input    *typeDTO
 		expected *domain.TrackerIssueType
 	}{
 		{
@@ -752,7 +744,7 @@ func TestTypeToTrackerIssueType(t *testing.T) {
 		},
 		{
 			name: "full type",
-			input: &Type{
+			input: &typeDTO{
 				Self:    "https://api.tracker.yandex.net/v2/issuetypes/task",
 				ID:      "task-id",
 				Key:     "task",
@@ -774,4 +766,126 @@ func TestTypeToTrackerIssueType(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+func TestBuildUpdateIssueProject_JSONMarshal(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		primary      int
+		secondaryAdd []int
+		expected     string
+	}{
+		{
+			name:         "primary_only",
+			primary:      123,
+			secondaryAdd: nil,
+			expected:     `{"primary":123}`,
+		},
+		{
+			name:         "secondary_add_only",
+			primary:      0,
+			secondaryAdd: []int{1, 2},
+			expected:     `{"secondary":{"add":[1,2]}}`,
+		},
+		{
+			name:         "both_primary_and_secondary",
+			primary:      123,
+			secondaryAdd: []int{456, 789},
+			expected:     `{"primary":123,"secondary":{"add":[456,789]}}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			result := buildUpdateIssueProject(tt.primary, tt.secondaryAdd)
+			require.NotNil(t, result)
+
+			jsonBytes, err := json.Marshal(result)
+			require.NoError(t, err)
+			assert.JSONEq(t, tt.expected, string(jsonBytes))
+		})
+	}
+}
+
+func TestBuildUpdateIssueProject_Nil(t *testing.T) {
+	t.Parallel()
+
+	result := buildUpdateIssueProject(0, nil)
+	assert.Nil(t, result)
+}
+
+func TestBuildUpdateIssueSprint_JSONMarshal(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		sprintIDs []string
+		expected  string
+	}{
+		{
+			name:      "single_sprint",
+			sprintIDs: []string{"3"},
+			expected:  `[{"id":"3"}]`,
+		},
+		{
+			name:      "multiple_sprints",
+			sprintIDs: []string{"3", "2"},
+			expected:  `[{"id":"3"},{"id":"2"}]`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			result := buildUpdateIssueSprint(tt.sprintIDs)
+			require.NotNil(t, result)
+
+			jsonBytes, err := json.Marshal(result)
+			require.NoError(t, err)
+			assert.JSONEq(t, tt.expected, string(jsonBytes))
+		})
+	}
+}
+
+func TestBuildUpdateIssueSprint_Nil(t *testing.T) {
+	t.Parallel()
+
+	result := buildUpdateIssueSprint(nil)
+	assert.Nil(t, result)
+}
+
+func TestUpdateIssueRequest_FullJSONMarshal(t *testing.T) {
+	t.Parallel()
+
+	req := updateIssueRequestDTO{
+		Summary:     "",
+		Description: "",
+		Type:        "",
+		Priority:    "",
+		Assignee:    "",
+		Version:     0,
+		Project:     buildUpdateIssueProject(123, []int{456}),
+		Sprint:      buildUpdateIssueSprint([]string{"s1", "s2"}),
+	}
+
+	jsonBytes, err := json.Marshal(req)
+	require.NoError(t, err)
+
+	expected := `{
+		"project": {
+			"primary": 123,
+			"secondary": {"add": [456]}
+		},
+		"sprint": [
+			{"id": "s1"},
+			{"id": "s2"}
+		]
+	}`
+
+	assert.JSONEq(t, expected, string(jsonBytes))
 }

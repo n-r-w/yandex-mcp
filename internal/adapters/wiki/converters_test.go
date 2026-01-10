@@ -18,13 +18,13 @@ func TestPageToWikiPage(t *testing.T) {
 
 	t.Run("converts all fields including nested structs", func(t *testing.T) {
 		t.Parallel()
-		dto := &Page{
-			ID:       123,
+		dto := &pageDTO{
+			ID:       "123",
 			PageType: "wiki_page",
 			Slug:     "users/docs/readme",
 			Title:    "Readme",
 			Content:  "# Hello World",
-			Attributes: &Attributes{
+			Attributes: &attributesDTO{
 				CommentsCount:   5,
 				CommentsEnabled: true,
 				CreatedAt:       "2024-01-01T10:00:00Z",
@@ -34,8 +34,8 @@ func TestPageToWikiPage(t *testing.T) {
 				IsCollaborative: true,
 				IsDraft:         false,
 			},
-			Redirect: &Redirect{
-				PageID: 456,
+			Redirect: &redirectDTO{
+				PageID: "456",
 				Slug:   "users/docs/old-readme",
 			},
 		}
@@ -43,7 +43,7 @@ func TestPageToWikiPage(t *testing.T) {
 		result := pageToWikiPage(dto)
 
 		require.NotNil(t, result)
-		assert.Equal(t, int64(123), result.ID)
+		assert.Equal(t, "123", result.ID)
 		assert.Equal(t, "wiki_page", result.PageType)
 		assert.Equal(t, "users/docs/readme", result.Slug)
 		assert.Equal(t, "Readme", result.Title)
@@ -60,14 +60,14 @@ func TestPageToWikiPage(t *testing.T) {
 		assert.False(t, result.Attributes.IsDraft)
 
 		require.NotNil(t, result.Redirect)
-		assert.Equal(t, int64(456), result.Redirect.PageID)
+		assert.Equal(t, "456", result.Redirect.PageID)
 		assert.Equal(t, "users/docs/old-readme", result.Redirect.Slug)
 	})
 
 	t.Run("handles nil attributes and redirect", func(t *testing.T) {
 		t.Parallel()
-		dto := &Page{
-			ID:         789,
+		dto := &pageDTO{
+			ID:         "789",
 			PageType:   "wiki_page",
 			Slug:       "test",
 			Title:      "Test",
@@ -79,7 +79,7 @@ func TestPageToWikiPage(t *testing.T) {
 		result := pageToWikiPage(dto)
 
 		require.NotNil(t, result)
-		assert.Equal(t, int64(789), result.ID)
+		assert.Equal(t, "789", result.ID)
 		assert.Nil(t, result.Attributes)
 		assert.Nil(t, result.Redirect)
 	})
@@ -98,7 +98,7 @@ func TestResourceToWikiResource_Polymorphism(t *testing.T) {
 	t.Run("attachment type populates Attachment field", func(t *testing.T) {
 		t.Parallel()
 		// Simulates the map[string]any that json.Unmarshal produces
-		dto := &Resource{
+		dto := &resourceDTO{
 			Type: "attachment",
 			Item: map[string]any{
 				"id":           float64(100),
@@ -118,7 +118,7 @@ func TestResourceToWikiResource_Polymorphism(t *testing.T) {
 		assert.Equal(t, "attachment", result.Type)
 
 		require.NotNil(t, result.Attachment, "Attachment pointer should be set")
-		assert.Equal(t, int64(100), result.Attachment.ID)
+		assert.Equal(t, "100", result.Attachment.ID)
 		assert.Equal(t, "document.pdf", result.Attachment.Name)
 		assert.Equal(t, int64(1024), result.Attachment.Size)
 		assert.Equal(t, "application/pdf", result.Attachment.MIMEType)
@@ -132,7 +132,7 @@ func TestResourceToWikiResource_Polymorphism(t *testing.T) {
 
 	t.Run("sharepoint_resource type populates Sharepoint field", func(t *testing.T) {
 		t.Parallel()
-		dto := &Resource{
+		dto := &resourceDTO{
 			Type: "sharepoint_resource",
 			Item: map[string]any{
 				"id":         float64(200),
@@ -152,7 +152,7 @@ func TestResourceToWikiResource_Polymorphism(t *testing.T) {
 		assert.Nil(t, result.Grid, "Grid pointer should be nil for sharepoint_resource type")
 
 		require.NotNil(t, result.Sharepoint, "Sharepoint pointer should be set")
-		assert.Equal(t, int64(200), result.Sharepoint.ID)
+		assert.Equal(t, "200", result.Sharepoint.ID)
 		assert.Equal(t, "Budget 2024", result.Sharepoint.Title)
 		assert.Equal(t, "xlsx", result.Sharepoint.Doctype)
 		assert.Equal(t, "2024-02-20T14:00:00Z", result.Sharepoint.CreatedAt)
@@ -160,7 +160,7 @@ func TestResourceToWikiResource_Polymorphism(t *testing.T) {
 
 	t.Run("grid type populates Grid field", func(t *testing.T) {
 		t.Parallel()
-		dto := &Resource{
+		dto := &resourceDTO{
 			Type: "grid",
 			Item: map[string]any{
 				"id":         "550e8400-e29b-41d4-a716-446655440000",
@@ -186,7 +186,7 @@ func TestResourceToWikiResource_Polymorphism(t *testing.T) {
 
 	t.Run("unknown type leaves all pointers nil", func(t *testing.T) {
 		t.Parallel()
-		dto := &Resource{
+		dto := &resourceDTO{
 			Type: "future_resource_type",
 			Item: map[string]any{"some_field": "some_value"},
 		}
@@ -203,7 +203,7 @@ func TestResourceToWikiResource_Polymorphism(t *testing.T) {
 
 	t.Run("nil item leaves all pointers nil", func(t *testing.T) {
 		t.Parallel()
-		dto := &Resource{
+		dto := &resourceDTO{
 			Type: "attachment",
 			Item: nil,
 		}
@@ -231,8 +231,8 @@ func TestResourcesPageToWikiResourcesPage(t *testing.T) {
 
 	t.Run("converts multiple resources with pagination cursors", func(t *testing.T) {
 		t.Parallel()
-		dto := &ResourcesPage{
-			Resources: []Resource{
+		dto := &resourcesPageDTO{
+			Resources: []resourceDTO{
 				{
 					Type: "attachment",
 					Item: map[string]any{
@@ -278,8 +278,8 @@ func TestResourcesPageToWikiResourcesPage(t *testing.T) {
 
 	t.Run("empty resources slice converts to empty slice", func(t *testing.T) {
 		t.Parallel()
-		dto := &ResourcesPage{
-			Resources:  []Resource{},
+		dto := &resourcesPageDTO{
+			Resources:  []resourceDTO{},
 			NextCursor: "",
 			PrevCursor: "",
 		}
@@ -304,7 +304,7 @@ func TestGridRowToWikiGridRow_CellsMapping(t *testing.T) {
 
 	t.Run("converts various cell value types to strings", func(t *testing.T) {
 		t.Parallel()
-		dto := &GridRow{
+		dto := &gridRowDTO{
 			ID: "row-123",
 			Cells: map[string]any{
 				"text_col":    "hello world",
@@ -331,7 +331,7 @@ func TestGridRowToWikiGridRow_CellsMapping(t *testing.T) {
 
 	t.Run("empty cells map converts to empty map", func(t *testing.T) {
 		t.Parallel()
-		dto := &GridRow{
+		dto := &gridRowDTO{
 			ID:    "empty-row",
 			Cells: map[string]any{},
 		}
@@ -354,14 +354,14 @@ func TestGridToWikiGrid(t *testing.T) {
 
 	t.Run("converts grid with structure and rows", func(t *testing.T) {
 		t.Parallel()
-		dto := &Grid{
+		dto := &gridDTO{
 			ID:    "grid-456",
 			Title: "Employee Directory",
-			Structure: []Column{
+			Structure: []columnDTO{
 				{Slug: "name", Title: "Name", Type: "string"},
 				{Slug: "age", Title: "Age", Type: "number"},
 			},
-			Rows: []GridRow{
+			Rows: []gridRowDTO{
 				{
 					ID: "row-1",
 					Cells: map[string]any{
@@ -380,7 +380,7 @@ func TestGridToWikiGrid(t *testing.T) {
 			Revision:       "rev-789",
 			CreatedAt:      "2024-05-01T08:00:00Z",
 			RichTextFormat: "markdown",
-			Attributes: &Attributes{
+			Attributes: &attributesDTO{
 				CommentsCount:   10,
 				CommentsEnabled: true,
 				CreatedAt:       "2024-05-01T08:00:00Z",
@@ -421,11 +421,11 @@ func TestGridToWikiGrid(t *testing.T) {
 
 	t.Run("handles nil attributes", func(t *testing.T) {
 		t.Parallel()
-		dto := &Grid{
+		dto := &gridDTO{
 			ID:             "grid-minimal",
 			Title:          "Minimal Grid",
-			Structure:      []Column{},
-			Rows:           []GridRow{},
+			Structure:      []columnDTO{},
+			Rows:           []gridRowDTO{},
 			Revision:       "1",
 			CreatedAt:      "2024-06-01T00:00:00Z",
 			RichTextFormat: "",
@@ -453,8 +453,8 @@ func TestGridsPageToWikiGridsPage(t *testing.T) {
 
 	t.Run("converts grids page with summaries and cursors", func(t *testing.T) {
 		t.Parallel()
-		dto := &GridsPage{
-			Grids: []PageGridSummary{
+		dto := &gridsPageDTO{
+			Grids: []pageGridSummaryDTO{
 				{ID: "grid-1", Title: "Grid One", CreatedAt: "2024-01-01T00:00:00Z"},
 				{ID: "grid-2", Title: "Grid Two", CreatedAt: "2024-02-01T00:00:00Z"},
 			},
@@ -508,7 +508,7 @@ func TestAttachmentFieldMapping(t *testing.T) {
 
 	t.Run("Mimetype DTO field maps to MIMEType domain field", func(t *testing.T) {
 		t.Parallel()
-		dto := &Resource{
+		dto := &resourceDTO{
 			Type: "attachment",
 			Item: map[string]any{
 				"id":           float64(1),
@@ -536,7 +536,7 @@ func TestConversionsPreserveAllFields(t *testing.T) {
 
 	t.Run("WikiAttributes preserves all 8 fields", func(t *testing.T) {
 		t.Parallel()
-		dto := &Attributes{
+		dto := &attributesDTO{
 			CommentsCount:   42,
 			CommentsEnabled: true,
 			CreatedAt:       "created",
@@ -576,7 +576,7 @@ func TestConversionsPreserveAllFields(t *testing.T) {
 
 		require.NoError(t, err)
 		require.NotNil(t, result)
-		assert.Equal(t, int64(999), result.ID)
+		assert.Equal(t, "999", result.ID)
 		assert.Equal(t, "attachment.zip", result.Name)
 		assert.Equal(t, int64(999999), result.Size)
 		assert.Equal(t, "application/zip", result.MIMEType)
@@ -598,7 +598,7 @@ func TestConversionsPreserveAllFields(t *testing.T) {
 
 		require.NoError(t, err)
 		require.NotNil(t, result)
-		assert.Equal(t, int64(777), result.ID)
+		assert.Equal(t, "777", result.ID)
 		assert.Equal(t, "SharePoint Doc", result.Title)
 		assert.Equal(t, "pptx", result.Doctype)
 		assert.Equal(t, "2024-06-15T12:00:00Z", result.CreatedAt)
@@ -606,7 +606,7 @@ func TestConversionsPreserveAllFields(t *testing.T) {
 
 	t.Run("WikiColumn preserves all 3 fields", func(t *testing.T) {
 		t.Parallel()
-		dto := &Column{
+		dto := &columnDTO{
 			Slug:  "col_slug",
 			Title: "Column Title",
 			Type:  "date",

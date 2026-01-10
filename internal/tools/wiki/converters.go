@@ -6,12 +6,12 @@ import (
 
 // Mapping functions from domain models to tool outputs.
 
-func mapPageToOutput(p *domain.WikiPage) *PageOutput {
+func mapPageToOutput(p *domain.WikiPage) *pageOutputDTO {
 	if p == nil {
 		return nil
 	}
 
-	out := &PageOutput{
+	out := &pageOutputDTO{
 		ID:         p.ID,
 		PageType:   p.PageType,
 		Slug:       p.Slug,
@@ -22,7 +22,7 @@ func mapPageToOutput(p *domain.WikiPage) *PageOutput {
 	}
 
 	if p.Attributes != nil {
-		out.Attributes = &AttributesOutput{
+		out.Attributes = &attributesOutputDTO{
 			CommentsCount:   p.Attributes.CommentsCount,
 			CommentsEnabled: p.Attributes.CommentsEnabled,
 			CreatedAt:       p.Attributes.CreatedAt,
@@ -35,7 +35,7 @@ func mapPageToOutput(p *domain.WikiPage) *PageOutput {
 	}
 
 	if p.Redirect != nil {
-		out.Redirect = &RedirectOutput{
+		out.Redirect = &redirectOutputDTO{
 			PageID: p.Redirect.PageID,
 			Slug:   p.Redirect.Slug,
 		}
@@ -44,32 +44,32 @@ func mapPageToOutput(p *domain.WikiPage) *PageOutput {
 	return out
 }
 
-func mapResourcesPageToOutput(rp *domain.WikiResourcesPage) *ResourcesListOutput {
+func mapResourcesPageToOutput(rp *domain.WikiResourcesPage) *resourcesListOutputDTO {
 	if rp == nil {
 		return nil
 	}
 
-	resources := make([]ResourceOutput, len(rp.Resources))
+	resources := make([]resourceOutputDTO, len(rp.Resources))
 	for i, r := range rp.Resources {
 		resources[i] = mapResourceToOutput(r)
 	}
 
-	return &ResourcesListOutput{
+	return &resourcesListOutputDTO{
 		Resources:  resources,
 		NextCursor: rp.NextCursor,
 		PrevCursor: rp.PrevCursor,
 	}
 }
 
-func mapResourceToOutput(r domain.WikiResource) ResourceOutput {
-	out := ResourceOutput{
+func mapResourceToOutput(r domain.WikiResource) resourceOutputDTO {
+	out := resourceOutputDTO{
 		Type: r.Type,
 		Item: nil,
 	}
 
 	switch {
 	case r.Attachment != nil:
-		out.Item = AttachmentOutput{
+		out.Item = attachmentOutputDTO{
 			ID:          r.Attachment.ID,
 			Name:        r.Attachment.Name,
 			Size:        r.Attachment.Size,
@@ -79,14 +79,14 @@ func mapResourceToOutput(r domain.WikiResource) ResourceOutput {
 			HasPreview:  r.Attachment.HasPreview,
 		}
 	case r.Sharepoint != nil:
-		out.Item = SharepointResourceOutput{
+		out.Item = sharepointResourceOutputDTO{
 			ID:        r.Sharepoint.ID,
 			Title:     r.Sharepoint.Title,
 			Doctype:   r.Sharepoint.Doctype,
 			CreatedAt: r.Sharepoint.CreatedAt,
 		}
 	case r.Grid != nil:
-		out.Item = GridResourceOutput{
+		out.Item = gridResourceOutputDTO{
 			ID:        r.Grid.ID,
 			Title:     r.Grid.Title,
 			CreatedAt: r.Grid.CreatedAt,
@@ -96,33 +96,33 @@ func mapResourceToOutput(r domain.WikiResource) ResourceOutput {
 	return out
 }
 
-func mapGridsPageToOutput(gp *domain.WikiGridsPage) *GridsListOutput {
+func mapGridsPageToOutput(gp *domain.WikiGridsPage) *gridsListOutputDTO {
 	if gp == nil {
 		return nil
 	}
 
-	grids := make([]GridSummaryOutput, len(gp.Grids))
+	grids := make([]gridSummaryOutputDTO, len(gp.Grids))
 	for i, g := range gp.Grids {
-		grids[i] = GridSummaryOutput{
+		grids[i] = gridSummaryOutputDTO{
 			ID:        g.ID,
 			Title:     g.Title,
 			CreatedAt: g.CreatedAt,
 		}
 	}
 
-	return &GridsListOutput{
+	return &gridsListOutputDTO{
 		Grids:      grids,
 		NextCursor: gp.NextCursor,
 		PrevCursor: gp.PrevCursor,
 	}
 }
 
-func mapGridToOutput(g *domain.WikiGrid) *GridOutput {
+func mapGridToOutput(g *domain.WikiGrid) *gridOutputDTO {
 	if g == nil {
 		return nil
 	}
 
-	out := &GridOutput{
+	out := &gridOutputDTO{
 		ID:          g.ID,
 		Title:       g.Title,
 		Structure:   nil,
@@ -134,7 +134,7 @@ func mapGridToOutput(g *domain.WikiGrid) *GridOutput {
 	}
 
 	if g.Attributes != nil {
-		out.Attributes = &AttributesOutput{
+		out.Attributes = &attributesOutputDTO{
 			CommentsCount:   g.Attributes.CommentsCount,
 			CommentsEnabled: g.Attributes.CommentsEnabled,
 			CreatedAt:       g.Attributes.CreatedAt,
@@ -147,9 +147,9 @@ func mapGridToOutput(g *domain.WikiGrid) *GridOutput {
 	}
 
 	if len(g.Structure) > 0 {
-		out.Structure = make([]ColumnOutput, len(g.Structure))
+		out.Structure = make([]columnOutputDTO, len(g.Structure))
 		for i, c := range g.Structure {
-			out.Structure[i] = ColumnOutput{
+			out.Structure[i] = columnOutputDTO{
 				Slug:  c.Slug,
 				Title: c.Title,
 				Type:  c.Type,
@@ -158,7 +158,7 @@ func mapGridToOutput(g *domain.WikiGrid) *GridOutput {
 	}
 
 	if len(g.Rows) > 0 {
-		out.Rows = make([]GridRowOutput, len(g.Rows))
+		out.Rows = make([]gridRowOutputDTO, len(g.Rows))
 		for i, r := range g.Rows {
 			out.Rows[i] = mapGridRowToOutput(r)
 		}
@@ -167,12 +167,12 @@ func mapGridToOutput(g *domain.WikiGrid) *GridOutput {
 	return out
 }
 
-func mapGridRowToOutput(r domain.WikiGridRow) GridRowOutput {
+func mapGridRowToOutput(r domain.WikiGridRow) gridRowOutputDTO {
 	cells := make(map[string]any, len(r.Cells))
 	for k, v := range r.Cells {
 		cells[k] = v.Value
 	}
-	return GridRowOutput{
+	return gridRowOutputDTO{
 		ID:    r.ID,
 		Cells: cells,
 	}

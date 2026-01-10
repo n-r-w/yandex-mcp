@@ -29,6 +29,7 @@ THIS IS A NEW PROJECT, NOT IN PRODUCTION YET. NO DATA IN DATABASE YET. FEEL FREE
 - MUST maintain consistency of environment variables between `.env.example`, `.env`, Taskfile.yml, scripts, code, and documentation.
 - Use `task lint` and `task build` to check code before completing changes.
 - MUST NOT use tables in user-facing markdown docs, use lists or sections instead.
+- ALL DTOs MUST be not exported.
 
 ## Golang rules
 - MUST use `go.uber.org/mock` for mocks
@@ -128,6 +129,12 @@ Tools Description Rules:
 - If field has predefined set of values, MUST document all possible values.
 - MUST NOT contain text like "etc.", "and so on", "and more", "such as", etc.
 - MUST use consistent terminology with Yandex official documentation.
+
+MCP Tools Implementation Rules:
+- MCP tools should be primarily convenient for LLM usage and do not necessarily match the parameters of the official Yandex API.
+- For example:
+    * If the API has a parameter that passes a list as a delimited string, then in the MCP tool this parameter should be a list of strings
+    * If the API has a parameter that is a string, but contains integer value, then in the MCP tool this parameter should be an integer    
 
 **internal/tools/wiki/**
 Yandex Wiki related tools implementation.

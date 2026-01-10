@@ -55,5 +55,34 @@ type TrackerListCommentsOpts struct {
 	// PerPage specifies the number of comments per page.
 	PerPage int
 	// ID specifies the comment ID after which the requested page begins.
-	ID int64
+	ID string
+}
+
+// TrackerGetQueueOpts represents options for getting a single queue.
+type TrackerGetQueueOpts struct {
+	// Expand specifies additional fields to include.
+	// Allowed values: projects, components, versions, types, team, workflows, all.
+	Expand string
+}
+
+// TrackerListUsersOpts represents options for listing users.
+type TrackerListUsersOpts struct {
+	// PerPage specifies the number of users per page.
+	PerPage int
+	// Page specifies the page number.
+	Page int
+}
+
+// TrackerGetChangelogOpts represents options for getting issue changelog.
+type TrackerGetChangelogOpts struct {
+	// PerPage specifies the number of changelog entries per page.
+	// Default: 50.
+	PerPage int
+}
+
+// TrackerListProjectCommentsOpts represents options for listing project comments.
+type TrackerListProjectCommentsOpts struct {
+	// Expand specifies additional fields to include.
+	// Allowed values: all, html, attachments, reactions.
+	Expand string
 }

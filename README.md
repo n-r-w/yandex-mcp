@@ -39,6 +39,16 @@ Require `--wiki-write` (write operations):
 - `wiki_page_append_content` — Appends content to an existing Yandex Wiki page
 - `wiki_grid_create` — Creates a new Yandex Wiki dynamic table (grid)
 - `wiki_grid_update_cells` — Updates cells in a Yandex Wiki dynamic table (grid)
+- `wiki_page_delete` — Deletes a Yandex Wiki page
+- `wiki_page_clone` — Clones a Yandex Wiki page (async operation)
+- `wiki_grid_delete` — Deletes a Yandex Wiki dynamic table (grid)
+- `wiki_grid_clone` — Clones a Yandex Wiki dynamic table (grid) (async operation)
+- `wiki_grid_rows_add` — Adds rows to a Yandex Wiki dynamic table (grid)
+- `wiki_grid_rows_delete` — Deletes rows from a Yandex Wiki dynamic table (grid)
+- `wiki_grid_rows_move` — Moves rows within a Yandex Wiki dynamic table (grid)
+- `wiki_grid_columns_add` — Adds columns to a Yandex Wiki dynamic table (grid)
+- `wiki_grid_columns_delete` — Deletes columns from a Yandex Wiki dynamic table (grid)
+- `wiki_grid_columns_move` — Moves columns within a Yandex Wiki dynamic table (grid)
 
 ### Yandex Tracker tools
 
@@ -50,6 +60,14 @@ Enabled by default (read-only):
 - `tracker_issue_transitions_list` — Lists available status transitions for a Yandex Tracker issue
 - `tracker_queues_list` — Lists Yandex Tracker queues
 - `tracker_issue_comments_list` — Lists comments for a Yandex Tracker issue
+- `tracker_issue_attachments_list` — Lists attachments for a Yandex Tracker issue
+- `tracker_queue_get` — Retrieves a Yandex Tracker queue by its key
+- `tracker_user_current` — Retrieves the current Yandex Tracker user
+- `tracker_users_list` — Lists Yandex Tracker users
+- `tracker_user_get` — Retrieves a Yandex Tracker user by ID
+- `tracker_issue_links_list` — Lists links for a Yandex Tracker issue
+- `tracker_issue_changelog` — Retrieves the changelog for a Yandex Tracker issue
+- `tracker_project_comments_list` — Lists comments for a Yandex Tracker project entity
 
 Require `--tracker-write` (write operations):
 
@@ -57,6 +75,15 @@ Require `--tracker-write` (write operations):
 - `tracker_issue_update` — Updates an existing Yandex Tracker issue
 - `tracker_issue_transition_execute` — Executes a status transition on a Yandex Tracker issue
 - `tracker_issue_comment_add` — Adds a comment to a Yandex Tracker issue
+- `tracker_issue_comment_update` — Updates a comment on a Yandex Tracker issue
+- `tracker_issue_comment_delete` — Deletes a comment from a Yandex Tracker issue
+- `tracker_issue_attachment_delete` — Deletes an attachment from a Yandex Tracker issue
+- `tracker_queue_create` — Creates a new Yandex Tracker queue
+- `tracker_queue_delete` — Deletes a Yandex Tracker queue
+- `tracker_queue_restore` — Restores a deleted Yandex Tracker queue
+- `tracker_issue_link_create` — Creates a link between Yandex Tracker issues
+- `tracker_issue_link_delete` — Deletes a link between Yandex Tracker issues
+- `tracker_issue_move` — Moves a Yandex Tracker issue to another queue
 
 ## Installation
 

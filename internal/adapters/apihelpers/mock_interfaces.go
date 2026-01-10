@@ -40,21 +40,6 @@ func (m *MockITokenProvider) EXPECT() *MockITokenProviderMockRecorder {
 	return m.recorder
 }
 
-// ForceRefresh mocks base method.
-func (m *MockITokenProvider) ForceRefresh(ctx context.Context) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ForceRefresh", ctx)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ForceRefresh indicates an expected call of ForceRefresh.
-func (mr *MockITokenProviderMockRecorder) ForceRefresh(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForceRefresh", reflect.TypeOf((*MockITokenProvider)(nil).ForceRefresh), ctx)
-}
-
 // Token mocks base method.
 func (m *MockITokenProvider) Token(ctx context.Context) (string, error) {
 	m.ctrl.T.Helper()

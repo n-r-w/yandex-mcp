@@ -2,7 +2,7 @@ package domain
 
 // WikiPage represents a Yandex Wiki page entity.
 type WikiPage struct {
-	ID         int64
+	ID         string
 	PageType   string
 	Slug       string
 	Title      string
@@ -25,7 +25,7 @@ type WikiAttributes struct {
 
 // WikiRedirect represents redirect information for a Wiki page.
 type WikiRedirect struct {
-	PageID int64
+	PageID string
 	Slug   string
 }
 
@@ -46,7 +46,7 @@ type WikiResource struct {
 
 // WikiAttachment represents a file attachment resource.
 type WikiAttachment struct {
-	ID          int64
+	ID          string
 	Name        string
 	Size        int64
 	MIMEType    string
@@ -57,7 +57,7 @@ type WikiAttachment struct {
 
 // WikiSharepointResource represents a SharePoint resource linked to a Wiki page.
 type WikiSharepointResource struct {
-	ID        int64
+	ID        string
 	Title     string
 	Doctype   string
 	CreatedAt string

@@ -39,9 +39,11 @@ func TestClient_HeaderInjection(t *testing.T) {
 		capturedHeaders = r.Header.Clone()
 		w.Header().Set("Content-Type", "application/json")
 		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode(Issue{ID: "1", Key: "TEST-1"})
+		json.NewEncoder(w).Encode(issueDTO{ID: "1", Key: "TEST-1"})
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return(testToken, nil)
 
@@ -72,9 +74,11 @@ func TestClient_HeaderInjection_POST(t *testing.T) {
 		capturedHeaders = r.Header.Clone()
 		w.Header().Set("Content-Type", "application/json")
 		//nolint:errcheck // test helper
-		json.NewEncoder(w).Encode([]Issue{})
+		json.NewEncoder(w).Encode([]issueDTO{})
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return(testToken, nil)
 
@@ -90,98 +94,6 @@ func TestClient_HeaderInjection_POST(t *testing.T) {
 	assert.Equal(t, "application/json", capturedHeaders.Get(apihelpers.HeaderContentType))
 }
 
-func TestClient_RetryOnce_ForceRefreshCalled(t *testing.T) {
-	t.Parallel()
-
-	ctrl := gomock.NewController(t)
-	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
-
-	const (
-		staleToken = "stale-token"
-		freshToken = "fresh-token"
-		testOrgID  = "test-org"
-	)
-
-	var requestCount atomic.Int32
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		count := requestCount.Add(1)
-		authHeader := r.Header.Get(apihelpers.HeaderAuthorization)
-
-		if count == 1 {
-			assert.Equal(t, "Bearer "+staleToken, authHeader)
-			w.WriteHeader(http.StatusUnauthorized)
-			_, _ = w.Write([]byte(`{"errorMessages":["Token expired"]}`))
-			return
-		}
-
-		assert.Equal(t, "Bearer "+freshToken, authHeader)
-		w.Header().Set("Content-Type", "application/json")
-		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode(Issue{ID: "1", Key: "TEST-1", Summary: "Success"})
-	}))
-	defer server.Close()
-
-	gomock.InOrder(
-		tokenProvider.EXPECT().Token(gomock.Any()).Return(staleToken, nil),
-		tokenProvider.EXPECT().ForceRefresh(gomock.Any()).Return(freshToken, nil),
-	)
-
-	client := NewClient(newTestConfig(server.URL, testOrgID), tokenProvider)
-
-	//nolint:exhaustruct // test focuses on retry behavior
-	issue, err := client.GetIssue(context.Background(), "TEST-1", domain.TrackerGetIssueOpts{})
-	require.NoError(t, err)
-	assert.Equal(t, "TEST-1", issue.Key)
-	assert.Equal(t, "Success", issue.Summary)
-	assert.Equal(t, int32(2), requestCount.Load())
-}
-
-func TestClient_RetryOnce_POST_ForceRefreshCalled(t *testing.T) {
-	t.Parallel()
-
-	ctrl := gomock.NewController(t)
-	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
-
-	const (
-		staleToken = "stale-token"
-		freshToken = "fresh-token"
-		testOrgID  = "test-org"
-	)
-
-	var requestCount atomic.Int32
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		count := requestCount.Add(1)
-		authHeader := r.Header.Get(apihelpers.HeaderAuthorization)
-
-		if count == 1 {
-			assert.Equal(t, "Bearer "+staleToken, authHeader)
-			w.WriteHeader(http.StatusUnauthorized)
-			_, _ = w.Write([]byte(`{"errorMessages":["Token expired"]}`))
-			return
-		}
-
-		assert.Equal(t, "Bearer "+freshToken, authHeader)
-		w.Header().Set("Content-Type", "application/json")
-		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode([]Issue{{ID: "1", Key: "TEST-1"}})
-	}))
-	defer server.Close()
-
-	gomock.InOrder(
-		tokenProvider.EXPECT().Token(gomock.Any()).Return(staleToken, nil),
-		tokenProvider.EXPECT().ForceRefresh(gomock.Any()).Return(freshToken, nil),
-	)
-
-	client := NewClient(newTestConfig(server.URL, testOrgID), tokenProvider)
-
-	//nolint:exhaustruct // test focuses on retry behavior
-	result, err := client.SearchIssues(context.Background(), domain.TrackerSearchIssuesOpts{})
-	require.NoError(t, err)
-	require.Len(t, result.Issues, 1)
-	assert.Equal(t, "TEST-1", result.Issues[0].Key)
-	assert.Equal(t, int32(2), requestCount.Load())
-}
-
 func TestClient_Non2xx_ReturnsUpstreamError_Sanitized(t *testing.T) {
 	t.Parallel()
 
@@ -192,7 +104,9 @@ func TestClient_Non2xx_ReturnsUpstreamError_Sanitized(t *testing.T) {
 		w.WriteHeader(http.StatusNotFound)
 		_, _ = w.Write([]byte(`{"errorMessages":["Issue not found"]}`))
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
 
@@ -222,7 +136,9 @@ func TestClient_Non2xx_FallbackMessage(t *testing.T) {
 		w.WriteHeader(http.StatusInternalServerError)
 		_, _ = w.Write([]byte("Internal error"))
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
 
@@ -239,39 +155,6 @@ func TestClient_Non2xx_FallbackMessage(t *testing.T) {
 	assert.Equal(t, "Internal Server Error", upstreamErr.Message)
 }
 
-func TestClient_RetryOnce_StillFailsAfterRefresh(t *testing.T) {
-	t.Parallel()
-
-	ctrl := gomock.NewController(t)
-	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
-
-	var requestCount atomic.Int32
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestCount.Add(1)
-		w.WriteHeader(http.StatusUnauthorized)
-		_, _ = w.Write([]byte(`{"errorMessages":["Still unauthorized"]}`))
-	}))
-	defer server.Close()
-
-	gomock.InOrder(
-		tokenProvider.EXPECT().Token(gomock.Any()).Return("token1", nil),
-		tokenProvider.EXPECT().ForceRefresh(gomock.Any()).Return("token2", nil),
-	)
-
-	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
-
-	//nolint:exhaustruct // test checks retry count
-	_, err := client.GetIssue(context.Background(), "TEST-1", domain.TrackerGetIssueOpts{})
-	require.Error(t, err)
-
-	var upstreamErr domain.UpstreamError
-	require.ErrorAs(t, err, &upstreamErr)
-	assert.Equal(t, http.StatusUnauthorized, upstreamErr.HTTPStatus)
-
-	// Verify exactly 2 requests were made (initial + retry)
-	assert.Equal(t, int32(2), requestCount.Load())
-}
-
 func TestClient_GetIssue_WithExpand(t *testing.T) {
 	t.Parallel()
 
@@ -285,9 +168,11 @@ func TestClient_GetIssue_WithExpand(t *testing.T) {
 		capturedMethod = r.Method
 		w.Header().Set("Content-Type", "application/json")
 		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode(Issue{ID: "42", Key: "TEST-42", Summary: "Test Issue"})
+		json.NewEncoder(w).Encode(issueDTO{ID: "42", Key: "TEST-42", Summary: "Test Issue"})
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
 
@@ -321,12 +206,14 @@ func TestClient_SearchIssues_StandardPagination(t *testing.T) {
 		w.Header().Set(headerXTotalCount, "100")
 		w.Header().Set(headerXTotalPages, "5")
 		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode([]Issue{
+		json.NewEncoder(w).Encode([]issueDTO{
 			{ID: "1", Key: "TEST-1"},
 			{ID: "2", Key: "TEST-2"},
 		})
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
 
@@ -373,9 +260,11 @@ func TestClient_SearchIssues_ScrollPagination(t *testing.T) {
 		w.Header().Set(headerLink, `</v3/issues/_search?scrollId=scroll-id-abc123>; rel="next"`)
 		w.Header().Set(headerXTotalCount, "50000")
 		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode([]Issue{{ID: "1", Key: "TEST-1"}})
+		json.NewEncoder(w).Encode([]issueDTO{{ID: "1", Key: "TEST-1"}})
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
 
@@ -412,9 +301,11 @@ func TestClient_SearchIssues_ScrollPagination_SubsequentRequest(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set(headerXScrollID, "scroll-id-next")
 		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode([]Issue{{ID: "501", Key: "TEST-501"}})
+		json.NewEncoder(w).Encode([]issueDTO{{ID: "501", Key: "TEST-501"}})
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
 
@@ -449,7 +340,9 @@ func TestClient_CountIssues_WithFilter(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte("5221186"))
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
 
@@ -479,7 +372,9 @@ func TestClient_CountIssues_WithQuery(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte("42"))
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
 
@@ -508,20 +403,22 @@ func TestClient_ListIssueTransitions(t *testing.T) {
 		capturedMethod = r.Method
 		w.Header().Set("Content-Type", "application/json")
 		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode([]Transition{
+		json.NewEncoder(w).Encode([]transitionDTO{
 			{
 				ID:      "start_progress",
 				Display: "Start Progress",
-				To:      &Status{ID: "2", Key: "inProgress", Display: "In Progress"},
+				To:      &statusDTO{ID: "2", Key: "inProgress", Display: "In Progress"},
 			},
 			{
 				ID:      "resolve",
 				Display: "Resolve",
-				To:      &Status{ID: "3", Key: "resolved", Display: "Resolved"},
+				To:      &statusDTO{ID: "3", Key: "resolved", Display: "Resolved"},
 			},
 		})
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
 
@@ -559,7 +456,9 @@ func TestClient_ListQueues_WithPagination(t *testing.T) {
 			{"id": 2, "key": "SUPPORT", "name": "Support"}
 		]`))
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
 
@@ -598,12 +497,14 @@ func TestClient_ListIssueComments_WithPagination(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set(headerLink, `</v3/issues/TEST-1/comments?id=123>; rel="next"`)
 		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode([]Comment{
-			{ID: 100, LongID: "long-100", Text: "First comment"},
-			{ID: 101, LongID: "long-101", Text: "Second comment"},
+		json.NewEncoder(w).Encode([]commentDTO{
+			{ID: "100", LongID: "long-100", Text: "First comment"},
+			{ID: "101", LongID: "long-101", Text: "Second comment"},
 		})
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
 
@@ -612,7 +513,7 @@ func TestClient_ListIssueComments_WithPagination(t *testing.T) {
 	result, err := client.ListIssueComments(context.Background(), "TEST-1", domain.TrackerListCommentsOpts{
 		Expand:  "attachments",
 		PerPage: 25,
-		ID:      50,
+		ID:      "50",
 	})
 	require.NoError(t, err)
 
@@ -623,7 +524,7 @@ func TestClient_ListIssueComments_WithPagination(t *testing.T) {
 	assert.Contains(t, capturedURL, "id=50")
 
 	require.Len(t, result.Comments, 2)
-	assert.Equal(t, int64(100), result.Comments[0].ID)
+	assert.Equal(t, "100", result.Comments[0].ID)
 	assert.Equal(t, "First comment", result.Comments[0].Text)
 	assert.Contains(t, result.NextLink, "id=123")
 }
@@ -640,7 +541,9 @@ func TestClient_UpstreamError_NoTokenLeak(t *testing.T) {
 		w.WriteHeader(http.StatusBadRequest)
 		_, _ = w.Write([]byte(`{"errorMessages":["Invalid request"]}`))
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return(secretToken, nil)
 
@@ -667,12 +570,11 @@ func TestClient_ErrorCodes_401(t *testing.T) {
 		w.WriteHeader(http.StatusUnauthorized)
 		_, _ = w.Write([]byte(`{"errorMessages":["Unauthorized"]}`))
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
-	gomock.InOrder(
-		tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil),
-		tokenProvider.EXPECT().ForceRefresh(gomock.Any()).Return("token2", nil),
-	)
+	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
@@ -683,7 +585,7 @@ func TestClient_ErrorCodes_401(t *testing.T) {
 	var upstreamErr domain.UpstreamError
 	require.ErrorAs(t, err, &upstreamErr)
 	assert.Equal(t, http.StatusUnauthorized, upstreamErr.HTTPStatus)
-	assert.Equal(t, int32(2), requestCount.Load())
+	assert.Equal(t, int32(1), requestCount.Load())
 }
 
 func TestClient_ErrorCodes_403(t *testing.T) {
@@ -696,7 +598,9 @@ func TestClient_ErrorCodes_403(t *testing.T) {
 		w.WriteHeader(http.StatusForbidden)
 		_, _ = w.Write([]byte(`{"errorMessages":["Access denied"]}`))
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
 
@@ -722,7 +626,9 @@ func TestClient_ErrorCodes_404(t *testing.T) {
 		w.WriteHeader(http.StatusNotFound)
 		_, _ = w.Write([]byte(`{"errorMessages":["Issue not found"]}`))
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
 
@@ -748,7 +654,9 @@ func TestClient_ErrorCodes_422(t *testing.T) {
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		_, _ = w.Write([]byte(`{"errorMessages":["Validation failed"]}`))
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
 
@@ -774,7 +682,9 @@ func TestClient_ErrorCodes_429(t *testing.T) {
 		w.WriteHeader(http.StatusTooManyRequests)
 		_, _ = w.Write([]byte(`{"errorMessages":["Rate limit exceeded"]}`))
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
 
@@ -801,9 +711,11 @@ func TestClient_IssueID_PathEscaping(t *testing.T) {
 		capturedRawURL = r.RequestURI
 		w.Header().Set("Content-Type", "application/json")
 		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode(Issue{ID: "1", Key: "TEST-1"})
+		json.NewEncoder(w).Encode(issueDTO{ID: "1", Key: "TEST-1"})
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
 
@@ -828,9 +740,11 @@ func TestClient_SearchIssues_QueryLanguage(t *testing.T) {
 		_ = json.NewDecoder(r.Body).Decode(&capturedBody)
 		w.Header().Set("Content-Type", "application/json")
 		//nolint:errcheck // test helper
-		json.NewEncoder(w).Encode([]Issue{})
+		json.NewEncoder(w).Encode([]issueDTO{})
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
 
@@ -855,7 +769,9 @@ func TestClient_ErrorResponse_WithErrorsArray(t *testing.T) {
 		w.WriteHeader(http.StatusBadRequest)
 		_, _ = w.Write([]byte(`{"errors":["Error 1","Error 2"]}`))
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
 

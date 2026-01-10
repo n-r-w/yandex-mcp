@@ -4,72 +4,74 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+
+	"github.com/n-r-w/yandex-mcp/internal/adapters/apihelpers"
 )
 
-// Issue is a Yandex Tracker issue.
-type Issue struct {
-	Self            string  `json:"self"`
-	ID              string  `json:"id"`
-	Key             string  `json:"key"`
-	Version         int     `json:"version"`
-	Summary         string  `json:"summary"`
-	Description     string  `json:"description,omitempty"`
-	StatusStartTime string  `json:"statusStartTime,omitempty"`
-	CreatedAt       string  `json:"createdAt,omitempty"`
-	UpdatedAt       string  `json:"updatedAt,omitempty"`
-	ResolvedAt      string  `json:"resolvedAt,omitempty"`
-	Status          *Status `json:"status,omitempty"`
-	Type            *Type   `json:"type,omitempty"`
-	Priority        *Prio   `json:"priority,omitempty"`
-	Queue           *Queue  `json:"queue,omitempty"`
-	Assignee        *User   `json:"assignee,omitempty"`
-	CreatedBy       *User   `json:"createdBy,omitempty"`
-	UpdatedBy       *User   `json:"updatedBy,omitempty"`
-	Votes           int     `json:"votes,omitempty"`
-	Favorite        bool    `json:"favorite,omitempty"`
+// issueDTO is a Yandex Tracker issue.
+type issueDTO struct {
+	Self            string              `json:"self"`
+	ID              apihelpers.StringID `json:"id"`
+	Key             string              `json:"key"`
+	Version         int                 `json:"version"`
+	Summary         string              `json:"summary"`
+	Description     string              `json:"description,omitempty"`
+	StatusStartTime string              `json:"statusStartTime,omitempty"`
+	CreatedAt       string              `json:"createdAt,omitempty"`
+	UpdatedAt       string              `json:"updatedAt,omitempty"`
+	ResolvedAt      string              `json:"resolvedAt,omitempty"`
+	Status          *statusDTO          `json:"status,omitempty"`
+	Type            *typeDTO            `json:"type,omitempty"`
+	Priority        *prioDTO            `json:"priority,omitempty"`
+	Queue           *queueDTO           `json:"queue,omitempty"`
+	Assignee        *userDTO            `json:"assignee,omitempty"`
+	CreatedBy       *userDTO            `json:"createdBy,omitempty"`
+	UpdatedBy       *userDTO            `json:"updatedBy,omitempty"`
+	Votes           int                 `json:"votes,omitempty"`
+	Favorite        bool                `json:"favorite,omitempty"`
 }
 
-// Status represents an issue status.
-type Status struct {
-	Self    string `json:"self"`
-	ID      string `json:"id"`
-	Key     string `json:"key"`
-	Display string `json:"display"`
+// statusDTO represents an issue status.
+type statusDTO struct {
+	Self    string              `json:"self"`
+	ID      apihelpers.StringID `json:"id"`
+	Key     string              `json:"key"`
+	Display string              `json:"display"`
 }
 
-// Type represents an issue type.
-type Type struct {
-	Self    string `json:"self"`
-	ID      string `json:"id"`
-	Key     string `json:"key"`
-	Display string `json:"display"`
+// typeDTO represents an issue type.
+type typeDTO struct {
+	Self    string              `json:"self"`
+	ID      apihelpers.StringID `json:"id"`
+	Key     string              `json:"key"`
+	Display string              `json:"display"`
 }
 
-// Prio represents an issue priority.
-type Prio struct {
-	Self    string `json:"self"`
-	ID      string `json:"id"`
-	Key     string `json:"key"`
-	Display string `json:"display"`
+// prioDTO represents an issue priority.
+type prioDTO struct {
+	Self    string              `json:"self"`
+	ID      apihelpers.StringID `json:"id"`
+	Key     string              `json:"key"`
+	Display string              `json:"display"`
 }
 
-// Queue represents a Tracker queue.
-type Queue struct {
-	Self           string `json:"self"`
-	ID             string `json:"id"`
-	Key            string `json:"key"`
-	Display        string `json:"display,omitempty"`
-	Name           string `json:"name,omitempty"`
-	Version        int    `json:"version,omitempty"`
-	Lead           *User  `json:"lead,omitempty"`
-	AssignAuto     bool   `json:"assignAuto,omitempty"`
-	AllowExternals bool   `json:"allowExternals,omitempty"`
-	DenyVoting     bool   `json:"denyVoting,omitempty"`
+// queueDTO represents a Tracker queue.
+type queueDTO struct {
+	Self           string              `json:"self"`
+	ID             apihelpers.StringID `json:"id"`
+	Key            string              `json:"key"`
+	Display        string              `json:"display,omitempty"`
+	Name           string              `json:"name,omitempty"`
+	Version        int                 `json:"version,omitempty"`
+	Lead           *userDTO            `json:"lead,omitempty"`
+	AssignAuto     bool                `json:"assignAuto,omitempty"`
+	AllowExternals bool                `json:"allowExternals,omitempty"`
+	DenyVoting     bool                `json:"denyVoting,omitempty"`
 }
 
 // UnmarshalJSON implements custom JSON unmarshaling for Queue to handle numeric and string IDs.
-func (q *Queue) UnmarshalJSON(data []byte) error {
-	type QueueAlias Queue
+func (q *queueDTO) UnmarshalJSON(data []byte) error {
+	type QueueAlias queueDTO
 
 	alias := &struct {
 		ID any `json:"id"` // Queue ID can be either string or number
@@ -87,9 +89,9 @@ func (q *Queue) UnmarshalJSON(data []byte) error {
 	if alias.ID != nil {
 		switch v := alias.ID.(type) {
 		case float64:
-			q.ID = strconv.FormatFloat(v, 'f', -1, 64)
+			q.ID = apihelpers.StringID(strconv.FormatFloat(v, 'f', -1, 64))
 		case string:
-			q.ID = v
+			q.ID = apihelpers.StringID(v)
 		default:
 			return fmt.Errorf("unsupported queue ID type: %T", v)
 		}
@@ -98,139 +100,58 @@ func (q *Queue) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// User represents a Tracker user.
-type User struct {
-	Self        string `json:"self"`
-	ID          string `json:"id"`
-	UID         int64  `json:"uid,omitempty"`
-	Login       string `json:"login,omitempty"`
-	Display     string `json:"display,omitempty"`
-	FirstName   string `json:"firstName,omitempty"`
-	LastName    string `json:"lastName,omitempty"`
-	Email       string `json:"email,omitempty"`
-	CloudUID    string `json:"cloudUid,omitempty"`
-	PassportUID int64  `json:"passportUid,omitempty"`
+// userDTO represents a Tracker user.
+type userDTO struct {
+	Self        string              `json:"self"`
+	ID          apihelpers.StringID `json:"id"`
+	UID         apihelpers.StringID `json:"uid,omitempty"`
+	Login       string              `json:"login,omitempty"`
+	Display     string              `json:"display,omitempty"`
+	FirstName   string              `json:"firstName,omitempty"`
+	LastName    string              `json:"lastName,omitempty"`
+	Email       string              `json:"email,omitempty"`
+	CloudUID    apihelpers.StringID `json:"cloudUid,omitempty"`
+	PassportUID apihelpers.StringID `json:"passportUid,omitempty"`
 }
 
-// Transition represents an available issue transition.
-type Transition struct {
-	ID      string  `json:"id"`
-	Display string  `json:"display"`
-	Self    string  `json:"self"`
-	To      *Status `json:"to"`
+// transitionDTO represents an available issue transition.
+type transitionDTO struct {
+	ID      apihelpers.StringID `json:"id"`
+	Display string              `json:"display"`
+	Self    string              `json:"self"`
+	To      *statusDTO          `json:"to"`
 }
 
-// Comment represents an issue comment.
-type Comment struct {
-	ID        int64  `json:"id"`
-	LongID    string `json:"longId"`
-	Self      string `json:"self"`
-	Text      string `json:"text"`
-	Version   int    `json:"version"`
-	Type      string `json:"type,omitempty"`
-	Transport string `json:"transport,omitempty"`
-	CreatedAt string `json:"createdAt,omitempty"`
-	UpdatedAt string `json:"updatedAt,omitempty"`
-	CreatedBy *User  `json:"createdBy,omitempty"`
-	UpdatedBy *User  `json:"updatedBy,omitempty"`
+// commentDTO represents an issue comment.
+type commentDTO struct {
+	ID        apihelpers.StringID `json:"id"`
+	LongID    apihelpers.StringID `json:"longId"`
+	Self      string              `json:"self"`
+	Text      string              `json:"text"`
+	Version   int                 `json:"version"`
+	Type      string              `json:"type,omitempty"`
+	Transport string              `json:"transport,omitempty"`
+	CreatedAt string              `json:"createdAt,omitempty"`
+	UpdatedAt string              `json:"updatedAt,omitempty"`
+	CreatedBy *userDTO            `json:"createdBy,omitempty"`
+	UpdatedBy *userDTO            `json:"updatedBy,omitempty"`
 }
 
-// SearchIssuesOpts contains options for searching issues.
-type SearchIssuesOpts struct {
-	// Filter is a field-based filter object.
-	Filter map[string]any
-	// Query is a query language filter string.
-	Query string
-	// Order specifies sorting direction and field (e.g., "+updated", "-created").
-	Order string
-	// Expand specifies additional fields to include (transitions, attachments).
-	Expand string
-	// PerPage specifies the number of results per page (standard pagination).
-	PerPage int
-	// Page specifies the page number (standard pagination).
-	Page int
-	// ScrollType specifies scrolling type: "sorted" or "unsorted".
-	ScrollType string
-	// PerScroll specifies max issues per response in scroll mode (max 1000).
-	PerScroll int
-	// ScrollTTLMillis specifies scroll context lifetime in milliseconds.
-	ScrollTTLMillis int
-	// ScrollID specifies the scroll page ID for subsequent requests.
-	ScrollID string
-}
-
-// SearchIssuesResult contains the result of a search operation.
-type SearchIssuesResult struct {
-	Issues      []Issue
-	TotalCount  int
-	TotalPages  int
-	ScrollID    string
-	ScrollToken string
-	NextLink    string
-}
-
-// CountIssuesOpts contains options for counting issues.
-type CountIssuesOpts struct {
-	// Filter is a field-based filter object.
-	Filter map[string]any
-	// Query is a query language filter string.
-	Query string
-}
-
-// ListQueuesOpts contains options for listing queues.
-type ListQueuesOpts struct {
-	// Expand specifies additional fields (projects, components, versions, types, team, workflows).
-	Expand string
-	// PerPage specifies the number of queues per page.
-	PerPage int
-	// Page specifies the page number.
-	Page int
-}
-
-// ListQueuesResult contains the result of listing queues.
-type ListQueuesResult struct {
-	Queues     []Queue
-	TotalCount int
-	TotalPages int
-}
-
-// ListCommentsOpts contains options for listing comments.
-type ListCommentsOpts struct {
-	// Expand specifies additional fields (attachments, html, all).
-	Expand string
-	// PerPage specifies the number of comments per page.
-	PerPage int
-	// ID specifies the comment ID after which the requested page begins.
-	ID int64
-}
-
-// ListCommentsResult contains the result of listing comments.
-type ListCommentsResult struct {
-	Comments []Comment
-	NextLink string
-}
-
-// GetIssueOpts contains options for getting an issue.
-type GetIssueOpts struct {
-	// Expand specifies additional fields to include (attachments).
-	Expand string
-}
-
-// searchRequest represents the request body for issue search.
-type searchRequest struct {
+// searchRequestDTO represents the request body for issue search.
+type searchRequestDTO struct {
 	Filter map[string]any `json:"filter,omitempty"`
 	Query  string         `json:"query,omitempty"`
 	Order  string         `json:"order,omitempty"`
 }
 
-// countRequest represents the request body for issue count.
-type countRequest struct {
+// countRequestDTO represents the request body for issue count.
+type countRequestDTO struct {
 	Filter map[string]any `json:"filter,omitempty"`
 	Query  string         `json:"query,omitempty"`
 }
 
-// errorResponse represents the Tracker API error format.
-type errorResponse struct {
+// errorResponseDTO represents the Tracker API error format.
+type errorResponseDTO struct {
 	Errors        []string `json:"errors,omitempty"`
 	ErrorMessages []string `json:"errorMessages,omitempty"`
 	StatusCode    int      `json:"statusCode,omitempty"`
@@ -238,42 +159,203 @@ type errorResponse struct {
 
 // Write operation request DTOs.
 
-// CreateIssueRequest is the request body for issue creation.
-type CreateIssueRequest struct {
-	Queue         string   `json:"queue"`
-	Summary       string   `json:"summary"`
-	Description   string   `json:"description,omitempty"`
-	Type          string   `json:"type,omitempty"`
-	Priority      string   `json:"priority,omitempty"`
-	Assignee      string   `json:"assignee,omitempty"`
-	Tags          []string `json:"tags,omitempty"`
-	Parent        string   `json:"parent,omitempty"`
-	AttachmentIDs []string `json:"attachmentIds,omitempty"`
-	Sprint        []string `json:"sprint,omitempty"`
+// createIssueRequestDTO is the request body for issue creation.
+type createIssueRequestDTO struct {
+	Queue         string                `json:"queue"`
+	Summary       string                `json:"summary"`
+	Description   string                `json:"description,omitempty"`
+	Type          string                `json:"type,omitempty"`
+	Priority      string                `json:"priority,omitempty"`
+	Assignee      string                `json:"assignee,omitempty"`
+	Tags          []string              `json:"tags,omitempty"`
+	Parent        string                `json:"parent,omitempty"`
+	AttachmentIDs []apihelpers.StringID `json:"attachmentIds,omitempty"`
+	Sprint        []string              `json:"sprint,omitempty"`
 }
 
-// UpdateIssueRequest is the request body for issue update.
-type UpdateIssueRequest struct {
-	Summary     string `json:"summary,omitempty"`
-	Description string `json:"description,omitempty"`
-	Type        string `json:"type,omitempty"`
-	Priority    string `json:"priority,omitempty"`
-	Assignee    string `json:"assignee,omitempty"`
-	Version     int    `json:"version,omitempty"`
+// updateIssueProjectDTO is the nested project structure for issue update.
+type updateIssueProjectDTO struct {
+	Primary   int                          `json:"primary,omitempty"`
+	Secondary *updateIssueProjectSecAddDTO `json:"secondary,omitempty"`
 }
 
-// ExecuteTransitionRequest is the request body for transition execution.
-type ExecuteTransitionRequest struct {
+// updateIssueProjectSecAddDTO is the secondary project add structure.
+type updateIssueProjectSecAddDTO struct {
+	Add []int `json:"add,omitempty"`
+}
+
+// updateIssueSprintDTO is the sprint reference for issue update.
+type updateIssueSprintDTO struct {
+	ID apihelpers.StringID `json:"id"`
+}
+
+// updateIssueRequestDTO is the request body for issue update.
+type updateIssueRequestDTO struct {
+	Summary     string                 `json:"summary,omitempty"`
+	Description string                 `json:"description,omitempty"`
+	Type        string                 `json:"type,omitempty"`
+	Priority    string                 `json:"priority,omitempty"`
+	Assignee    string                 `json:"assignee,omitempty"`
+	Version     int                    `json:"version,omitempty"`
+	Project     *updateIssueProjectDTO `json:"project,omitempty"`
+	Sprint      []updateIssueSprintDTO `json:"sprint,omitempty"`
+}
+
+// executeTransitionRequestDTO is the request body for transition execution.
+type executeTransitionRequestDTO struct {
 	Comment string         `json:"comment,omitempty"`
 	Fields  map[string]any `json:"fields,omitempty"`
 }
 
-// AddCommentRequest is the request body for adding a comment.
-type AddCommentRequest struct {
-	Text              string   `json:"text"`
-	AttachmentIDs     []string `json:"attachmentIds,omitempty"`
-	MarkupType        string   `json:"markupType,omitempty"`
-	Summonees         []string `json:"summonees,omitempty"`
-	MaillistSummonees []string `json:"maillistSummonees,omitempty"`
-	IsAddToFollowers  *bool    `json:"isAddToFollowers,omitempty"`
+// addCommentRequestDTO is the request body for adding a comment.
+type addCommentRequestDTO struct {
+	Text              string                `json:"text"`
+	AttachmentIDs     []apihelpers.StringID `json:"attachmentIds,omitempty"`
+	MarkupType        string                `json:"markupType,omitempty"`
+	Summonees         []string              `json:"summonees,omitempty"`
+	MaillistSummonees []string              `json:"maillistSummonees,omitempty"`
+	IsAddToFollowers  *bool                 `json:"isAddToFollowers,omitempty"`
+}
+
+// updateCommentRequestDTO is the request body for updating a comment.
+type updateCommentRequestDTO struct {
+	Text              string                `json:"text"`
+	AttachmentIDs     []apihelpers.StringID `json:"attachmentIds,omitempty"`
+	MarkupType        string                `json:"markupType,omitempty"`
+	Summonees         []string              `json:"summonees,omitempty"`
+	MaillistSummonees []string              `json:"maillistSummonees,omitempty"`
+}
+
+// attachmentDTO represents a file attachment in the Tracker API.
+type attachmentDTO struct {
+	ID        apihelpers.StringID    `json:"id"`
+	Name      string                 `json:"name"`
+	Content   string                 `json:"content"`
+	Thumbnail string                 `json:"thumbnail,omitempty"`
+	Mimetype  string                 `json:"mimetype,omitempty"`
+	Size      int64                  `json:"size"`
+	CreatedAt string                 `json:"createdAt,omitempty"`
+	CreatedBy *userDTO               `json:"createdBy,omitempty"`
+	Metadata  *attachmentMetadataDTO `json:"metadata,omitempty"`
+}
+
+// attachmentMetadataDTO contains additional attachment metadata.
+type attachmentMetadataDTO struct {
+	Size string `json:"size,omitempty"`
+}
+
+// queueDetailDTO represents a detailed queue response from the Tracker API.
+type queueDetailDTO struct {
+	Self            string              `json:"self"`
+	ID              apihelpers.StringID `json:"id"`
+	Key             string              `json:"key"`
+	Display         string              `json:"display,omitempty"`
+	Name            string              `json:"name,omitempty"`
+	Description     string              `json:"description,omitempty"`
+	Version         int                 `json:"version,omitempty"`
+	Lead            *userDTO            `json:"lead,omitempty"`
+	AssignAuto      bool                `json:"assignAuto,omitempty"`
+	AllowExternals  bool                `json:"allowExternals,omitempty"`
+	DenyVoting      bool                `json:"denyVoting,omitempty"`
+	DefaultType     *typeDTO            `json:"defaultType,omitempty"`
+	DefaultPriority *prioDTO            `json:"defaultPriority,omitempty"`
+}
+
+// userDetailDTO represents a detailed user response from the Tracker API.
+type userDetailDTO struct {
+	Self        string              `json:"self"`
+	ID          apihelpers.StringID `json:"id"`
+	UID         apihelpers.StringID `json:"uid,omitempty"`
+	TrackerUID  apihelpers.StringID `json:"trackerUid,omitempty"`
+	Login       string              `json:"login,omitempty"`
+	Display     string              `json:"display,omitempty"`
+	FirstName   string              `json:"firstName,omitempty"`
+	LastName    string              `json:"lastName,omitempty"`
+	Email       string              `json:"email,omitempty"`
+	CloudUID    apihelpers.StringID `json:"cloudUid,omitempty"`
+	PassportUID apihelpers.StringID `json:"passportUid,omitempty"`
+	HasLicense  bool                `json:"hasLicense,omitempty"`
+	Dismissed   bool                `json:"dismissed,omitempty"`
+	External    bool                `json:"external,omitempty"`
+}
+
+// createQueueRequestDTO is the request body for queue creation.
+type createQueueRequestDTO struct {
+	Key             string `json:"key"`
+	Name            string `json:"name"`
+	Lead            string `json:"lead"`
+	DefaultType     string `json:"defaultType"`
+	DefaultPriority string `json:"defaultPriority"`
+}
+
+// linkDTO represents an issue link in the Tracker API.
+type linkDTO struct {
+	ID        apihelpers.StringID `json:"id"`
+	Self      string              `json:"self"`
+	Type      *linkTypeDTO        `json:"type,omitempty"`
+	Direction string              `json:"direction,omitempty"`
+	Object    *linkedIssueDTO     `json:"object,omitempty"`
+	CreatedBy *userDTO            `json:"createdBy,omitempty"`
+	UpdatedBy *userDTO            `json:"updatedBy,omitempty"`
+	CreatedAt string              `json:"createdAt,omitempty"`
+	UpdatedAt string              `json:"updatedAt,omitempty"`
+}
+
+// linkTypeDTO represents a link type in the Tracker API.
+type linkTypeDTO struct {
+	ID      apihelpers.StringID `json:"id"`
+	Inward  string              `json:"inward,omitempty"`
+	Outward string              `json:"outward,omitempty"`
+}
+
+// linkedIssueDTO represents a linked issue reference in the Tracker API.
+type linkedIssueDTO struct {
+	Self    string              `json:"self"`
+	ID      apihelpers.StringID `json:"id"`
+	Key     string              `json:"key"`
+	Display string              `json:"display,omitempty"`
+}
+
+// createLinkRequestDTO is the request body for creating a link.
+type createLinkRequestDTO struct {
+	Relationship string `json:"relationship"`
+	Issue        string `json:"issue"`
+}
+
+// changelogEntryDTO represents a single changelog entry in the Tracker API.
+type changelogEntryDTO struct {
+	ID        apihelpers.StringID       `json:"id"`
+	Self      string                    `json:"self"`
+	Issue     *linkedIssueDTO           `json:"issue,omitempty"`
+	UpdatedAt string                    `json:"updatedAt,omitempty"`
+	UpdatedBy *userDTO                  `json:"updatedBy,omitempty"`
+	Type      string                    `json:"type,omitempty"`
+	Transport string                    `json:"transport,omitempty"`
+	Fields    []changelogFieldChangeDTO `json:"fields,omitempty"`
+}
+
+// changelogFieldDTO represents the field object in changelog entries.
+type changelogFieldDTO struct {
+	Self    string              `json:"self"`
+	ID      apihelpers.StringID `json:"id"`
+	Display string              `json:"display"`
+}
+
+// changelogFieldChangeDTO represents a single field change in a changelog entry.
+type changelogFieldChangeDTO struct {
+	Field *changelogFieldDTO `json:"field"`
+	From  any                `json:"from,omitempty"`
+	To    any                `json:"to,omitempty"`
+}
+
+// projectCommentDTO represents a project entity comment in the Tracker API.
+type projectCommentDTO struct {
+	ID        apihelpers.StringID `json:"id"`
+	LongID    apihelpers.StringID `json:"longId,omitempty"`
+	Self      string              `json:"self"`
+	Text      string              `json:"text,omitempty"`
+	CreatedAt string              `json:"createdAt,omitempty"`
+	UpdatedAt string              `json:"updatedAt,omitempty"`
+	CreatedBy *userDTO            `json:"createdBy,omitempty"`
+	UpdatedBy *userDTO            `json:"updatedBy,omitempty"`
 }

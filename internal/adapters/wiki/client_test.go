@@ -4,9 +4,9 @@ package wiki
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -41,9 +41,11 @@ func TestClient_HeaderInjection(t *testing.T) {
 		capturedHeaders = r.Header.Clone()
 		w.Header().Set("Content-Type", "application/json")
 		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode(Page{ID: 1, Title: "Test"})
+		json.NewEncoder(w).Encode(pageDTO{ID: "1", Title: "Test"})
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return(testToken, nil)
 
@@ -57,51 +59,6 @@ func TestClient_HeaderInjection(t *testing.T) {
 	assert.Contains(t, capturedHeaders.Get(apihelpers.HeaderContentType), "application/json")
 }
 
-func TestClient_RetryOnce_ForceRefreshCalled(t *testing.T) {
-	t.Parallel()
-
-	ctrl := gomock.NewController(t)
-	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
-
-	const (
-		staleToken = "stale-token"
-		freshToken = "fresh-token"
-		testOrgID  = "test-org"
-	)
-
-	var requestCount atomic.Int32
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		count := requestCount.Add(1)
-		authHeader := r.Header.Get(apihelpers.HeaderAuthorization)
-
-		if count == 1 {
-			assert.Equal(t, "Bearer "+staleToken, authHeader)
-			w.WriteHeader(http.StatusUnauthorized)
-			_, _ = w.Write([]byte(`{"error_code":"UNAUTHORIZED","debug_message":"Token expired"}`))
-			return
-		}
-
-		assert.Equal(t, "Bearer "+freshToken, authHeader)
-		w.Header().Set("Content-Type", "application/json")
-		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode(Page{ID: 1, Title: "Success"})
-	}))
-	defer server.Close()
-
-	gomock.InOrder(
-		tokenProvider.EXPECT().Token(gomock.Any()).Return(staleToken, nil),
-		tokenProvider.EXPECT().ForceRefresh(gomock.Any()).Return(freshToken, nil),
-	)
-
-	client := NewClient(newTestConfig(server.URL, testOrgID), tokenProvider)
-
-	page, err := client.GetPageBySlug(context.Background(), "test/page", domain.WikiGetPageOpts{})
-	require.NoError(t, err)
-	assert.Equal(t, int64(1), page.ID)
-	assert.Equal(t, "Success", page.Title)
-	assert.Equal(t, int32(2), requestCount.Load())
-}
-
 func TestClient_Non2xx_ReturnsUpstreamError_Sanitized(t *testing.T) {
 	t.Parallel()
 
@@ -112,13 +69,15 @@ func TestClient_Non2xx_ReturnsUpstreamError_Sanitized(t *testing.T) {
 		w.WriteHeader(http.StatusNotFound)
 		_, _ = w.Write([]byte(`{"error_code":"NOT_FOUND","debug_message":"Page not found"}`))
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	_, err := client.GetPageByID(context.Background(), 123, domain.WikiGetPageOpts{})
+	_, err := client.GetPageByID(context.Background(), "123", domain.WikiGetPageOpts{})
 	require.Error(t, err)
 
 	var upstreamErr domain.UpstreamError
@@ -142,7 +101,9 @@ func TestClient_Non2xx_FallbackMessage(t *testing.T) {
 		w.WriteHeader(http.StatusInternalServerError)
 		_, _ = w.Write([]byte("Internal error"))
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
 
@@ -169,9 +130,11 @@ func TestClient_GetPageBySlug_Fields(t *testing.T) {
 		capturedURL = r.URL.String()
 		w.Header().Set("Content-Type", "application/json")
 		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode(Page{ID: 1, Slug: "test/page"})
+		json.NewEncoder(w).Encode(pageDTO{ID: "1", Slug: "test/page"})
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
 
@@ -195,8 +158,8 @@ func TestClient_ListPageResources_Pagination(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedURL = r.URL.String()
 		w.Header().Set("Content-Type", "application/json")
-		resp := resourcesResponse{
-			Items: []Resource{
+		resp := resourcesResponseDTO{
+			Items: []resourceDTO{
 				{Type: "attachment", Item: map[string]any{"id": float64(1), "name": "file.txt"}},
 			},
 			NextCursor: "next-cursor-abc",
@@ -205,13 +168,15 @@ func TestClient_ListPageResources_Pagination(t *testing.T) {
 		//nolint:errcheck // test helper
 		json.NewEncoder(w).Encode(resp)
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	result, err := client.ListPageResources(context.Background(), 42, domain.WikiListResourcesOpts{
+	result, err := client.ListPageResources(context.Background(), "42", domain.WikiListResourcesOpts{
 		Cursor:         "start-cursor",
 		PageSize:       25,
 		OrderBy:        "created_at",
@@ -246,19 +211,21 @@ func TestClient_ListPageResources_EnforcesMaxPageSize(t *testing.T) {
 		capturedURL = r.URL.String()
 		w.Header().Set("Content-Type", "application/json")
 		//nolint:errcheck // test helper
-		json.NewEncoder(w).Encode(resourcesResponse{
+		json.NewEncoder(w).Encode(resourcesResponseDTO{
 			Items:      nil,
 			NextCursor: "",
 			PrevCursor: "",
 		})
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	_, err := client.ListPageResources(context.Background(), 1, domain.WikiListResourcesOpts{
+	_, err := client.ListPageResources(context.Background(), "1", domain.WikiListResourcesOpts{
 		Cursor:         "",
 		PageSize:       100, // exceeds max of 50
 		OrderBy:        "",
@@ -279,8 +246,8 @@ func TestClient_ListPageResources_ResourceUnionMapping(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		resp := resourcesResponse{
-			Items: []Resource{
+		resp := resourcesResponseDTO{
+			Items: []resourceDTO{
 				{
 					Type: "attachment",
 					Item: map[string]any{
@@ -317,13 +284,15 @@ func TestClient_ListPageResources_ResourceUnionMapping(t *testing.T) {
 		//nolint:errcheck // test helper
 		json.NewEncoder(w).Encode(resp)
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	result, err := client.ListPageResources(context.Background(), 1, domain.WikiListResourcesOpts{
+	result, err := client.ListPageResources(context.Background(), "1", domain.WikiListResourcesOpts{
 		Cursor:         "",
 		PageSize:       0,
 		OrderBy:        "",
@@ -340,7 +309,7 @@ func TestClient_ListPageResources_ResourceUnionMapping(t *testing.T) {
 	require.NotNil(t, att.Attachment)
 	assert.Nil(t, att.Sharepoint)
 	assert.Nil(t, att.Grid)
-	assert.Equal(t, int64(101), att.Attachment.ID)
+	assert.Equal(t, "101", att.Attachment.ID)
 	assert.Equal(t, "doc.pdf", att.Attachment.Name)
 	assert.Equal(t, int64(2048), att.Attachment.Size)
 	assert.Equal(t, "application/pdf", att.Attachment.MIMEType)
@@ -354,7 +323,7 @@ func TestClient_ListPageResources_ResourceUnionMapping(t *testing.T) {
 	assert.Nil(t, sp.Attachment)
 	require.NotNil(t, sp.Sharepoint)
 	assert.Nil(t, sp.Grid)
-	assert.Equal(t, int64(202), sp.Sharepoint.ID)
+	assert.Equal(t, "202", sp.Sharepoint.ID)
 	assert.Equal(t, "Shared Doc", sp.Sharepoint.Title)
 	assert.Equal(t, "spreadsheet", sp.Sharepoint.Doctype)
 	assert.Equal(t, "2025-02-01T12:00:00Z", sp.Sharepoint.CreatedAt)
@@ -380,8 +349,8 @@ func TestClient_ListPageGrids_Pagination(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedURL = r.URL.String()
 		w.Header().Set("Content-Type", "application/json")
-		resp := gridsResponse{
-			Items: []PageGridSummary{
+		resp := gridsResponseDTO{
+			Items: []pageGridSummaryDTO{
 				{ID: "grid-uuid-1", Title: "Grid 1", CreatedAt: "2024-01-01T00:00:00Z"},
 			},
 			NextCursor: "next",
@@ -390,13 +359,15 @@ func TestClient_ListPageGrids_Pagination(t *testing.T) {
 		//nolint:errcheck // test helper
 		json.NewEncoder(w).Encode(resp)
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	result, err := client.ListPageGrids(context.Background(), 99, domain.WikiListGridsOpts{
+	result, err := client.ListPageGrids(context.Background(), "99", domain.WikiListGridsOpts{
 		Cursor:         "",
 		PageSize:       30,
 		OrderBy:        "title",
@@ -425,12 +396,14 @@ func TestClient_GetGridByID_WithOptions(t *testing.T) {
 		capturedURL = r.URL.String()
 		w.Header().Set("Content-Type", "application/json")
 		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode(Grid{
+		json.NewEncoder(w).Encode(gridDTO{
 			ID:    "abc-123",
 			Title: "Test Grid",
 		})
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
 
@@ -441,7 +414,7 @@ func TestClient_GetGridByID_WithOptions(t *testing.T) {
 		Filter:   "status=active",
 		OnlyCols: "col1,col2",
 		OnlyRows: "row1,row2",
-		Revision: 5,
+		Revision: "5",
 		Sort:     "created_at",
 	})
 	require.NoError(t, err)
@@ -458,38 +431,6 @@ func TestClient_GetGridByID_WithOptions(t *testing.T) {
 	assert.Equal(t, "Test Grid", grid.Title)
 }
 
-func TestClient_RetryOnce_StillFailsAfterRefresh(t *testing.T) {
-	t.Parallel()
-
-	ctrl := gomock.NewController(t)
-	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
-
-	var requestCount atomic.Int32
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestCount.Add(1)
-		w.WriteHeader(http.StatusUnauthorized)
-		_, _ = w.Write([]byte(`{"error_code":"UNAUTHORIZED","debug_message":"Still unauthorized"}`))
-	}))
-	defer server.Close()
-
-	gomock.InOrder(
-		tokenProvider.EXPECT().Token(gomock.Any()).Return("token1", nil),
-		tokenProvider.EXPECT().ForceRefresh(gomock.Any()).Return("token2", nil),
-	)
-
-	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
-
-	_, err := client.GetPageBySlug(context.Background(), "test/page", domain.WikiGetPageOpts{})
-	require.Error(t, err)
-
-	var upstreamErr domain.UpstreamError
-	require.ErrorAs(t, err, &upstreamErr)
-	assert.Equal(t, http.StatusUnauthorized, upstreamErr.HTTPStatus)
-
-	// Verify exactly 2 requests were made (initial + retry)
-	assert.Equal(t, int32(2), requestCount.Load())
-}
-
 func TestClient_GetPageByID_Success(t *testing.T) {
 	t.Parallel()
 
@@ -501,26 +442,28 @@ func TestClient_GetPageByID_Success(t *testing.T) {
 		capturedURL = r.URL.String()
 		w.Header().Set("Content-Type", "application/json")
 		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode(Page{
-			ID:       42,
+		json.NewEncoder(w).Encode(pageDTO{
+			ID:       "42",
 			PageType: "page",
 			Slug:     "users/test",
 			Title:    "Test Page",
 			Content:  "Content here",
 		})
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	page, err := client.GetPageByID(context.Background(), 42, domain.WikiGetPageOpts{Fields: []string{"content"}})
+	page, err := client.GetPageByID(context.Background(), "42", domain.WikiGetPageOpts{Fields: []string{"content"}})
 	require.NoError(t, err)
 
 	assert.Contains(t, capturedURL, "/v1/pages/42")
 	assert.Contains(t, capturedURL, "fields=content")
-	assert.Equal(t, int64(42), page.ID)
+	assert.Equal(t, "42", page.ID)
 	assert.Equal(t, "Test Page", page.Title)
 	assert.Equal(t, "Content here", page.Content)
 }
@@ -537,7 +480,9 @@ func TestClient_UpstreamError_NoTokenLeak(t *testing.T) {
 		w.WriteHeader(http.StatusBadRequest)
 		_, _ = w.Write([]byte(`{"error_code":"BAD_REQUEST","debug_message":"Invalid request"}`))
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return(secretToken, nil)
 
@@ -560,9 +505,11 @@ func TestClient_FullConfig(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode(Page{ID: 1, Title: "Test"})
+		json.NewEncoder(w).Encode(pageDTO{ID: "1", Title: "Test"})
 	}))
-	defer server.Close()
+	t.Cleanup(func() {
+		server.Close()
+	})
 
 	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
 
@@ -577,4 +524,441 @@ func TestClient_FullConfig(t *testing.T) {
 
 	_, err := client.GetPageBySlug(context.Background(), "test/page", domain.WikiGetPageOpts{})
 	require.NoError(t, err)
+}
+
+// TestClient_DeletePage verifies DeletePage issues DELETE /v1/pages/{id} and parses response.
+func TestClient_DeletePage(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
+
+	var capturedMethod, capturedPath string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedMethod = r.Method
+		capturedPath = r.URL.Path
+		w.Header().Set("Content-Type", "application/json")
+		//nolint:errcheck // test helper
+		w.Write([]byte(`{"recovery_token":"abc-123-def"}`))
+	}))
+	t.Cleanup(func() {
+		server.Close()
+	})
+
+	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+
+	client := NewClient(newTestConfig(server.URL, "org-123"), tokenProvider)
+
+	resp, err := client.DeletePage(context.Background(), "42")
+	require.NoError(t, err)
+
+	assert.Equal(t, http.MethodDelete, capturedMethod)
+	assert.Equal(t, "/v1/pages/42", capturedPath)
+	assert.Equal(t, "abc-123-def", resp.RecoveryToken)
+}
+
+// TestClient_ClonePage verifies ClonePage issues POST /v1/pages/{id}/clone with correct body.
+func TestClient_ClonePage(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
+
+	var capturedMethod, capturedPath string
+	var capturedBody []byte
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedMethod = r.Method
+		capturedPath = r.URL.Path
+		capturedBody, _ = io.ReadAll(r.Body)
+		w.Header().Set("Content-Type", "application/json")
+		//nolint:errcheck // test helper
+		w.Write([]byte(`{
+			"operation": {"id": "op-123", "type": "clone_page"},
+			"dry_run": false,
+			"status_url": "https://wiki.example.com/status/op-123"
+		}`))
+	}))
+	t.Cleanup(func() {
+		server.Close()
+	})
+
+	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+
+	client := NewClient(newTestConfig(server.URL, "org-123"), tokenProvider)
+
+	resp, err := client.ClonePage(context.Background(), domain.WikiPageCloneRequest{
+		PageID:      "99",
+		Target:      "new/location",
+		Title:       "Cloned Title",
+		SubscribeMe: true,
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t, http.MethodPost, capturedMethod)
+	assert.Equal(t, "/v1/pages/99/clone", capturedPath)
+	assert.Contains(t, string(capturedBody), `"target":"new/location"`)
+	assert.Contains(t, string(capturedBody), `"title":"Cloned Title"`)
+	assert.Contains(t, string(capturedBody), `"subscribe_me":true`)
+	assert.Equal(t, "op-123", resp.OperationID)
+	assert.Equal(t, "clone_page", resp.OperationType)
+	assert.False(t, resp.DryRun)
+	assert.Equal(t, "https://wiki.example.com/status/op-123", resp.StatusURL)
+}
+
+// TestClient_DeleteGrid verifies DeleteGrid issues DELETE /v1/grids/{id} and treats 204 as success.
+func TestClient_DeleteGrid(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
+
+	var capturedMethod, capturedPath string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedMethod = r.Method
+		capturedPath = r.URL.Path
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	t.Cleanup(func() {
+		server.Close()
+	})
+
+	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+
+	client := NewClient(newTestConfig(server.URL, "org-123"), tokenProvider)
+
+	err := client.DeleteGrid(context.Background(), "grid-uuid-456")
+	require.NoError(t, err)
+
+	assert.Equal(t, http.MethodDelete, capturedMethod)
+	assert.Equal(t, "/v1/grids/grid-uuid-456", capturedPath)
+}
+
+// TestClient_CloneGrid verifies CloneGrid issues POST /v1/grids/{id}/clone with correct body.
+func TestClient_CloneGrid(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
+
+	var capturedMethod, capturedPath string
+	var capturedBody []byte
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedMethod = r.Method
+		capturedPath = r.URL.Path
+		capturedBody, _ = io.ReadAll(r.Body)
+		w.Header().Set("Content-Type", "application/json")
+		//nolint:errcheck // test helper
+		w.Write([]byte(`{
+			"operation": {"id": "grid-op-789", "type": "clone_grid"},
+			"dry_run": true,
+			"status_url": "https://wiki.example.com/status/grid-op-789"
+		}`))
+	}))
+	t.Cleanup(func() {
+		server.Close()
+	})
+
+	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+
+	client := NewClient(newTestConfig(server.URL, "org-123"), tokenProvider)
+
+	resp, err := client.CloneGrid(context.Background(), domain.WikiGridCloneRequest{
+		GridID:   "source-grid-id",
+		Target:   "target/page/slug",
+		Title:    "Cloned Grid Title",
+		WithData: true,
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t, http.MethodPost, capturedMethod)
+	assert.Equal(t, "/v1/grids/source-grid-id/clone", capturedPath)
+	assert.Contains(t, string(capturedBody), `"target":"target/page/slug"`)
+	assert.Contains(t, string(capturedBody), `"title":"Cloned Grid Title"`)
+	assert.Contains(t, string(capturedBody), `"with_data":true`)
+	assert.Equal(t, "grid-op-789", resp.OperationID)
+	assert.Equal(t, "clone_grid", resp.OperationType)
+	assert.True(t, resp.DryRun)
+	assert.Equal(t, "https://wiki.example.com/status/grid-op-789", resp.StatusURL)
+}
+
+// TestClient_AddGridRows verifies AddGridRows issues POST /v1/grids/{id}/rows with correct body.
+func TestClient_AddGridRows(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
+
+	var capturedMethod, capturedPath string
+	var capturedBody []byte
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedMethod = r.Method
+		capturedPath = r.URL.Path
+		capturedBody, _ = io.ReadAll(r.Body)
+		w.Header().Set("Content-Type", "application/json")
+		//nolint:errcheck // test helper
+		w.Write([]byte(`{"revision":"rev-123","results":[{"id":"row-1","row":["val"],"color":"blue","pinned":true}]}`))
+	}))
+	t.Cleanup(func() {
+		server.Close()
+	})
+
+	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+
+	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
+
+	pos := 2
+	resp, err := client.AddGridRows(context.Background(), domain.WikiGridRowsAddRequest{
+		GridID:     "grid-123",
+		Rows:       []map[string]any{{"col": "val"}},
+		AfterRowID: "row-0",
+		Position:   &pos,
+		Revision:   "rev-prev",
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t, http.MethodPost, capturedMethod)
+	assert.Equal(t, "/v1/grids/grid-123/rows", capturedPath)
+	assert.Contains(t, string(capturedBody), `"after_row_id":"row-0"`)
+	assert.Contains(t, string(capturedBody), `"position":2`)
+	assert.Contains(t, string(capturedBody), `"revision":"rev-prev"`)
+	assert.Equal(t, "rev-123", resp.Revision)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, "row-1", resp.Results[0].ID)
+	assert.Equal(t, []any{"val"}, resp.Results[0].Row)
+	assert.Equal(t, "blue", resp.Results[0].Color)
+	assert.True(t, resp.Results[0].Pinned)
+}
+
+// TestClient_DeleteGridRows verifies DeleteGridRows issues DELETE /v1/grids/{id}/rows with correct body.
+func TestClient_DeleteGridRows(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
+
+	var capturedMethod, capturedPath string
+	var capturedBody []byte
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedMethod = r.Method
+		capturedPath = r.URL.Path
+		capturedBody, _ = io.ReadAll(r.Body)
+		w.Header().Set("Content-Type", "application/json")
+		//nolint:errcheck // test helper
+		w.Write([]byte(`{"revision":"rev-456"}`))
+	}))
+	t.Cleanup(func() {
+		server.Close()
+	})
+
+	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+
+	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
+
+	resp, err := client.DeleteGridRows(context.Background(), domain.WikiGridRowsDeleteRequest{
+		GridID:   "grid-123",
+		RowIDs:   []string{"row-1", "row-2"},
+		Revision: "rev-prev",
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t, http.MethodDelete, capturedMethod)
+	assert.Equal(t, "/v1/grids/grid-123/rows", capturedPath)
+	assert.Contains(t, string(capturedBody), `"row_ids":["row-1","row-2"]`)
+	assert.Contains(t, string(capturedBody), `"revision":"rev-prev"`)
+	assert.Equal(t, "rev-456", resp.Revision)
+}
+
+// TestClient_MoveGridRows verifies MoveGridRows issues POST /v1/grids/{id}/rows/move with correct body.
+func TestClient_MoveGridRows(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
+
+	var capturedMethod, capturedPath string
+	var capturedBody []byte
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedMethod = r.Method
+		capturedPath = r.URL.Path
+		capturedBody, _ = io.ReadAll(r.Body)
+		w.Header().Set("Content-Type", "application/json")
+		//nolint:errcheck // test helper
+		w.Write([]byte(`{"revision":"rev-789"}`))
+	}))
+	t.Cleanup(func() {
+		server.Close()
+	})
+
+	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+
+	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
+
+	pos := 5
+	rowsCount := 3
+	resp, err := client.MoveGridRows(context.Background(), domain.WikiGridRowsMoveRequest{
+		GridID:     "grid-123",
+		RowID:      "row-1",
+		AfterRowID: "row-0",
+		Position:   &pos,
+		RowsCount:  &rowsCount,
+		Revision:   "rev-prev",
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t, http.MethodPost, capturedMethod)
+	assert.Equal(t, "/v1/grids/grid-123/rows/move", capturedPath)
+	assert.Contains(t, string(capturedBody), `"row_id":"row-1"`)
+	assert.Contains(t, string(capturedBody), `"after_row_id":"row-0"`)
+	assert.Contains(t, string(capturedBody), `"position":5`)
+	assert.Contains(t, string(capturedBody), `"rows_count":3`)
+	assert.Contains(t, string(capturedBody), `"revision":"rev-prev"`)
+	assert.Equal(t, "rev-789", resp.Revision)
+}
+
+// TestClient_AddGridColumns verifies AddGridColumns issues POST /v1/grids/{id}/columns with correct body.
+func TestClient_AddGridColumns(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
+
+	var capturedMethod, capturedPath string
+	var capturedBody []byte
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedMethod = r.Method
+		capturedPath = r.URL.Path
+		capturedBody, _ = io.ReadAll(r.Body)
+		w.Header().Set("Content-Type", "application/json")
+		//nolint:errcheck // test helper
+		w.Write([]byte(`{"revision":"rev-col-add"}`))
+	}))
+	t.Cleanup(func() {
+		server.Close()
+	})
+
+	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+
+	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
+
+	pos := 1
+	width := 150
+	resp, err := client.AddGridColumns(context.Background(), domain.WikiGridColumnsAddRequest{
+		GridID: "grid-123",
+		Columns: []domain.WikiNewColumnDefinition{
+			{
+				Slug:        "col1",
+				Title:       "Col1",
+				Type:        "string",
+				Required:    true,
+				Description: "A description",
+				Color:       "blue",
+				Format:      "plain",
+				Width:       &width,
+				WidthUnits:  "px",
+				Pinned:      "left",
+			},
+		},
+		Position: &pos,
+		Revision: "rev-prev",
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t, http.MethodPost, capturedMethod)
+	assert.Equal(t, "/v1/grids/grid-123/columns", capturedPath)
+	assert.Contains(t, string(capturedBody), `"slug":"col1"`)
+	assert.Contains(t, string(capturedBody), `"title":"Col1"`)
+	assert.Contains(t, string(capturedBody), `"type":"string"`)
+	assert.Contains(t, string(capturedBody), `"required":true`)
+	assert.Contains(t, string(capturedBody), `"description":"A description"`)
+	assert.Contains(t, string(capturedBody), `"color":"blue"`)
+	assert.Contains(t, string(capturedBody), `"format":"plain"`)
+	assert.Contains(t, string(capturedBody), `"width":150`)
+	assert.Contains(t, string(capturedBody), `"width_units":"px"`)
+	assert.Contains(t, string(capturedBody), `"pinned":"left"`)
+	assert.Contains(t, string(capturedBody), `"position":1`)
+	assert.Contains(t, string(capturedBody), `"revision":"rev-prev"`)
+	assert.Equal(t, "rev-col-add", resp.Revision)
+}
+
+// TestClient_DeleteGridColumns verifies DeleteGridColumns issues DELETE /v1/grids/{id}/columns with correct body.
+func TestClient_DeleteGridColumns(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
+
+	var capturedMethod, capturedPath string
+	var capturedBody []byte
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedMethod = r.Method
+		capturedPath = r.URL.Path
+		capturedBody, _ = io.ReadAll(r.Body)
+		w.Header().Set("Content-Type", "application/json")
+		//nolint:errcheck // test helper
+		w.Write([]byte(`{"revision":"rev-col-del"}`))
+	}))
+	t.Cleanup(func() {
+		server.Close()
+	})
+
+	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+
+	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
+
+	resp, err := client.DeleteGridColumns(context.Background(), domain.WikiGridColumnsDeleteRequest{
+		GridID:      "grid-123",
+		ColumnSlugs: []string{"col1", "col2"},
+		Revision:    "rev-prev",
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t, http.MethodDelete, capturedMethod)
+	assert.Equal(t, "/v1/grids/grid-123/columns", capturedPath)
+	assert.Contains(t, string(capturedBody), `"column_slugs":["col1","col2"]`)
+	assert.Contains(t, string(capturedBody), `"revision":"rev-prev"`)
+	assert.Equal(t, "rev-col-del", resp.Revision)
+}
+
+// TestClient_MoveGridColumns verifies MoveGridColumns issues POST /v1/grids/{id}/columns/move with correct body.
+func TestClient_MoveGridColumns(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
+
+	var capturedMethod, capturedPath string
+	var capturedBody []byte
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedMethod = r.Method
+		capturedPath = r.URL.Path
+		capturedBody, _ = io.ReadAll(r.Body)
+		w.Header().Set("Content-Type", "application/json")
+		//nolint:errcheck // test helper
+		w.Write([]byte(`{"revision":"rev-col-move"}`))
+	}))
+	t.Cleanup(func() {
+		server.Close()
+	})
+
+	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+
+	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
+
+	colsCount := 2
+	resp, err := client.MoveGridColumns(context.Background(), domain.WikiGridColumnsMoveRequest{
+		GridID:       "grid-123",
+		ColumnSlug:   "col1",
+		Position:     3,
+		ColumnsCount: &colsCount,
+		Revision:     "rev-prev",
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t, http.MethodPost, capturedMethod)
+	assert.Equal(t, "/v1/grids/grid-123/columns/move", capturedPath)
+	assert.Contains(t, string(capturedBody), `"column_slug":"col1"`)
+	assert.Contains(t, string(capturedBody), `"position":3`)
+	assert.Contains(t, string(capturedBody), `"columns_count":2`)
+	assert.Contains(t, string(capturedBody), `"revision":"rev-prev"`)
+	assert.Equal(t, "rev-col-move", resp.Revision)
 }

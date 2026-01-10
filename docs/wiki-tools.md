@@ -310,3 +310,227 @@ This tool is write-gated and requires `--wiki-write`.
 ### Output
 
 Returns `GridOutput`.
+
+## wiki_page_delete
+
+Deletes a Yandex Wiki page.
+
+This tool is write-gated and requires `--wiki-write`.
+
+### Input
+
+- `page_id` (integer, required): Page ID to delete. Must be positive.
+
+### Output
+
+Returns `DeletePageOutput`:
+
+- `recovery_token` (string): Recovery token for potential page restoration.
+
+## wiki_page_clone
+
+Clones a Yandex Wiki page to a new location (async operation).
+
+This tool is write-gated and requires `--wiki-write`.
+
+### Input
+
+- `page_id` (integer, required): Source page ID to clone. Must be positive.
+- `target` (string, required): Target page slug where clone will be created.
+- `title` (string, optional): New page title after cloning.
+- `subscribe_me` (boolean, optional): Subscribe to changes on the cloned page (default: false).
+
+Note: clone is asynchronous; the output contains a `status_url` for polling operation status.
+
+### Output
+
+Returns `CloneOperationOutput`:
+
+- `operation_id` (string): Async operation ID.
+- `operation_type` (string): Operation type identifier.
+- `dry_run` (boolean): Whether the operation was executed as a dry run.
+- `status_url` (string): URL for polling operation status.
+
+## wiki_grid_delete
+
+Deletes a Yandex Wiki dynamic table (grid).
+
+This tool is write-gated and requires `--wiki-write`.
+
+### Input
+
+- `grid_id` (string, required): Grid ID (UUID string) to delete.
+
+### Output
+
+No output. Success is indicated by the absence of an error.
+
+## wiki_grid_clone
+
+Clones a Yandex Wiki grid to a new location (async operation).
+
+This tool is write-gated and requires `--wiki-write`.
+
+### Input
+
+- `grid_id` (string, required): Source grid ID (UUID string) to clone.
+- `target` (string, required): Target page slug where the grid will be copied; the page is created if it does not exist.
+- `title` (string, optional): New grid title after copying (1-255 chars).
+- `with_data` (boolean, optional): Copy grid rows (default: false).
+
+Note: clone is asynchronous; the output contains a `status_url` for polling operation status.
+
+### Output
+
+Returns `CloneOperationOutput` (same shape as `wiki_page_clone`).
+
+## wiki_grid_rows_add
+
+Adds rows to a Yandex Wiki dynamic table (grid).
+
+This tool is write-gated and requires `--wiki-write`.
+
+### Input
+
+- `grid_id` (string, required): Grid ID (UUID string) to add rows to.
+- `rows` (array of object, required): Array of row objects; each object is a mapping of `column_slug` to value.
+  - Tool validation: must contain at least one element.
+- `after_row_id` (string, optional): Insert rows after this row ID.
+- `position` (integer, optional): Absolute insertion position (0-based).
+- `revision` (string, optional): Current revision for optimistic locking.
+
+### Output
+
+Returns `AddGridRowsOutput`:
+
+- `revision` (string): New grid revision.
+- `results` (array of object): Array of row result items.
+
+Row result item:
+
+- `id` (string): Row ID.
+- `row` (array): Cell values.
+- `color` (string, optional): Row color value returned by the API.
+- `pinned` (boolean, optional): Row pinned status.
+
+## wiki_grid_rows_delete
+
+Deletes rows from a Yandex Wiki dynamic table (grid).
+
+This tool is write-gated and requires `--wiki-write`.
+
+### Input
+
+- `grid_id` (string, required): Grid ID (UUID string) to delete rows from.
+- `row_ids` (array of string, required): Row IDs to delete.
+  - Tool validation: must contain at least one element.
+- `revision` (string, optional): Current revision for optimistic locking.
+
+### Output
+
+Returns `RevisionOutput`:
+
+- `revision` (string): New grid revision.
+
+## wiki_grid_rows_move
+
+Moves rows within a Yandex Wiki dynamic table (grid).
+
+This tool is write-gated and requires `--wiki-write`.
+
+### Input
+
+- `grid_id` (string, required): Grid ID (UUID string) to move rows in.
+- `row_id` (string, required): Starting row ID to move.
+- `after_row_id` (string, optional): Move rows to after this row ID.
+- `position` (integer, optional): Move to absolute position (0-based).
+- `rows_count` (integer, optional): Number of consecutive rows to move starting from `row_id` (must be greater than 0 if provided).
+- `revision` (string, optional): Current revision for optimistic locking.
+
+### Output
+
+Returns `RevisionOutput` (same shape as `wiki_grid_rows_delete`).
+
+## wiki_grid_columns_add
+
+Adds columns to a Yandex Wiki dynamic table (grid).
+
+This tool is write-gated and requires `--wiki-write`.
+
+### Input
+
+- `grid_id` (string, required): Grid ID (UUID string) to add columns to.
+- `columns` (array of object, required): Array of column definitions.
+  - Tool validation: must contain at least one element.
+- `position` (integer, optional): Insertion position (0-based).
+- `revision` (string, optional): Current revision for optimistic locking.
+
+Each column definition:
+
+- `slug` (string, required): Column identifier (alphanumeric underscores).
+- `title` (string, required): Column display title (1-255 chars).
+- `type` (string, required): Column type.
+  - Allowed values: `string`, `number`, `date`, `select`, `staff`, `checkbox`, `ticket`, `ticket_field`
+- `required` (boolean, required): Whether column value is required.
+- `description` (string, optional): Column description (max 1000 chars).
+- `color` (string, optional): Column header color.
+  - Allowed values: `blue`, `yellow`, `pink`, `red`, `green`, `mint`, `grey`, `orange`, `magenta`, `purple`, `copper`, `ocean`
+- `format` (string, optional): Text format for string columns only.
+  - Allowed values: `yfm`, `wom`, `plain`
+- `select_options` (array of string, optional): Options for select column type.
+- `multiple` (boolean, optional): Enable multiple selection for `select` and `staff` column types.
+- `mark_rows` (boolean, optional): For checkbox columns: mark row as completed in UI.
+- `ticket_field` (string, optional): Tracker field for `ticket_field` column type.
+  - Allowed values: `assignee`, `components`, `created_at`, `deadline`, `description`, `end`, `estimation`, `fixversions`, `followers`, `last_comment_updated_at`, `original_estimation`, `parent`, `pending_reply_from`, `priority`, `project`, `queue`, `reporter`, `resolution`, `resolved_at`, `sprint`, `start`, `status`, `status_start_time`, `status_type`, `storypoints`, `subject`, `tags`, `type`, `updated_at`, `votes`
+- `width` (integer, optional): Column width value.
+- `width_units` (string, optional): Column width units.
+  - Allowed values: `%`, `px`
+- `pinned` (string, optional): Pin column position.
+  - Allowed values: `left`, `right`
+
+### Output
+
+Returns `RevisionOutput` (same shape as `wiki_grid_rows_delete`).
+
+## wiki_grid_columns_delete
+
+Deletes columns from a Yandex Wiki dynamic table (grid).
+
+This tool is write-gated and requires `--wiki-write`.
+
+### Input
+
+- `grid_id` (string, required): Grid ID (UUID string) to delete columns from.
+- `column_slugs` (array of string, required): Column slugs to delete.
+  - Tool validation: must contain at least one element.
+- `revision` (string, optional): Current revision for optimistic locking.
+
+### Output
+
+Returns `RevisionOutput` (same shape as `wiki_grid_rows_delete`).
+
+## wiki_grid_columns_move
+
+Moves columns within a Yandex Wiki dynamic table (grid).
+
+This tool is write-gated and requires `--wiki-write`.
+
+### Input
+
+- `grid_id` (string, required): Grid ID (UUID string) to move columns in.
+- `column_slug` (string, required): Starting column slug to move.
+- `position` (integer, required): Destination position (0-based).
+- `columns_count` (integer, optional): Number of consecutive columns to move (must be greater than 0 if provided).
+- `revision` (string, optional): Current revision for optimistic locking.
+
+### Output
+
+Returns `RevisionOutput` (same shape as `wiki_grid_rows_delete`).
+
+## Planned / Requires Additional Research
+
+Items in this section are not implemented and are not available as MCP tools yet.
+
+- Update grid settings beyond cell values (for example, changing default sort for a grid).
+  - Requires: upstream schema for the sort configuration object and how it interacts with `wiki_grid_get` and revisions.
+  - Tentative tool name (not callable): `wiki_grid_update`

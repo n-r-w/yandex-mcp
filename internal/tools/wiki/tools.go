@@ -10,8 +10,8 @@ import (
 	"github.com/n-r-w/yandex-mcp/internal/tools/helpers"
 )
 
-// GetPageBySlug retrieves a Wiki page by its slug.
-func (r *Registrator) GetPageBySlug(ctx context.Context, input GetPageBySlugInput) (*PageOutput, error) {
+// getPageBySlug retrieves a Wiki page by its slug.
+func (r *Registrator) getPageBySlug(ctx context.Context, input getPageBySlugInputDTO) (*pageOutputDTO, error) {
 	if input.Slug == "" {
 		return nil, r.logError(ctx, errors.New("slug is required"))
 	}
@@ -30,12 +30,8 @@ func (r *Registrator) GetPageBySlug(ctx context.Context, input GetPageBySlugInpu
 	return mapPageToOutput(page), nil
 }
 
-// GetPageByID retrieves a Wiki page by its ID.
-func (r *Registrator) GetPageByID(ctx context.Context, input GetPageByIDInput) (*PageOutput, error) {
-	if input.PageID <= 0 {
-		return nil, r.logError(ctx, errors.New("page_id must be positive"))
-	}
-
+// getPageByID retrieves a Wiki page by its ID.
+func (r *Registrator) getPageByID(ctx context.Context, input getPageByIDInputDTO) (*pageOutputDTO, error) {
 	opts := domain.WikiGetPageOpts{
 		Fields:          input.Fields,
 		RevisionID:      input.RevisionID,
@@ -50,12 +46,8 @@ func (r *Registrator) GetPageByID(ctx context.Context, input GetPageByIDInput) (
 	return mapPageToOutput(page), nil
 }
 
-// ListResources lists resources (attachments, grids) for a page.
-func (r *Registrator) ListResources(ctx context.Context, input ListResourcesInput) (*ResourcesListOutput, error) {
-	if input.PageID <= 0 {
-		return nil, r.logError(ctx, errors.New("page_id must be positive"))
-	}
-
+// listResources lists resources (attachments, grids) for a page.
+func (r *Registrator) listResources(ctx context.Context, input listResourcesInputDTO) (*resourcesListOutputDTO, error) {
 	if input.PageSize < 0 {
 		return nil, r.logError(ctx, errors.New("page_size must be non-negative"))
 	}
@@ -82,12 +74,8 @@ func (r *Registrator) ListResources(ctx context.Context, input ListResourcesInpu
 	return mapResourcesPageToOutput(result), nil
 }
 
-// ListGrids lists dynamic tables (grids) for a page.
-func (r *Registrator) ListGrids(ctx context.Context, input ListGridsInput) (*GridsListOutput, error) {
-	if input.PageID <= 0 {
-		return nil, r.logError(ctx, errors.New("page_id must be positive"))
-	}
-
+// listGrids lists dynamic tables (grids) for a page.
+func (r *Registrator) listGrids(ctx context.Context, input listGridsInputDTO) (*gridsListOutputDTO, error) {
 	if input.PageSize < 0 {
 		return nil, r.logError(ctx, errors.New("page_size must be non-negative"))
 	}
@@ -112,8 +100,8 @@ func (r *Registrator) ListGrids(ctx context.Context, input ListGridsInput) (*Gri
 	return mapGridsPageToOutput(result), nil
 }
 
-// GetGrid retrieves a dynamic table by its ID.
-func (r *Registrator) GetGrid(ctx context.Context, input GetGridInput) (*GridOutput, error) {
+// getGrid retrieves a dynamic table by its ID.
+func (r *Registrator) getGrid(ctx context.Context, input getGridInputDTO) (*gridOutputDTO, error) {
 	if input.GridID == "" {
 		return nil, r.logError(ctx, errors.New("grid_id is required"))
 	}
@@ -135,8 +123,8 @@ func (r *Registrator) GetGrid(ctx context.Context, input GetGridInput) (*GridOut
 	return mapGridToOutput(grid), nil
 }
 
-// CreatePage creates a new wiki page.
-func (r *Registrator) CreatePage(ctx context.Context, input CreatePageInput) (*PageOutput, error) {
+// createPage creates a new wiki page.
+func (r *Registrator) createPage(ctx context.Context, input createPageInputDTO) (*pageOutputDTO, error) {
 	if input.Slug == "" {
 		return nil, r.logError(ctx, errors.New("slug is required"))
 	}
@@ -174,14 +162,14 @@ func (r *Registrator) CreatePage(ctx context.Context, input CreatePageInput) (*P
 	return mapPageToOutput(&result.Page), nil
 }
 
-// UpdatePage updates an existing wiki page.
-func (r *Registrator) UpdatePage(ctx context.Context, input UpdatePageInput) (*PageOutput, error) {
-	if input.PageID <= 0 {
-		return nil, r.logError(ctx, errors.New("page_id must be positive"))
-	}
-
+// updatePage updates an existing wiki page.
+func (r *Registrator) updatePage(ctx context.Context, input updatePageInputDTO) (*pageOutputDTO, error) {
 	if input.Title == "" && input.Content == "" && input.Redirect == nil {
 		return nil, r.logError(ctx, errors.New("at least one of title, content, or redirect is required"))
+	}
+
+	if input.PageID == "" {
+		return nil, r.logError(ctx, errors.New("page_id is required"))
 	}
 
 	req := &domain.WikiPageUpdateRequest{ //nolint:exhaustruct // Redirect set conditionally
@@ -208,12 +196,8 @@ func (r *Registrator) UpdatePage(ctx context.Context, input UpdatePageInput) (*P
 	return mapPageToOutput(&result.Page), nil
 }
 
-// AppendPage appends content to an existing wiki page.
-func (r *Registrator) AppendPage(ctx context.Context, input AppendPageInput) (*PageOutput, error) {
-	if input.PageID <= 0 {
-		return nil, r.logError(ctx, errors.New("page_id must be positive"))
-	}
-
+// appendPage appends content to an existing wiki page.
+func (r *Registrator) appendPage(ctx context.Context, input appendPageInputDTO) (*pageOutputDTO, error) {
 	if input.Content == "" {
 		return nil, r.logError(ctx, errors.New("content is required"))
 	}
@@ -254,9 +238,9 @@ func (r *Registrator) AppendPage(ctx context.Context, input AppendPageInput) (*P
 	return mapPageToOutput(&result.Page), nil
 }
 
-// CreateGrid creates a new dynamic table (grid).
-func (r *Registrator) CreateGrid(ctx context.Context, input CreateGridInput) (*GridOutput, error) {
-	if input.Page.ID <= 0 && input.Page.Slug == "" {
+// createGrid creates a new dynamic table (grid).
+func (r *Registrator) createGrid(ctx context.Context, input createGridInputDTO) (*gridOutputDTO, error) {
+	if input.Page.ID == "" && input.Page.Slug == "" {
 		return nil, r.logError(ctx, errors.New("page.id or page.slug is required"))
 	}
 
@@ -287,10 +271,10 @@ func (r *Registrator) CreateGrid(ctx context.Context, input CreateGridInput) (*G
 
 	// Resolve page ID from slug if not provided directly
 	pageID := input.Page.ID
-	if pageID <= 0 {
+	if pageID == "" {
 		page, err := r.adapter.GetPageBySlug(ctx, input.Page.Slug, domain.WikiGetPageOpts{
 			Fields:          nil,
-			RevisionID:      0,
+			RevisionID:      "",
 			RaiseOnRedirect: false,
 		})
 		if err != nil {
@@ -316,8 +300,8 @@ func (r *Registrator) CreateGrid(ctx context.Context, input CreateGridInput) (*G
 	return mapGridToOutput(&result.Grid), nil
 }
 
-// UpdateGridCells updates cells in a dynamic table (grid).
-func (r *Registrator) UpdateGridCells(ctx context.Context, input UpdateGridCellsInput) (*GridOutput, error) {
+// updateGridCells updates cells in a dynamic table (grid).
+func (r *Registrator) updateGridCells(ctx context.Context, input updateGridCellsInputDTO) (*gridOutputDTO, error) {
 	if input.GridID == "" {
 		return nil, r.logError(ctx, errors.New("grid_id is required"))
 	}
@@ -328,23 +312,18 @@ func (r *Registrator) UpdateGridCells(ctx context.Context, input UpdateGridCells
 
 	cells := make([]domain.WikiCellUpdate, 0, len(input.Cells))
 	for i, cell := range input.Cells {
-		if cell.RowID <= 0 {
-			return nil, r.logError(ctx, fmt.Errorf("cell[%d]: row_id must be positive", i))
+		if cell.RowID == "" {
+			return nil, r.logError(ctx, fmt.Errorf("cell[%d]: row_id is required", i))
 		}
 
 		if cell.ColumnSlug == "" {
 			return nil, r.logError(ctx, fmt.Errorf("cell[%d]: column_slug is required", i))
 		}
 
-		value, ok := cell.Value.(string)
-		if !ok {
-			return nil, r.logError(ctx, fmt.Errorf("cell[%d]: value must be a string", i))
-		}
-
 		cells = append(cells, domain.WikiCellUpdate{
 			RowID:      cell.RowID,
 			ColumnSlug: cell.ColumnSlug,
-			Value:      value,
+			Value:      cell.Value,
 		})
 	}
 
@@ -375,4 +354,291 @@ func splitFields(s string) []string {
 		}
 	}
 	return result
+}
+
+// deletePage deletes a wiki page by its ID.
+func (r *Registrator) deletePage(ctx context.Context, input deletePageInputDTO) (*deletePageOutputDTO, error) {
+	if input.PageID == "" {
+		return nil, r.logError(ctx, errors.New("page_id is required"))
+	}
+
+	resp, err := r.adapter.DeletePage(ctx, input.PageID)
+	if err != nil {
+		return nil, helpers.ToSafeError(ctx, domain.ServiceWiki, err)
+	}
+
+	return &deletePageOutputDTO{
+		RecoveryToken: resp.RecoveryToken,
+	}, nil
+}
+
+// clonePage initiates an async clone operation for a wiki page.
+func (r *Registrator) clonePage(ctx context.Context, input clonePageInputDTO) (*cloneOperationOutputDTO, error) {
+	if input.PageID == "" {
+		return nil, r.logError(ctx, errors.New("page_id is required"))
+	}
+
+	if input.Target == "" {
+		return nil, r.logError(ctx, errors.New("target is required"))
+	}
+
+	req := domain.WikiPageCloneRequest{
+		PageID:      input.PageID,
+		Target:      input.Target,
+		Title:       input.Title,
+		SubscribeMe: input.SubscribeMe,
+	}
+
+	resp, err := r.adapter.ClonePage(ctx, req)
+	if err != nil {
+		return nil, helpers.ToSafeError(ctx, domain.ServiceWiki, err)
+	}
+
+	return &cloneOperationOutputDTO{
+		OperationID:   resp.OperationID,
+		OperationType: resp.OperationType,
+		DryRun:        resp.DryRun,
+		StatusURL:     resp.StatusURL,
+	}, nil
+}
+
+// deleteGrid deletes a wiki grid by its ID.
+func (r *Registrator) deleteGrid(ctx context.Context, input deleteGridInputDTO) (*deleteGridOutputDTO, error) {
+	if input.GridID == "" {
+		return nil, r.logError(ctx, errors.New("grid_id is required"))
+	}
+
+	err := r.adapter.DeleteGrid(ctx, input.GridID)
+	if err != nil {
+		return nil, helpers.ToSafeError(ctx, domain.ServiceWiki, err)
+	}
+
+	return &deleteGridOutputDTO{}, nil
+}
+
+// cloneGrid initiates an async clone operation for a wiki grid.
+func (r *Registrator) cloneGrid(ctx context.Context, input cloneGridInputDTO) (*cloneOperationOutputDTO, error) {
+	if input.GridID == "" {
+		return nil, r.logError(ctx, errors.New("grid_id is required"))
+	}
+
+	if input.Target == "" {
+		return nil, r.logError(ctx, errors.New("target is required"))
+	}
+
+	req := domain.WikiGridCloneRequest{
+		GridID:   input.GridID,
+		Target:   input.Target,
+		Title:    input.Title,
+		WithData: input.WithData,
+	}
+
+	resp, err := r.adapter.CloneGrid(ctx, req)
+	if err != nil {
+		return nil, helpers.ToSafeError(ctx, domain.ServiceWiki, err)
+	}
+
+	return &cloneOperationOutputDTO{
+		OperationID:   resp.OperationID,
+		OperationType: resp.OperationType,
+		DryRun:        resp.DryRun,
+		StatusURL:     resp.StatusURL,
+	}, nil
+}
+
+// addGridRows adds rows to a wiki grid.
+func (r *Registrator) addGridRows(ctx context.Context, input addGridRowsInputDTO) (*addGridRowsOutputDTO, error) {
+	if input.GridID == "" {
+		return nil, r.logError(ctx, errors.New("grid_id is required"))
+	}
+
+	if len(input.Rows) == 0 {
+		return nil, r.logError(ctx, errors.New("rows must contain at least one element"))
+	}
+
+	req := domain.WikiGridRowsAddRequest{
+		GridID:     input.GridID,
+		Rows:       input.Rows,
+		AfterRowID: input.AfterRowID,
+		Position:   input.Position,
+		Revision:   input.Revision,
+	}
+
+	resp, err := r.adapter.AddGridRows(ctx, req)
+	if err != nil {
+		return nil, helpers.ToSafeError(ctx, domain.ServiceWiki, err)
+	}
+
+	results := make([]gridRowResultItemDTO, len(resp.Results))
+	for i, row := range resp.Results {
+		results[i] = gridRowResultItemDTO{
+			ID:     row.ID,
+			Row:    row.Row,
+			Color:  row.Color,
+			Pinned: row.Pinned,
+		}
+	}
+
+	return &addGridRowsOutputDTO{
+		Revision: resp.Revision,
+		Results:  results,
+	}, nil
+}
+
+// deleteGridRows deletes rows from a wiki grid.
+func (r *Registrator) deleteGridRows(ctx context.Context, input deleteGridRowsInputDTO) (*revisionOutputDTO, error) {
+	if input.GridID == "" {
+		return nil, r.logError(ctx, errors.New("grid_id is required"))
+	}
+
+	if len(input.RowIDs) == 0 {
+		return nil, r.logError(ctx, errors.New("row_ids must contain at least one element"))
+	}
+
+	req := domain.WikiGridRowsDeleteRequest{
+		GridID:   input.GridID,
+		RowIDs:   input.RowIDs,
+		Revision: input.Revision,
+	}
+
+	resp, err := r.adapter.DeleteGridRows(ctx, req)
+	if err != nil {
+		return nil, helpers.ToSafeError(ctx, domain.ServiceWiki, err)
+	}
+
+	return &revisionOutputDTO{
+		Revision: resp.Revision,
+	}, nil
+}
+
+// moveGridRows moves rows within a wiki grid.
+func (r *Registrator) moveGridRows(ctx context.Context, input moveGridRowsInputDTO) (*revisionOutputDTO, error) {
+	if input.GridID == "" {
+		return nil, r.logError(ctx, errors.New("grid_id is required"))
+	}
+
+	if input.RowID == "" {
+		return nil, r.logError(ctx, errors.New("row_id is required"))
+	}
+
+	req := domain.WikiGridRowsMoveRequest{
+		GridID:     input.GridID,
+		RowID:      input.RowID,
+		AfterRowID: input.AfterRowID,
+		Position:   input.Position,
+		RowsCount:  input.RowsCount,
+		Revision:   input.Revision,
+	}
+
+	resp, err := r.adapter.MoveGridRows(ctx, req)
+	if err != nil {
+		return nil, helpers.ToSafeError(ctx, domain.ServiceWiki, err)
+	}
+
+	return &revisionOutputDTO{
+		Revision: resp.Revision,
+	}, nil
+}
+
+// addGridColumns adds columns to a wiki grid.
+func (r *Registrator) addGridColumns(ctx context.Context, input addGridColumnsInputDTO) (*revisionOutputDTO, error) {
+	if input.GridID == "" {
+		return nil, r.logError(ctx, errors.New("grid_id is required"))
+	}
+
+	if len(input.Columns) == 0 {
+		return nil, r.logError(ctx, errors.New("columns must contain at least one element"))
+	}
+
+	cols := make([]domain.WikiNewColumnDefinition, len(input.Columns))
+	for i, c := range input.Columns {
+		cols[i] = domain.WikiNewColumnDefinition{
+			Slug:          c.Slug,
+			Title:         c.Title,
+			Type:          c.Type,
+			Required:      c.Required,
+			Description:   c.Description,
+			Color:         c.Color,
+			Format:        c.Format,
+			SelectOptions: c.SelectOptions,
+			Multiple:      c.Multiple,
+			MarkRows:      c.MarkRows,
+			TicketField:   c.TicketField,
+			Width:         c.Width,
+			WidthUnits:    c.WidthUnits,
+			Pinned:        c.Pinned,
+		}
+	}
+
+	req := domain.WikiGridColumnsAddRequest{
+		GridID:   input.GridID,
+		Columns:  cols,
+		Position: input.Position,
+		Revision: input.Revision,
+	}
+
+	resp, err := r.adapter.AddGridColumns(ctx, req)
+	if err != nil {
+		return nil, helpers.ToSafeError(ctx, domain.ServiceWiki, err)
+	}
+
+	return &revisionOutputDTO{
+		Revision: resp.Revision,
+	}, nil
+}
+
+// deleteGridColumns deletes columns from a wiki grid.
+func (r *Registrator) deleteGridColumns(
+	ctx context.Context, input deleteGridColumnsInputDTO,
+) (*revisionOutputDTO, error) {
+	if input.GridID == "" {
+		return nil, r.logError(ctx, errors.New("grid_id is required"))
+	}
+
+	if len(input.ColumnSlugs) == 0 {
+		return nil, r.logError(ctx, errors.New("column_slugs must contain at least one element"))
+	}
+
+	req := domain.WikiGridColumnsDeleteRequest{
+		GridID:      input.GridID,
+		ColumnSlugs: input.ColumnSlugs,
+		Revision:    input.Revision,
+	}
+
+	resp, err := r.adapter.DeleteGridColumns(ctx, req)
+	if err != nil {
+		return nil, helpers.ToSafeError(ctx, domain.ServiceWiki, err)
+	}
+
+	return &revisionOutputDTO{
+		Revision: resp.Revision,
+	}, nil
+}
+
+// moveGridColumns moves columns within a wiki grid.
+func (r *Registrator) moveGridColumns(ctx context.Context, input moveGridColumnsInputDTO) (*revisionOutputDTO, error) {
+	if input.GridID == "" {
+		return nil, r.logError(ctx, errors.New("grid_id is required"))
+	}
+
+	if input.ColumnSlug == "" {
+		return nil, r.logError(ctx, errors.New("column_slug is required"))
+	}
+
+	req := domain.WikiGridColumnsMoveRequest{
+		GridID:       input.GridID,
+		ColumnSlug:   input.ColumnSlug,
+		Position:     input.Position,
+		ColumnsCount: input.ColumnsCount,
+		Revision:     input.Revision,
+	}
+
+	resp, err := r.adapter.MoveGridColumns(ctx, req)
+	if err != nil {
+		return nil, helpers.ToSafeError(ctx, domain.ServiceWiki, err)
+	}
+
+	return &revisionOutputDTO{
+		Revision: resp.Revision,
+	}, nil
 }

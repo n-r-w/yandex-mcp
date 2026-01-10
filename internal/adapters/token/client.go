@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/n-r-w/singleflight/v2"
 	"github.com/n-r-w/yandex-mcp/internal/adapters/apihelpers"
 	"github.com/n-r-w/yandex-mcp/internal/config"
 )
@@ -23,10 +24,8 @@ type Provider struct {
 	cachedToken string
 	refreshedAt time.Time
 
-	// in-flight coordination for single-flight refresh
-	inflight    bool
-	inflightCh  chan struct{}
-	inflightErr error
+	// single-flight group for token refresh operations
+	sf singleflight.Group[string, string]
 
 	tokenRegex *regexp.Regexp
 }
@@ -62,12 +61,7 @@ func (p *Provider) Token(ctx context.Context) (string, error) {
 		return token, nil
 	}
 
-	return p.refreshToken(ctx, false)
-}
-
-// ForceRefresh discards any cached token and fetches a new one.
-func (p *Provider) ForceRefresh(ctx context.Context) (string, error) {
-	return p.refreshToken(ctx, true)
+	return p.refreshToken(ctx)
 }
 
 // getCachedToken returns the cached token if it exists and is not expired.
@@ -87,73 +81,39 @@ func (p *Provider) getCachedToken() (string, bool) {
 }
 
 // refreshToken fetches a new token from yc CLI with single-flight coordination.
-func (p *Provider) refreshToken(ctx context.Context, force bool) (string, error) {
+func (p *Provider) refreshToken(ctx context.Context) (string, error) {
+	// Fast path: check cache again after acquiring lock
 	p.mu.Lock()
-
-	// Check if another goroutine is already fetching
-	if p.inflight {
-		ch := p.inflightCh
-		p.mu.Unlock()
-		// Wait for in-flight request to complete
-		select {
-		case <-ch:
-			return p.getInflightResult()
-		case <-ctx.Done():
-			return "", p.logError(ctx, fmt.Errorf("token refresh: %w", ctx.Err()))
-		}
-	}
-
-	// Double-check: maybe token was refreshed while we waited for lock
-	// Skip this check for force refresh
-	if !force && p.cachedToken != "" && p.nowFunc().Sub(p.refreshedAt) < p.refreshPeriod {
+	if p.cachedToken != "" && p.nowFunc().Sub(p.refreshedAt) < p.refreshPeriod {
 		token := p.cachedToken
 		p.mu.Unlock()
 		return token, nil
 	}
-
-	// Start in-flight request
-	p.inflight = true
-	p.inflightCh = make(chan struct{})
-	p.inflightErr = nil
 	p.mu.Unlock()
 
-	// Execute yc command
-	token, err := p.executeYC(ctx)
-
-	// Update cache and signal completion
-	p.mu.Lock()
-	if err == nil {
-		p.cachedToken = token
-		p.refreshedAt = p.nowFunc()
-	} else {
-		p.inflightErr = err
-	}
-	p.inflight = false
-	close(p.inflightCh)
-	p.mu.Unlock()
-
+	// Use singleflight to ensure only one refresh happens at a time
+	result, _, err := p.sf.Do(ctx, "token", p.doRefresh)
 	if err != nil {
 		return "", p.logError(ctx, err)
 	}
 
-	return token, nil
+	return result, nil
 }
 
-// getInflightResult returns the result of the in-flight refresh operation.
-// Returns cached token if refresh succeeded, or the refresh error if it failed.
-func (p *Provider) getInflightResult() (string, error) {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
-
-	if p.inflightErr != nil {
-		return "", p.inflightErr
+// doRefresh performs the actual token refresh.
+func (p *Provider) doRefresh(ctx context.Context) (string, error) {
+	token, err := p.executeYC(ctx)
+	if err != nil {
+		return "", err
 	}
 
-	if p.cachedToken == "" {
-		return "", errEmptyToken
-	}
+	// Update cache
+	p.mu.Lock()
+	p.cachedToken = token
+	p.refreshedAt = p.nowFunc()
+	p.mu.Unlock()
 
-	return p.cachedToken, nil
+	return token, nil
 }
 
 // executeYC runs the yc CLI command and extracts the IAM token using regex.

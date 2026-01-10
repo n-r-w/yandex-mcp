@@ -27,4 +27,31 @@ type ITrackerAdapter interface {
 		ctx context.Context, req *domain.TrackerTransitionExecuteRequest,
 	) (*domain.TrackerTransitionExecuteResponse, error)
 	AddComment(ctx context.Context, req *domain.TrackerCommentAddRequest) (*domain.TrackerCommentAddResponse, error)
+	UpdateComment(
+		ctx context.Context, req *domain.TrackerCommentUpdateRequest,
+	) (*domain.TrackerCommentUpdateResponse, error)
+	DeleteComment(ctx context.Context, req *domain.TrackerCommentDeleteRequest) error
+	ListIssueAttachments(ctx context.Context, issueID string) ([]domain.TrackerAttachment, error)
+	DeleteAttachment(ctx context.Context, req *domain.TrackerAttachmentDeleteRequest) error
+	GetQueue(
+		ctx context.Context, queueID string, opts domain.TrackerGetQueueOpts,
+	) (*domain.TrackerQueueDetail, error)
+	CreateQueue(ctx context.Context, req *domain.TrackerQueueCreateRequest) (*domain.TrackerQueueCreateResponse, error)
+	DeleteQueue(ctx context.Context, req *domain.TrackerQueueDeleteRequest) error
+	RestoreQueue(
+		ctx context.Context, req *domain.TrackerQueueRestoreRequest,
+	) (*domain.TrackerQueueRestoreResponse, error)
+	GetCurrentUser(ctx context.Context) (*domain.TrackerUserDetail, error)
+	ListUsers(ctx context.Context, opts domain.TrackerListUsersOpts) (*domain.TrackerUsersPage, error)
+	GetUser(ctx context.Context, userID string) (*domain.TrackerUserDetail, error)
+	ListIssueLinks(ctx context.Context, issueID string) ([]domain.TrackerLink, error)
+	CreateLink(ctx context.Context, req *domain.TrackerLinkCreateRequest) (*domain.TrackerLinkCreateResponse, error)
+	DeleteLink(ctx context.Context, req *domain.TrackerLinkDeleteRequest) error
+	GetIssueChangelog(
+		ctx context.Context, issueID string, opts domain.TrackerGetChangelogOpts,
+	) ([]domain.TrackerChangelogEntry, error)
+	MoveIssue(ctx context.Context, req *domain.TrackerIssueMoveRequest) (*domain.TrackerIssueMoveResponse, error)
+	ListProjectComments(
+		ctx context.Context, projectID string, opts domain.TrackerListProjectCommentsOpts,
+	) ([]domain.TrackerProjectComment, error)
 }

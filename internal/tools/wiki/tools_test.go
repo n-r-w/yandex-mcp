@@ -22,7 +22,7 @@ func TestTools_GetPageBySlug(t *testing.T) {
 		mockAdapter := NewMockIWikiAdapter(ctrl)
 		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
-		_, err := reg.GetPageBySlug(context.Background(), GetPageBySlugInput{})
+		_, err := reg.getPageBySlug(context.Background(), getPageBySlugInputDTO{})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "slug is required")
 	})
@@ -34,7 +34,7 @@ func TestTools_GetPageBySlug(t *testing.T) {
 		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
 		expectedPage := &domain.WikiPage{
-			ID:       123,
+			ID:       "123",
 			PageType: "doc",
 			Slug:     "test/page",
 			Title:    "Test Page",
@@ -45,14 +45,14 @@ func TestTools_GetPageBySlug(t *testing.T) {
 			GetPageBySlug(gomock.Any(), "test/page", domain.WikiGetPageOpts{Fields: []string{"content", "attributes"}}).
 			Return(expectedPage, nil)
 
-		input := GetPageBySlugInput{
+		input := getPageBySlugInputDTO{
 			Slug:   "test/page",
 			Fields: []string{"content", "attributes"},
 		}
 
-		result, err := reg.GetPageBySlug(context.Background(), input)
+		result, err := reg.getPageBySlug(context.Background(), input)
 		require.NoError(t, err)
-		assert.Equal(t, int64(123), result.ID)
+		assert.Equal(t, "123", result.ID)
 		assert.Equal(t, "Test Page", result.Title)
 		assert.Equal(t, "test/page", result.Slug)
 	})
@@ -74,7 +74,7 @@ func TestTools_GetPageBySlug(t *testing.T) {
 			GetPageBySlug(gomock.Any(), "missing", domain.WikiGetPageOpts{}).
 			Return(nil, upstreamErr)
 
-		_, err := reg.GetPageBySlug(context.Background(), GetPageBySlugInput{Slug: "missing"})
+		_, err := reg.getPageBySlug(context.Background(), getPageBySlugInputDTO{Slug: "missing"})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), domain.ServiceWiki)
 		assert.Contains(t, err.Error(), "GetPageBySlug")
@@ -86,21 +86,6 @@ func TestTools_GetPageBySlug(t *testing.T) {
 func TestTools_GetPageByID(t *testing.T) {
 	t.Parallel()
 
-	t.Run("returns error when id is not positive", func(t *testing.T) {
-		t.Parallel()
-		ctrl := gomock.NewController(t)
-		mockAdapter := NewMockIWikiAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
-
-		_, err := reg.GetPageByID(context.Background(), GetPageByIDInput{PageID: 0})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "page_id must be positive")
-
-		_, err = reg.GetPageByID(context.Background(), GetPageByIDInput{PageID: -1})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "page_id must be positive")
-	})
-
 	t.Run("calls adapter with correct parameters", func(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
@@ -108,22 +93,22 @@ func TestTools_GetPageByID(t *testing.T) {
 		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
 		expectedPage := &domain.WikiPage{
-			ID:       456,
+			ID:       "456",
 			PageType: "doc",
 			Slug:     "another/page",
 			Title:    "Another Page",
 		}
 
 		mockAdapter.EXPECT().
-			GetPageByID(gomock.Any(), int64(456), domain.WikiGetPageOpts{Fields: []string{"title"}}).
+			GetPageByID(gomock.Any(), "456", domain.WikiGetPageOpts{Fields: []string{"title"}}).
 			Return(expectedPage, nil)
 
-		result, err := reg.GetPageByID(context.Background(), GetPageByIDInput{
-			PageID: 456,
+		result, err := reg.getPageByID(context.Background(), getPageByIDInputDTO{
+			PageID: "456",
 			Fields: []string{"title"},
 		})
 		require.NoError(t, err)
-		assert.Equal(t, int64(456), result.ID)
+		assert.Equal(t, "456", result.ID)
 		assert.Equal(t, "Another Page", result.Title)
 	})
 
@@ -134,7 +119,7 @@ func TestTools_GetPageByID(t *testing.T) {
 		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
 		expectedPage := &domain.WikiPage{
-			ID:    789,
+			ID:    "789",
 			Title: "With Attrs",
 			Attributes: &domain.WikiAttributes{
 				CommentsCount:   5,
@@ -145,10 +130,10 @@ func TestTools_GetPageByID(t *testing.T) {
 		}
 
 		mockAdapter.EXPECT().
-			GetPageByID(gomock.Any(), int64(789), domain.WikiGetPageOpts{}).
+			GetPageByID(gomock.Any(), "789", domain.WikiGetPageOpts{}).
 			Return(expectedPage, nil)
 
-		result, err := reg.GetPageByID(context.Background(), GetPageByIDInput{PageID: 789})
+		result, err := reg.getPageByID(context.Background(), getPageByIDInputDTO{PageID: "789"})
 		require.NoError(t, err)
 		require.NotNil(t, result.Attributes)
 		assert.Equal(t, 5, result.Attributes.CommentsCount)
@@ -160,25 +145,14 @@ func TestTools_GetPageByID(t *testing.T) {
 func TestTools_ListResources(t *testing.T) {
 	t.Parallel()
 
-	t.Run("returns error when page_id is not positive", func(t *testing.T) {
-		t.Parallel()
-		ctrl := gomock.NewController(t)
-		mockAdapter := NewMockIWikiAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
-
-		_, err := reg.ListResources(context.Background(), ListResourcesInput{PageID: 0})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "page_id must be positive")
-	})
-
 	t.Run("returns error when page_size is negative", func(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockIWikiAdapter(ctrl)
 		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
-		_, err := reg.ListResources(context.Background(), ListResourcesInput{
-			PageID:   123,
+		_, err := reg.listResources(context.Background(), listResourcesInputDTO{
+			PageID:   "123",
 			PageSize: -1,
 		})
 		require.Error(t, err)
@@ -191,8 +165,8 @@ func TestTools_ListResources(t *testing.T) {
 		mockAdapter := NewMockIWikiAdapter(ctrl)
 		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
-		_, err := reg.ListResources(context.Background(), ListResourcesInput{
-			PageID:   123,
+		_, err := reg.listResources(context.Background(), listResourcesInputDTO{
+			PageID:   "123",
 			PageSize: 51,
 		})
 		require.Error(t, err)
@@ -219,7 +193,7 @@ func TestTools_ListResources(t *testing.T) {
 		}
 
 		mockAdapter.EXPECT().
-			ListPageResources(gomock.Any(), int64(100), domain.WikiListResourcesOpts{
+			ListPageResources(gomock.Any(), "100", domain.WikiListResourcesOpts{
 				Cursor:         "cursor1",
 				PageSize:       20,
 				OrderBy:        "created_at",
@@ -229,8 +203,8 @@ func TestTools_ListResources(t *testing.T) {
 			}).
 			Return(expectedResult, nil)
 
-		input := ListResourcesInput{
-			PageID:         100,
+		input := listResourcesInputDTO{
+			PageID:         "100",
 			Cursor:         "cursor1",
 			PageSize:       20,
 			OrderBy:        "created_at",
@@ -239,7 +213,7 @@ func TestTools_ListResources(t *testing.T) {
 			Types:          "attachment",
 		}
 
-		result, err := reg.ListResources(context.Background(), input)
+		result, err := reg.listResources(context.Background(), input)
 		require.NoError(t, err)
 		assert.Len(t, result.Resources, 1)
 		assert.Equal(t, "next123", result.NextCursor)
@@ -257,7 +231,7 @@ func TestTools_ListResources(t *testing.T) {
 				{
 					Type: "attachment",
 					Attachment: &domain.WikiAttachment{
-						ID:          101,
+						ID:          "101",
 						Name:        "document.pdf",
 						Size:        1024,
 						MIMEType:    "application/pdf",
@@ -270,10 +244,10 @@ func TestTools_ListResources(t *testing.T) {
 		}
 
 		mockAdapter.EXPECT().
-			ListPageResources(gomock.Any(), int64(100), gomock.Any()).
+			ListPageResources(gomock.Any(), "100", gomock.Any()).
 			Return(expectedResult, nil)
 
-		result, err := reg.ListResources(context.Background(), ListResourcesInput{PageID: 100})
+		result, err := reg.listResources(context.Background(), listResourcesInputDTO{PageID: "100"})
 		require.NoError(t, err)
 		require.Len(t, result.Resources, 1)
 
@@ -281,9 +255,9 @@ func TestTools_ListResources(t *testing.T) {
 		assert.Equal(t, "attachment", res.Type)
 		require.NotNil(t, res.Item)
 
-		attachment, ok := res.Item.(AttachmentOutput)
+		attachment, ok := res.Item.(attachmentOutputDTO)
 		require.True(t, ok, "expected AttachmentOutput, got %T", res.Item)
-		assert.Equal(t, int64(101), attachment.ID)
+		assert.Equal(t, "101", attachment.ID)
 		assert.Equal(t, "document.pdf", attachment.Name)
 		assert.Equal(t, int64(1024), attachment.Size)
 		assert.Equal(t, "application/pdf", attachment.Mimetype)
@@ -303,7 +277,7 @@ func TestTools_ListResources(t *testing.T) {
 				{
 					Type: "sharepoint_resource",
 					Sharepoint: &domain.WikiSharepointResource{
-						ID:        202,
+						ID:        "202",
 						Title:     "Important Document",
 						Doctype:   "docx",
 						CreatedAt: "2024-02-01T10:00:00Z",
@@ -313,10 +287,10 @@ func TestTools_ListResources(t *testing.T) {
 		}
 
 		mockAdapter.EXPECT().
-			ListPageResources(gomock.Any(), int64(100), gomock.Any()).
+			ListPageResources(gomock.Any(), "100", gomock.Any()).
 			Return(expectedResult, nil)
 
-		result, err := reg.ListResources(context.Background(), ListResourcesInput{PageID: 100})
+		result, err := reg.listResources(context.Background(), listResourcesInputDTO{PageID: "100"})
 		require.NoError(t, err)
 		require.Len(t, result.Resources, 1)
 
@@ -324,9 +298,9 @@ func TestTools_ListResources(t *testing.T) {
 		assert.Equal(t, "sharepoint_resource", res.Type)
 		require.NotNil(t, res.Item)
 
-		sharepoint, ok := res.Item.(SharepointResourceOutput)
+		sharepoint, ok := res.Item.(sharepointResourceOutputDTO)
 		require.True(t, ok, "expected SharepointResourceOutput, got %T", res.Item)
-		assert.Equal(t, int64(202), sharepoint.ID)
+		assert.Equal(t, "202", sharepoint.ID)
 		assert.Equal(t, "Important Document", sharepoint.Title)
 		assert.Equal(t, "docx", sharepoint.Doctype)
 		assert.Equal(t, "2024-02-01T10:00:00Z", sharepoint.CreatedAt)
@@ -352,10 +326,10 @@ func TestTools_ListResources(t *testing.T) {
 		}
 
 		mockAdapter.EXPECT().
-			ListPageResources(gomock.Any(), int64(100), gomock.Any()).
+			ListPageResources(gomock.Any(), "100", gomock.Any()).
 			Return(expectedResult, nil)
 
-		result, err := reg.ListResources(context.Background(), ListResourcesInput{PageID: 100})
+		result, err := reg.listResources(context.Background(), listResourcesInputDTO{PageID: "100"})
 		require.NoError(t, err)
 		require.Len(t, result.Resources, 1)
 
@@ -363,7 +337,7 @@ func TestTools_ListResources(t *testing.T) {
 		assert.Equal(t, "grid", res.Type)
 		require.NotNil(t, res.Item)
 
-		grid, ok := res.Item.(GridResourceOutput)
+		grid, ok := res.Item.(gridResourceOutputDTO)
 		require.True(t, ok, "expected GridResourceOutput, got %T", res.Item)
 		assert.Equal(t, "grid-xyz-123", grid.ID)
 		assert.Equal(t, "Sales Data", grid.Title)
@@ -374,25 +348,14 @@ func TestTools_ListResources(t *testing.T) {
 func TestTools_ListGrids(t *testing.T) {
 	t.Parallel()
 
-	t.Run("returns error when page_id is not positive", func(t *testing.T) {
-		t.Parallel()
-		ctrl := gomock.NewController(t)
-		mockAdapter := NewMockIWikiAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
-
-		_, err := reg.ListGrids(context.Background(), ListGridsInput{PageID: 0})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "page_id must be positive")
-	})
-
 	t.Run("returns error when page_size is negative", func(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockIWikiAdapter(ctrl)
 		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
-		_, err := reg.ListGrids(context.Background(), ListGridsInput{
-			PageID:   123,
+		_, err := reg.listGrids(context.Background(), listGridsInputDTO{
+			PageID:   "123",
 			PageSize: -1,
 		})
 		require.Error(t, err)
@@ -405,8 +368,8 @@ func TestTools_ListGrids(t *testing.T) {
 		mockAdapter := NewMockIWikiAdapter(ctrl)
 		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
-		_, err := reg.ListGrids(context.Background(), ListGridsInput{
-			PageID:   123,
+		_, err := reg.listGrids(context.Background(), listGridsInputDTO{
+			PageID:   "123",
 			PageSize: 51,
 		})
 		require.Error(t, err)
@@ -428,14 +391,14 @@ func TestTools_ListGrids(t *testing.T) {
 		}
 
 		mockAdapter.EXPECT().
-			ListPageGrids(gomock.Any(), int64(200), domain.WikiListGridsOpts{
+			ListPageGrids(gomock.Any(), "200", domain.WikiListGridsOpts{
 				Cursor:   "cur",
 				PageSize: 10,
 			}).
 			Return(expectedResult, nil)
 
-		result, err := reg.ListGrids(context.Background(), ListGridsInput{
-			PageID:   200,
+		result, err := reg.listGrids(context.Background(), listGridsInputDTO{
+			PageID:   "200",
 			Cursor:   "cur",
 			PageSize: 10,
 		})
@@ -455,7 +418,7 @@ func TestTools_GetGrid(t *testing.T) {
 		mockAdapter := NewMockIWikiAdapter(ctrl)
 		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
-		_, err := reg.GetGrid(context.Background(), GetGridInput{})
+		_, err := reg.getGrid(context.Background(), getGridInputDTO{})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "grid_id is required")
 	})
@@ -483,16 +446,16 @@ func TestTools_GetGrid(t *testing.T) {
 				Fields:   []string{"rows"},
 				Filter:   "col1 = 'test'",
 				OnlyCols: "col1",
-				Revision: 5,
+				Revision: "5",
 			}).
 			Return(expectedGrid, nil)
 
-		result, err := reg.GetGrid(context.Background(), GetGridInput{
+		result, err := reg.getGrid(context.Background(), getGridInputDTO{
 			GridID:   "grid123",
 			Fields:   []string{"rows"},
 			Filter:   "col1 = 'test'",
 			OnlyCols: "col1",
-			Revision: 5,
+			Revision: "5",
 		})
 		require.NoError(t, err)
 		assert.Equal(t, "grid123", result.ID)
@@ -522,7 +485,7 @@ func TestTools_GetGrid(t *testing.T) {
 			GetGridByID(gomock.Any(), "gridWithAttrs", domain.WikiGetGridOpts{}).
 			Return(expectedGrid, nil)
 
-		result, err := reg.GetGrid(context.Background(), GetGridInput{GridID: "gridWithAttrs"})
+		result, err := reg.getGrid(context.Background(), getGridInputDTO{GridID: "gridWithAttrs"})
 		require.NoError(t, err)
 		require.NotNil(t, result.Attributes)
 		assert.Equal(t, "2024-01-01T00:00:00Z", result.Attributes.CreatedAt)
@@ -568,7 +531,7 @@ func TestTools_GetGrid(t *testing.T) {
 			GetGridByID(gomock.Any(), "gridCellTypes", domain.WikiGetGridOpts{}).
 			Return(expectedGrid, nil)
 
-		result, err := reg.GetGrid(context.Background(), GetGridInput{GridID: "gridCellTypes"})
+		result, err := reg.getGrid(context.Background(), getGridInputDTO{GridID: "gridCellTypes"})
 		require.NoError(t, err)
 		require.Len(t, result.Rows, 2)
 
@@ -628,7 +591,7 @@ func TestTools_ErrorShaping(t *testing.T) {
 			GetPageBySlug(gomock.Any(), "test", domain.WikiGetPageOpts{}).
 			Return(nil, upstreamErr)
 
-		_, err := reg.GetPageBySlug(context.Background(), GetPageBySlugInput{Slug: "test"})
+		_, err := reg.getPageBySlug(context.Background(), getPageBySlugInputDTO{Slug: "test"})
 		require.Error(t, err)
 		errStr := err.Error()
 		assert.Contains(t, errStr, domain.ServiceWiki)
@@ -650,7 +613,7 @@ func TestTools_ErrorShaping(t *testing.T) {
 			GetPageBySlug(gomock.Any(), "test", domain.WikiGetPageOpts{}).
 			Return(nil, sensitiveErr)
 
-		_, err := reg.GetPageBySlug(context.Background(), GetPageBySlugInput{Slug: "test"})
+		_, err := reg.getPageBySlug(context.Background(), getPageBySlugInputDTO{Slug: "test"})
 		require.Error(t, err)
 		errStr := err.Error()
 		// Non-upstream errors should return a generic safe message
@@ -669,7 +632,7 @@ func TestTools_CreatePage(t *testing.T) {
 		mockAdapter := NewMockIWikiAdapter(ctrl)
 		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
-		_, err := reg.CreatePage(context.Background(), CreatePageInput{
+		_, err := reg.createPage(context.Background(), createPageInputDTO{
 			Title:    "Test Page",
 			PageType: "page",
 		})
@@ -683,7 +646,7 @@ func TestTools_CreatePage(t *testing.T) {
 		mockAdapter := NewMockIWikiAdapter(ctrl)
 		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
-		_, err := reg.CreatePage(context.Background(), CreatePageInput{
+		_, err := reg.createPage(context.Background(), createPageInputDTO{
 			Slug:     "test/page",
 			PageType: "page",
 		})
@@ -697,7 +660,7 @@ func TestTools_CreatePage(t *testing.T) {
 		mockAdapter := NewMockIWikiAdapter(ctrl)
 		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
-		_, err := reg.CreatePage(context.Background(), CreatePageInput{
+		_, err := reg.createPage(context.Background(), createPageInputDTO{
 			Slug:  "test/page",
 			Title: "Test Page",
 		})
@@ -713,7 +676,7 @@ func TestTools_CreatePage(t *testing.T) {
 
 		expectedResp := &domain.WikiPageCreateResponse{
 			Page: domain.WikiPage{
-				ID:       123,
+				ID:       "123",
 				Slug:     "test/page",
 				Title:    "Test Page",
 				PageType: "page",
@@ -728,13 +691,13 @@ func TestTools_CreatePage(t *testing.T) {
 			}).
 			Return(expectedResp, nil)
 
-		result, err := reg.CreatePage(context.Background(), CreatePageInput{
+		result, err := reg.createPage(context.Background(), createPageInputDTO{
 			Slug:     "test/page",
 			Title:    "Test Page",
 			PageType: "page",
 		})
 		require.NoError(t, err)
-		assert.Equal(t, int64(123), result.ID)
+		assert.Equal(t, "123", result.ID)
 		assert.Equal(t, "test/page", result.Slug)
 		assert.Equal(t, "Test Page", result.Title)
 	})
@@ -747,7 +710,7 @@ func TestTools_CreatePage(t *testing.T) {
 
 		expectedResp := &domain.WikiPageCreateResponse{
 			Page: domain.WikiPage{
-				ID:       456,
+				ID:       "456",
 				Slug:     "full/page",
 				Title:    "Full Page",
 				PageType: "page",
@@ -767,7 +730,7 @@ func TestTools_CreatePage(t *testing.T) {
 			}).
 			Return(expectedResp, nil)
 
-		result, err := reg.CreatePage(context.Background(), CreatePageInput{
+		result, err := reg.createPage(context.Background(), createPageInputDTO{
 			Slug:       "full/page",
 			Title:      "Full Page",
 			PageType:   "page",
@@ -777,7 +740,7 @@ func TestTools_CreatePage(t *testing.T) {
 			GridFormat: "yfm",
 		})
 		require.NoError(t, err)
-		assert.Equal(t, int64(456), result.ID)
+		assert.Equal(t, "456", result.ID)
 	})
 
 	t.Run("adapter/call_with_cloud_page", func(t *testing.T) {
@@ -788,7 +751,7 @@ func TestTools_CreatePage(t *testing.T) {
 
 		expectedResp := &domain.WikiPageCreateResponse{
 			Page: domain.WikiPage{
-				ID:       789,
+				ID:       "789",
 				Slug:     "cloud/doc",
 				Title:    "Cloud Document",
 				PageType: "cloud_page",
@@ -807,17 +770,17 @@ func TestTools_CreatePage(t *testing.T) {
 			}).
 			Return(expectedResp, nil)
 
-		result, err := reg.CreatePage(context.Background(), CreatePageInput{
+		result, err := reg.createPage(context.Background(), createPageInputDTO{
 			Slug:     "cloud/doc",
 			Title:    "Cloud Document",
 			PageType: "cloud_page",
-			CloudPage: &CloudPageInput{
+			CloudPage: &cloudPageInputDTO{
 				Method:  "empty_doc",
 				Doctype: "docx",
 			},
 		})
 		require.NoError(t, err)
-		assert.Equal(t, int64(789), result.ID)
+		assert.Equal(t, "789", result.ID)
 		assert.Equal(t, "cloud_page", result.PageType)
 	})
 
@@ -829,7 +792,7 @@ func TestTools_CreatePage(t *testing.T) {
 
 		expectedResp := &domain.WikiPageCreateResponse{
 			Page: domain.WikiPage{
-				ID:       100,
+				ID:       "100",
 				Slug:     "mapped/page",
 				Title:    "Mapped Page",
 				PageType: "page",
@@ -847,13 +810,13 @@ func TestTools_CreatePage(t *testing.T) {
 			CreatePage(gomock.Any(), gomock.Any()).
 			Return(expectedResp, nil)
 
-		result, err := reg.CreatePage(context.Background(), CreatePageInput{
+		result, err := reg.createPage(context.Background(), createPageInputDTO{
 			Slug:     "mapped/page",
 			Title:    "Mapped Page",
 			PageType: "page",
 		})
 		require.NoError(t, err)
-		assert.Equal(t, int64(100), result.ID)
+		assert.Equal(t, "100", result.ID)
 		assert.Equal(t, "mapped/page", result.Slug)
 		assert.Equal(t, "Mapped Page", result.Title)
 		assert.Equal(t, "page", result.PageType)
@@ -883,7 +846,7 @@ func TestTools_CreatePage(t *testing.T) {
 			CreatePage(gomock.Any(), gomock.Any()).
 			Return(nil, upstreamErr)
 
-		_, err := reg.CreatePage(context.Background(), CreatePageInput{
+		_, err := reg.createPage(context.Background(), createPageInputDTO{
 			Slug:     "test",
 			Title:    "Test",
 			PageType: "invalid",
@@ -906,26 +869,11 @@ func TestTools_UpdatePage(t *testing.T) {
 		mockAdapter := NewMockIWikiAdapter(ctrl)
 		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
-		_, err := reg.UpdatePage(context.Background(), UpdatePageInput{
-			PageID: 0,
+		_, err := reg.updatePage(context.Background(), updatePageInputDTO{
+			PageID: "",
 			Title:  "Updated Title",
 		})
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "page_id must be positive")
-	})
-
-	t.Run("validation/page_id_negative", func(t *testing.T) {
-		t.Parallel()
-		ctrl := gomock.NewController(t)
-		mockAdapter := NewMockIWikiAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
-
-		_, err := reg.UpdatePage(context.Background(), UpdatePageInput{
-			PageID: -1,
-			Title:  "Updated Title",
-		})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "page_id must be positive")
 	})
 
 	t.Run("validation/no_fields_to_update", func(t *testing.T) {
@@ -934,8 +882,8 @@ func TestTools_UpdatePage(t *testing.T) {
 		mockAdapter := NewMockIWikiAdapter(ctrl)
 		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
-		_, err := reg.UpdatePage(context.Background(), UpdatePageInput{
-			PageID: 123,
+		_, err := reg.updatePage(context.Background(), updatePageInputDTO{
+			PageID: "123",
 		})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "at least one of title, content, or redirect is required")
@@ -949,7 +897,7 @@ func TestTools_UpdatePage(t *testing.T) {
 
 		expectedResp := &domain.WikiPageUpdateResponse{
 			Page: domain.WikiPage{
-				ID:    123,
+				ID:    "123",
 				Slug:  "test/page",
 				Title: "Updated Title",
 			},
@@ -957,13 +905,13 @@ func TestTools_UpdatePage(t *testing.T) {
 
 		mockAdapter.EXPECT().
 			UpdatePage(gomock.Any(), &domain.WikiPageUpdateRequest{
-				PageID: 123,
+				PageID: "123",
 				Title:  "Updated Title",
 			}).
 			Return(expectedResp, nil)
 
-		result, err := reg.UpdatePage(context.Background(), UpdatePageInput{
-			PageID: 123,
+		result, err := reg.updatePage(context.Background(), updatePageInputDTO{
+			PageID: "123",
 			Title:  "Updated Title",
 		})
 		require.NoError(t, err)
@@ -978,7 +926,7 @@ func TestTools_UpdatePage(t *testing.T) {
 
 		expectedResp := &domain.WikiPageUpdateResponse{
 			Page: domain.WikiPage{
-				ID:      123,
+				ID:      "123",
 				Slug:    "test/page",
 				Title:   "Full Update",
 				Content: "Updated content",
@@ -987,7 +935,7 @@ func TestTools_UpdatePage(t *testing.T) {
 
 		mockAdapter.EXPECT().
 			UpdatePage(gomock.Any(), &domain.WikiPageUpdateRequest{
-				PageID:     123,
+				PageID:     "123",
 				Title:      "Full Update",
 				Content:    "Updated content",
 				AllowMerge: true,
@@ -996,8 +944,8 @@ func TestTools_UpdatePage(t *testing.T) {
 			}).
 			Return(expectedResp, nil)
 
-		result, err := reg.UpdatePage(context.Background(), UpdatePageInput{
-			PageID:     123,
+		result, err := reg.updatePage(context.Background(), updatePageInputDTO{
+			PageID:     "123",
 			Title:      "Full Update",
 			Content:    "Updated content",
 			AllowMerge: true,
@@ -1014,14 +962,14 @@ func TestTools_UpdatePage(t *testing.T) {
 		mockAdapter := NewMockIWikiAdapter(ctrl)
 		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
-		targetPageID := int64(456)
+		targetPageID := "456"
 		expectedResp := &domain.WikiPageUpdateResponse{
 			Page: domain.WikiPage{
-				ID:    123,
+				ID:    "123",
 				Slug:  "old/page",
 				Title: "Old Page",
 				Redirect: &domain.WikiRedirect{
-					PageID: 456,
+					PageID: "456",
 					Slug:   "new/page",
 				},
 			},
@@ -1029,22 +977,22 @@ func TestTools_UpdatePage(t *testing.T) {
 
 		mockAdapter.EXPECT().
 			UpdatePage(gomock.Any(), &domain.WikiPageUpdateRequest{
-				PageID: 123,
+				PageID: "123",
 				Redirect: &domain.WikiRedirectInput{
 					PageID: &targetPageID,
 				},
 			}).
 			Return(expectedResp, nil)
 
-		result, err := reg.UpdatePage(context.Background(), UpdatePageInput{
-			PageID: 123,
-			Redirect: &RedirectInput{
+		result, err := reg.updatePage(context.Background(), updatePageInputDTO{
+			PageID: "123",
+			Redirect: &redirectInputDTO{
 				PageID: &targetPageID,
 			},
 		})
 		require.NoError(t, err)
 		require.NotNil(t, result.Redirect)
-		assert.Equal(t, int64(456), result.Redirect.PageID)
+		assert.Equal(t, "456", result.Redirect.PageID)
 	})
 
 	t.Run("result/maps_page_output", func(t *testing.T) {
@@ -1055,7 +1003,7 @@ func TestTools_UpdatePage(t *testing.T) {
 
 		expectedResp := &domain.WikiPageUpdateResponse{
 			Page: domain.WikiPage{
-				ID:       123,
+				ID:       "123",
 				Slug:     "test/page",
 				Title:    "Mapped Page",
 				PageType: "page",
@@ -1071,12 +1019,12 @@ func TestTools_UpdatePage(t *testing.T) {
 			UpdatePage(gomock.Any(), gomock.Any()).
 			Return(expectedResp, nil)
 
-		result, err := reg.UpdatePage(context.Background(), UpdatePageInput{
-			PageID: 123,
+		result, err := reg.updatePage(context.Background(), updatePageInputDTO{
+			PageID: "123",
 			Title:  "Mapped Page",
 		})
 		require.NoError(t, err)
-		assert.Equal(t, int64(123), result.ID)
+		assert.Equal(t, "123", result.ID)
 		assert.Equal(t, "test/page", result.Slug)
 		assert.Equal(t, "Mapped Page", result.Title)
 		require.NotNil(t, result.Attributes)
@@ -1102,8 +1050,8 @@ func TestTools_UpdatePage(t *testing.T) {
 			UpdatePage(gomock.Any(), gomock.Any()).
 			Return(nil, upstreamErr)
 
-		_, err := reg.UpdatePage(context.Background(), UpdatePageInput{
-			PageID: 999,
+		_, err := reg.updatePage(context.Background(), updatePageInputDTO{
+			PageID: "999",
 			Title:  "Updated",
 		})
 		require.Error(t, err)
@@ -1116,42 +1064,14 @@ func TestTools_UpdatePage(t *testing.T) {
 func TestTools_AppendPage(t *testing.T) {
 	t.Parallel()
 
-	t.Run("validation/page_id_zero", func(t *testing.T) {
-		t.Parallel()
-		ctrl := gomock.NewController(t)
-		mockAdapter := NewMockIWikiAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
-
-		_, err := reg.AppendPage(context.Background(), AppendPageInput{
-			PageID:  0,
-			Content: "Appended content",
-		})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "page_id must be positive")
-	})
-
-	t.Run("validation/page_id_negative", func(t *testing.T) {
-		t.Parallel()
-		ctrl := gomock.NewController(t)
-		mockAdapter := NewMockIWikiAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
-
-		_, err := reg.AppendPage(context.Background(), AppendPageInput{
-			PageID:  -1,
-			Content: "Appended content",
-		})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "page_id must be positive")
-	})
-
 	t.Run("validation/content_empty", func(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockIWikiAdapter(ctrl)
 		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
-		_, err := reg.AppendPage(context.Background(), AppendPageInput{
-			PageID: 123,
+		_, err := reg.appendPage(context.Background(), appendPageInputDTO{
+			PageID: "123",
 		})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "content is required")
@@ -1165,7 +1085,7 @@ func TestTools_AppendPage(t *testing.T) {
 
 		expectedResp := &domain.WikiPageAppendResponse{
 			Page: domain.WikiPage{
-				ID:      123,
+				ID:      "123",
 				Slug:    "test/page",
 				Title:   "Test Page",
 				Content: "Original + Appended",
@@ -1174,17 +1094,17 @@ func TestTools_AppendPage(t *testing.T) {
 
 		mockAdapter.EXPECT().
 			AppendPage(gomock.Any(), &domain.WikiPageAppendRequest{
-				PageID:  123,
+				PageID:  "123",
 				Content: "Appended content",
 			}).
 			Return(expectedResp, nil)
 
-		result, err := reg.AppendPage(context.Background(), AppendPageInput{
-			PageID:  123,
+		result, err := reg.appendPage(context.Background(), appendPageInputDTO{
+			PageID:  "123",
 			Content: "Appended content",
 		})
 		require.NoError(t, err)
-		assert.Equal(t, int64(123), result.ID)
+		assert.Equal(t, "123", result.ID)
 	})
 
 	t.Run("adapter/call_with_all_params", func(t *testing.T) {
@@ -1195,7 +1115,7 @@ func TestTools_AppendPage(t *testing.T) {
 
 		expectedResp := &domain.WikiPageAppendResponse{
 			Page: domain.WikiPage{
-				ID:      123,
+				ID:      "123",
 				Slug:    "test/page",
 				Title:   "Test Page",
 				Content: "Updated content",
@@ -1204,21 +1124,21 @@ func TestTools_AppendPage(t *testing.T) {
 
 		mockAdapter.EXPECT().
 			AppendPage(gomock.Any(), &domain.WikiPageAppendRequest{
-				PageID:   123,
+				PageID:   "123",
 				Content:  "Full append",
 				IsSilent: true,
 				Fields:   []string{"content"},
 			}).
 			Return(expectedResp, nil)
 
-		result, err := reg.AppendPage(context.Background(), AppendPageInput{
-			PageID:   123,
+		result, err := reg.appendPage(context.Background(), appendPageInputDTO{
+			PageID:   "123",
 			Content:  "Full append",
 			IsSilent: true,
 			Fields:   []string{"content"},
 		})
 		require.NoError(t, err)
-		assert.Equal(t, int64(123), result.ID)
+		assert.Equal(t, "123", result.ID)
 	})
 
 	t.Run("adapter/call_with_body_location", func(t *testing.T) {
@@ -1229,14 +1149,14 @@ func TestTools_AppendPage(t *testing.T) {
 
 		expectedResp := &domain.WikiPageAppendResponse{
 			Page: domain.WikiPage{
-				ID:    123,
+				ID:    "123",
 				Title: "Test Page",
 			},
 		}
 
 		mockAdapter.EXPECT().
 			AppendPage(gomock.Any(), &domain.WikiPageAppendRequest{
-				PageID:  123,
+				PageID:  "123",
 				Content: "Top content",
 				Body: &domain.WikiBodyLocation{
 					Location: "top",
@@ -1244,15 +1164,15 @@ func TestTools_AppendPage(t *testing.T) {
 			}).
 			Return(expectedResp, nil)
 
-		result, err := reg.AppendPage(context.Background(), AppendPageInput{
-			PageID:  123,
+		result, err := reg.appendPage(context.Background(), appendPageInputDTO{
+			PageID:  "123",
 			Content: "Top content",
-			Body: &BodyLocation{
+			Body: &bodyLocationDTO{
 				Location: "top",
 			},
 		})
 		require.NoError(t, err)
-		assert.Equal(t, int64(123), result.ID)
+		assert.Equal(t, "123", result.ID)
 	})
 
 	t.Run("adapter/call_with_section_location", func(t *testing.T) {
@@ -1263,32 +1183,32 @@ func TestTools_AppendPage(t *testing.T) {
 
 		expectedResp := &domain.WikiPageAppendResponse{
 			Page: domain.WikiPage{
-				ID:    123,
+				ID:    "123",
 				Title: "Test Page",
 			},
 		}
 
 		mockAdapter.EXPECT().
 			AppendPage(gomock.Any(), &domain.WikiPageAppendRequest{
-				PageID:  123,
+				PageID:  "123",
 				Content: "Section content",
 				Section: &domain.WikiSectionLocation{
-					ID:       5,
+					ID:       "5",
 					Location: "bottom",
 				},
 			}).
 			Return(expectedResp, nil)
 
-		result, err := reg.AppendPage(context.Background(), AppendPageInput{
-			PageID:  123,
+		result, err := reg.appendPage(context.Background(), appendPageInputDTO{
+			PageID:  "123",
 			Content: "Section content",
-			Section: &SectionLocation{
-				ID:       5,
+			Section: &sectionLocationDTO{
+				ID:       "5",
 				Location: "bottom",
 			},
 		})
 		require.NoError(t, err)
-		assert.Equal(t, int64(123), result.ID)
+		assert.Equal(t, "123", result.ID)
 	})
 
 	t.Run("adapter/call_with_anchor_location", func(t *testing.T) {
@@ -1299,14 +1219,14 @@ func TestTools_AppendPage(t *testing.T) {
 
 		expectedResp := &domain.WikiPageAppendResponse{
 			Page: domain.WikiPage{
-				ID:    123,
+				ID:    "123",
 				Title: "Test Page",
 			},
 		}
 
 		mockAdapter.EXPECT().
 			AppendPage(gomock.Any(), &domain.WikiPageAppendRequest{
-				PageID:  123,
+				PageID:  "123",
 				Content: "Anchor content",
 				Anchor: &domain.WikiAnchorLocation{
 					Name:     "my-anchor",
@@ -1316,17 +1236,17 @@ func TestTools_AppendPage(t *testing.T) {
 			}).
 			Return(expectedResp, nil)
 
-		result, err := reg.AppendPage(context.Background(), AppendPageInput{
-			PageID:  123,
+		result, err := reg.appendPage(context.Background(), appendPageInputDTO{
+			PageID:  "123",
 			Content: "Anchor content",
-			Anchor: &AnchorLocation{
+			Anchor: &anchorLocationDTO{
 				Name:     "my-anchor",
 				Fallback: true,
 				Regex:    false,
 			},
 		})
 		require.NoError(t, err)
-		assert.Equal(t, int64(123), result.ID)
+		assert.Equal(t, "123", result.ID)
 	})
 
 	t.Run("result/maps_page_output", func(t *testing.T) {
@@ -1337,7 +1257,7 @@ func TestTools_AppendPage(t *testing.T) {
 
 		expectedResp := &domain.WikiPageAppendResponse{
 			Page: domain.WikiPage{
-				ID:       123,
+				ID:       "123",
 				Slug:     "test/page",
 				Title:    "Test Page",
 				PageType: "page",
@@ -1349,12 +1269,12 @@ func TestTools_AppendPage(t *testing.T) {
 			AppendPage(gomock.Any(), gomock.Any()).
 			Return(expectedResp, nil)
 
-		result, err := reg.AppendPage(context.Background(), AppendPageInput{
-			PageID:  123,
+		result, err := reg.appendPage(context.Background(), appendPageInputDTO{
+			PageID:  "123",
 			Content: "Appended",
 		})
 		require.NoError(t, err)
-		assert.Equal(t, int64(123), result.ID)
+		assert.Equal(t, "123", result.ID)
 		assert.Equal(t, "test/page", result.Slug)
 		assert.Equal(t, "Test Page", result.Title)
 		assert.Equal(t, "page", result.PageType)
@@ -1380,8 +1300,8 @@ func TestTools_AppendPage(t *testing.T) {
 			AppendPage(gomock.Any(), gomock.Any()).
 			Return(nil, upstreamErr)
 
-		_, err := reg.AppendPage(context.Background(), AppendPageInput{
-			PageID:  123,
+		_, err := reg.appendPage(context.Background(), appendPageInputDTO{
+			PageID:  "123",
 			Content: "Content",
 		})
 		require.Error(t, err)
@@ -1400,10 +1320,10 @@ func TestTools_CreateGrid(t *testing.T) {
 		mockAdapter := NewMockIWikiAdapter(ctrl)
 		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
-		_, err := reg.CreateGrid(context.Background(), CreateGridInput{
-			Page:    PageInput{},
+		_, err := reg.createGrid(context.Background(), createGridInputDTO{
+			Page:    pageInputDTO{},
 			Title:   "Test Grid",
-			Columns: []ColumnInputCreate{{Slug: "col1", Title: "Column 1"}},
+			Columns: []columnInputCreateDTO{{Slug: "col1", Title: "Column 1"}},
 		})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "page.id or page.slug is required")
@@ -1415,9 +1335,9 @@ func TestTools_CreateGrid(t *testing.T) {
 		mockAdapter := NewMockIWikiAdapter(ctrl)
 		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
-		_, err := reg.CreateGrid(context.Background(), CreateGridInput{
-			Page:    PageInput{ID: 123},
-			Columns: []ColumnInputCreate{{Slug: "col1", Title: "Column 1"}},
+		_, err := reg.createGrid(context.Background(), createGridInputDTO{
+			Page:    pageInputDTO{ID: "123"},
+			Columns: []columnInputCreateDTO{{Slug: "col1", Title: "Column 1"}},
 		})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "title is required")
@@ -1429,10 +1349,10 @@ func TestTools_CreateGrid(t *testing.T) {
 		mockAdapter := NewMockIWikiAdapter(ctrl)
 		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
-		_, err := reg.CreateGrid(context.Background(), CreateGridInput{
-			Page:    PageInput{ID: 123},
+		_, err := reg.createGrid(context.Background(), createGridInputDTO{
+			Page:    pageInputDTO{ID: "123"},
 			Title:   "Test Grid",
-			Columns: []ColumnInputCreate{},
+			Columns: []columnInputCreateDTO{},
 		})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "at least one column is required")
@@ -1444,10 +1364,10 @@ func TestTools_CreateGrid(t *testing.T) {
 		mockAdapter := NewMockIWikiAdapter(ctrl)
 		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
-		_, err := reg.CreateGrid(context.Background(), CreateGridInput{
-			Page:    PageInput{ID: 123},
+		_, err := reg.createGrid(context.Background(), createGridInputDTO{
+			Page:    pageInputDTO{ID: "123"},
 			Title:   "Test Grid",
-			Columns: []ColumnInputCreate{{Slug: "", Title: "Column 1"}},
+			Columns: []columnInputCreateDTO{{Slug: "", Title: "Column 1"}},
 		})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "column slug is required")
@@ -1459,10 +1379,10 @@ func TestTools_CreateGrid(t *testing.T) {
 		mockAdapter := NewMockIWikiAdapter(ctrl)
 		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
-		_, err := reg.CreateGrid(context.Background(), CreateGridInput{
-			Page:    PageInput{ID: 123},
+		_, err := reg.createGrid(context.Background(), createGridInputDTO{
+			Page:    pageInputDTO{ID: "123"},
 			Title:   "Test Grid",
-			Columns: []ColumnInputCreate{{Slug: "col1", Title: ""}},
+			Columns: []columnInputCreateDTO{{Slug: "col1", Title: ""}},
 		})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "column title is required")
@@ -1484,7 +1404,7 @@ func TestTools_CreateGrid(t *testing.T) {
 
 		mockAdapter.EXPECT().
 			CreateGrid(gomock.Any(), &domain.WikiGridCreateRequest{
-				PageID: 123,
+				PageID: "123",
 				Title:  "Test Grid",
 				Columns: []domain.WikiColumnDefinition{
 					{Slug: "col1", Title: "Column 1", Type: "string"},
@@ -1492,10 +1412,10 @@ func TestTools_CreateGrid(t *testing.T) {
 			}).
 			Return(expectedResp, nil)
 
-		result, err := reg.CreateGrid(context.Background(), CreateGridInput{
-			Page:  PageInput{ID: 123},
+		result, err := reg.createGrid(context.Background(), createGridInputDTO{
+			Page:  pageInputDTO{ID: "123"},
 			Title: "Test Grid",
-			Columns: []ColumnInputCreate{
+			Columns: []columnInputCreateDTO{
 				{Slug: "col1", Title: "Column 1", Type: "string"},
 			},
 		})
@@ -1511,7 +1431,7 @@ func TestTools_CreateGrid(t *testing.T) {
 		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
 		resolvedPage := &domain.WikiPage{
-			ID:    456,
+			ID:    "456",
 			Slug:  "target/page",
 			Title: "Target Page",
 		}
@@ -1530,7 +1450,7 @@ func TestTools_CreateGrid(t *testing.T) {
 
 		mockAdapter.EXPECT().
 			CreateGrid(gomock.Any(), &domain.WikiGridCreateRequest{
-				PageID: 456,
+				PageID: "456",
 				Title:  "Slug Grid",
 				Columns: []domain.WikiColumnDefinition{
 					{Slug: "col1", Title: "Column 1"},
@@ -1538,10 +1458,10 @@ func TestTools_CreateGrid(t *testing.T) {
 			}).
 			Return(expectedResp, nil)
 
-		result, err := reg.CreateGrid(context.Background(), CreateGridInput{
-			Page:  PageInput{Slug: "target/page"},
+		result, err := reg.createGrid(context.Background(), createGridInputDTO{
+			Page:  pageInputDTO{Slug: "target/page"},
 			Title: "Slug Grid",
-			Columns: []ColumnInputCreate{
+			Columns: []columnInputCreateDTO{
 				{Slug: "col1", Title: "Column 1"},
 			},
 		})
@@ -1565,7 +1485,7 @@ func TestTools_CreateGrid(t *testing.T) {
 
 		mockAdapter.EXPECT().
 			CreateGrid(gomock.Any(), &domain.WikiGridCreateRequest{
-				PageID: 123,
+				PageID: "123",
 				Title:  "Full Grid",
 				Columns: []domain.WikiColumnDefinition{
 					{Slug: "col1", Title: "Column 1", Type: "string"},
@@ -1575,10 +1495,10 @@ func TestTools_CreateGrid(t *testing.T) {
 			}).
 			Return(expectedResp, nil)
 
-		result, err := reg.CreateGrid(context.Background(), CreateGridInput{
-			Page:  PageInput{ID: 123},
+		result, err := reg.createGrid(context.Background(), createGridInputDTO{
+			Page:  pageInputDTO{ID: "123"},
 			Title: "Full Grid",
-			Columns: []ColumnInputCreate{
+			Columns: []columnInputCreateDTO{
 				{Slug: "col1", Title: "Column 1", Type: "string"},
 				{Slug: "col2", Title: "Column 2", Type: "number"},
 			},
@@ -1614,10 +1534,10 @@ func TestTools_CreateGrid(t *testing.T) {
 			CreateGrid(gomock.Any(), gomock.Any()).
 			Return(expectedResp, nil)
 
-		result, err := reg.CreateGrid(context.Background(), CreateGridInput{
-			Page:  PageInput{ID: 123},
+		result, err := reg.createGrid(context.Background(), createGridInputDTO{
+			Page:  pageInputDTO{ID: "123"},
 			Title: "Mapped Grid",
-			Columns: []ColumnInputCreate{
+			Columns: []columnInputCreateDTO{
 				{Slug: "col1", Title: "Column 1", Type: "string"},
 			},
 		})
@@ -1651,10 +1571,10 @@ func TestTools_CreateGrid(t *testing.T) {
 			CreateGrid(gomock.Any(), gomock.Any()).
 			Return(nil, upstreamErr)
 
-		_, err := reg.CreateGrid(context.Background(), CreateGridInput{
-			Page:  PageInput{ID: 123},
+		_, err := reg.createGrid(context.Background(), createGridInputDTO{
+			Page:  pageInputDTO{ID: "123"},
 			Title: "Test",
-			Columns: []ColumnInputCreate{
+			Columns: []columnInputCreateDTO{
 				{Slug: "col1", Title: "Column 1"},
 			},
 		})
@@ -1683,10 +1603,10 @@ func TestTools_CreateGrid(t *testing.T) {
 			GetPageBySlug(gomock.Any(), "missing/page", domain.WikiGetPageOpts{}).
 			Return(nil, upstreamErr)
 
-		_, err := reg.CreateGrid(context.Background(), CreateGridInput{
-			Page:  PageInput{Slug: "missing/page"},
+		_, err := reg.createGrid(context.Background(), createGridInputDTO{
+			Page:  pageInputDTO{Slug: "missing/page"},
 			Title: "Test",
-			Columns: []ColumnInputCreate{
+			Columns: []columnInputCreateDTO{
 				{Slug: "col1", Title: "Column 1"},
 			},
 		})
@@ -1706,8 +1626,8 @@ func TestTools_UpdateGridCells(t *testing.T) {
 		mockAdapter := NewMockIWikiAdapter(ctrl)
 		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
-		_, err := reg.UpdateGridCells(context.Background(), UpdateGridCellsInput{
-			Cells: []CellUpdateInput{{RowID: 1, ColumnSlug: "col1", Value: "val"}},
+		_, err := reg.updateGridCells(context.Background(), updateGridCellsInputDTO{
+			Cells: []cellUpdateInputDTO{{RowID: "1", ColumnSlug: "col1", Value: "val"}},
 		})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "grid_id is required")
@@ -1719,9 +1639,9 @@ func TestTools_UpdateGridCells(t *testing.T) {
 		mockAdapter := NewMockIWikiAdapter(ctrl)
 		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
-		_, err := reg.UpdateGridCells(context.Background(), UpdateGridCellsInput{
+		_, err := reg.updateGridCells(context.Background(), updateGridCellsInputDTO{
 			GridID: "grid-123",
-			Cells:  []CellUpdateInput{},
+			Cells:  []cellUpdateInputDTO{},
 		})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "at least one cell is required")
@@ -1733,26 +1653,11 @@ func TestTools_UpdateGridCells(t *testing.T) {
 		mockAdapter := NewMockIWikiAdapter(ctrl)
 		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
-		_, err := reg.UpdateGridCells(context.Background(), UpdateGridCellsInput{
-			GridID: "grid-123",
-			Cells:  []CellUpdateInput{{RowID: 0, ColumnSlug: "col1", Value: "val"}},
+		_, err := reg.updateGridCells(context.Background(), updateGridCellsInputDTO{
+			GridID: "",
+			Cells:  []cellUpdateInputDTO{{RowID: "0", ColumnSlug: "col1", Value: "val"}},
 		})
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "cell[0]: row_id must be positive")
-	})
-
-	t.Run("validation/cell_row_id_negative", func(t *testing.T) {
-		t.Parallel()
-		ctrl := gomock.NewController(t)
-		mockAdapter := NewMockIWikiAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
-
-		_, err := reg.UpdateGridCells(context.Background(), UpdateGridCellsInput{
-			GridID: "grid-123",
-			Cells:  []CellUpdateInput{{RowID: -1, ColumnSlug: "col1", Value: "val"}},
-		})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "cell[0]: row_id must be positive")
 	})
 
 	t.Run("validation/cell_column_slug_empty", func(t *testing.T) {
@@ -1761,26 +1666,12 @@ func TestTools_UpdateGridCells(t *testing.T) {
 		mockAdapter := NewMockIWikiAdapter(ctrl)
 		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
-		_, err := reg.UpdateGridCells(context.Background(), UpdateGridCellsInput{
+		_, err := reg.updateGridCells(context.Background(), updateGridCellsInputDTO{
 			GridID: "grid-123",
-			Cells:  []CellUpdateInput{{RowID: 1, ColumnSlug: "", Value: "val"}},
+			Cells:  []cellUpdateInputDTO{{RowID: "1", ColumnSlug: "", Value: "val"}},
 		})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "cell[0]: column_slug is required")
-	})
-
-	t.Run("validation/cell_value_not_string", func(t *testing.T) {
-		t.Parallel()
-		ctrl := gomock.NewController(t)
-		mockAdapter := NewMockIWikiAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
-
-		_, err := reg.UpdateGridCells(context.Background(), UpdateGridCellsInput{
-			GridID: "grid-123",
-			Cells:  []CellUpdateInput{{RowID: 1, ColumnSlug: "col1", Value: 123}},
-		})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "cell[0]: value must be a string")
 	})
 
 	t.Run("adapter/call_with_minimal_params", func(t *testing.T) {
@@ -1801,14 +1692,14 @@ func TestTools_UpdateGridCells(t *testing.T) {
 			UpdateGridCells(gomock.Any(), &domain.WikiGridCellsUpdateRequest{
 				GridID: "grid-123",
 				Cells: []domain.WikiCellUpdate{
-					{RowID: 1, ColumnSlug: "col1", Value: "new value"},
+					{RowID: "1", ColumnSlug: "col1", Value: "new value"},
 				},
 			}).
 			Return(expectedResp, nil)
 
-		result, err := reg.UpdateGridCells(context.Background(), UpdateGridCellsInput{
+		result, err := reg.updateGridCells(context.Background(), updateGridCellsInputDTO{
 			GridID: "grid-123",
-			Cells:  []CellUpdateInput{{RowID: 1, ColumnSlug: "col1", Value: "new value"}},
+			Cells:  []cellUpdateInputDTO{{RowID: "1", ColumnSlug: "col1", Value: "new value"}},
 		})
 		require.NoError(t, err)
 		assert.Equal(t, "grid-123", result.ID)
@@ -1833,19 +1724,19 @@ func TestTools_UpdateGridCells(t *testing.T) {
 			UpdateGridCells(gomock.Any(), &domain.WikiGridCellsUpdateRequest{
 				GridID: "grid-123",
 				Cells: []domain.WikiCellUpdate{
-					{RowID: 1, ColumnSlug: "col1", Value: "value1"},
-					{RowID: 2, ColumnSlug: "col1", Value: "value2"},
-					{RowID: 1, ColumnSlug: "col2", Value: "value3"},
+					{RowID: "1", ColumnSlug: "col1", Value: "value1"},
+					{RowID: "2", ColumnSlug: "col1", Value: "value2"},
+					{RowID: "1", ColumnSlug: "col2", Value: "value3"},
 				},
 			}).
 			Return(expectedResp, nil)
 
-		result, err := reg.UpdateGridCells(context.Background(), UpdateGridCellsInput{
+		result, err := reg.updateGridCells(context.Background(), updateGridCellsInputDTO{
 			GridID: "grid-123",
-			Cells: []CellUpdateInput{
-				{RowID: 1, ColumnSlug: "col1", Value: "value1"},
-				{RowID: 2, ColumnSlug: "col1", Value: "value2"},
-				{RowID: 1, ColumnSlug: "col2", Value: "value3"},
+			Cells: []cellUpdateInputDTO{
+				{RowID: "1", ColumnSlug: "col1", Value: "value1"},
+				{RowID: "2", ColumnSlug: "col1", Value: "value2"},
+				{RowID: "1", ColumnSlug: "col2", Value: "value3"},
 			},
 		})
 		require.NoError(t, err)
@@ -1870,15 +1761,15 @@ func TestTools_UpdateGridCells(t *testing.T) {
 			UpdateGridCells(gomock.Any(), &domain.WikiGridCellsUpdateRequest{
 				GridID: "grid-123",
 				Cells: []domain.WikiCellUpdate{
-					{RowID: 1, ColumnSlug: "col1", Value: "val"},
+					{RowID: "1", ColumnSlug: "col1", Value: "val"},
 				},
 				Revision: "3",
 			}).
 			Return(expectedResp, nil)
 
-		result, err := reg.UpdateGridCells(context.Background(), UpdateGridCellsInput{
+		result, err := reg.updateGridCells(context.Background(), updateGridCellsInputDTO{
 			GridID:   "grid-123",
-			Cells:    []CellUpdateInput{{RowID: 1, ColumnSlug: "col1", Value: "val"}},
+			Cells:    []cellUpdateInputDTO{{RowID: "1", ColumnSlug: "col1", Value: "val"}},
 			Revision: "3",
 		})
 		require.NoError(t, err)
@@ -1911,9 +1802,9 @@ func TestTools_UpdateGridCells(t *testing.T) {
 			UpdateGridCells(gomock.Any(), gomock.Any()).
 			Return(expectedResp, nil)
 
-		result, err := reg.UpdateGridCells(context.Background(), UpdateGridCellsInput{
+		result, err := reg.updateGridCells(context.Background(), updateGridCellsInputDTO{
 			GridID: "grid-mapped",
-			Cells:  []CellUpdateInput{{RowID: 1, ColumnSlug: "col1", Value: "updated"}},
+			Cells:  []cellUpdateInputDTO{{RowID: "1", ColumnSlug: "col1", Value: "updated"}},
 		})
 		require.NoError(t, err)
 		assert.Equal(t, "grid-mapped", result.ID)
@@ -1943,13 +1834,576 @@ func TestTools_UpdateGridCells(t *testing.T) {
 			UpdateGridCells(gomock.Any(), gomock.Any()).
 			Return(nil, upstreamErr)
 
-		_, err := reg.UpdateGridCells(context.Background(), UpdateGridCellsInput{
+		_, err := reg.updateGridCells(context.Background(), updateGridCellsInputDTO{
 			GridID: "grid-123",
-			Cells:  []CellUpdateInput{{RowID: 1, ColumnSlug: "col1", Value: "val"}},
+			Cells:  []cellUpdateInputDTO{{RowID: "1", ColumnSlug: "col1", Value: "val"}},
 		})
 		require.Error(t, err)
 		errStr := err.Error()
 		assert.Contains(t, errStr, domain.ServiceWiki)
 		assert.Contains(t, errStr, "HTTP 409")
+	})
+}
+
+func TestTools_DeletePage(t *testing.T) {
+	t.Parallel()
+
+	t.Run("adapter_wiring/calls_adapter_with_correct_page_id", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockIWikiAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
+
+		expectedResp := &domain.WikiPageDeleteResponse{
+			RecoveryToken: "recovery-token-123",
+		}
+
+		mockAdapter.EXPECT().
+			DeletePage(gomock.Any(), "42").
+			Return(expectedResp, nil)
+
+		result, err := reg.deletePage(context.Background(), deletePageInputDTO{PageID: "42"})
+		require.NoError(t, err)
+		assert.Equal(t, "recovery-token-123", result.RecoveryToken)
+	})
+
+	t.Run("error/upstream_error_shaped", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockIWikiAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
+
+		upstreamErr := domain.NewUpstreamError(
+			domain.ServiceWiki,
+			"DeletePage",
+			403,
+			"forbidden",
+			"No permission",
+			"body",
+		)
+
+		mockAdapter.EXPECT().
+			DeletePage(gomock.Any(), "99").
+			Return(nil, upstreamErr)
+
+		_, err := reg.deletePage(context.Background(), deletePageInputDTO{PageID: "99"})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), domain.ServiceWiki)
+		assert.Contains(t, err.Error(), "HTTP 403")
+	})
+}
+
+func TestTools_ClonePage(t *testing.T) {
+	t.Parallel()
+
+	t.Run("validation/target_required", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockIWikiAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
+
+		_, err := reg.clonePage(context.Background(), clonePageInputDTO{PageID: "1", Target: ""})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "target is required")
+	})
+
+	t.Run("adapter_wiring/calls_adapter_with_correct_request", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockIWikiAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
+
+		expectedResp := &domain.WikiCloneOperationResponse{
+			OperationID:   "op-123",
+			OperationType: "clone_page",
+			DryRun:        false,
+			StatusURL:     "https://wiki.example.com/status/op-123",
+		}
+
+		mockAdapter.EXPECT().
+			ClonePage(gomock.Any(), domain.WikiPageCloneRequest{
+				PageID:      "10",
+				Target:      "new/location",
+				Title:       "Cloned Page",
+				SubscribeMe: true,
+			}).
+			Return(expectedResp, nil)
+
+		result, err := reg.clonePage(context.Background(), clonePageInputDTO{
+			PageID:      "10",
+			Target:      "new/location",
+			Title:       "Cloned Page",
+			SubscribeMe: true,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "op-123", result.OperationID)
+		assert.Equal(t, "clone_page", result.OperationType)
+		assert.False(t, result.DryRun)
+		assert.Equal(t, "https://wiki.example.com/status/op-123", result.StatusURL)
+	})
+}
+
+func TestTools_DeleteGrid(t *testing.T) {
+	t.Parallel()
+
+	t.Run("validation/grid_id_required", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockIWikiAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
+
+		_, err := reg.deleteGrid(context.Background(), deleteGridInputDTO{GridID: ""})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "grid_id is required")
+	})
+
+	t.Run("adapter_wiring/calls_adapter_with_correct_grid_id", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockIWikiAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
+
+		mockAdapter.EXPECT().
+			DeleteGrid(gomock.Any(), "grid-uuid-456").
+			Return(nil)
+
+		result, err := reg.deleteGrid(context.Background(), deleteGridInputDTO{GridID: "grid-uuid-456"})
+		require.NoError(t, err)
+		assert.NotNil(t, result)
+	})
+
+	t.Run("error/upstream_error_shaped", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockIWikiAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
+
+		upstreamErr := domain.NewUpstreamError(
+			domain.ServiceWiki,
+			"DeleteGrid",
+			404,
+			"not_found",
+			"Grid not found",
+			"body",
+		)
+
+		mockAdapter.EXPECT().
+			DeleteGrid(gomock.Any(), "missing-grid").
+			Return(upstreamErr)
+
+		_, err := reg.deleteGrid(context.Background(), deleteGridInputDTO{GridID: "missing-grid"})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), domain.ServiceWiki)
+		assert.Contains(t, err.Error(), "HTTP 404")
+	})
+}
+
+func TestTools_CloneGrid(t *testing.T) {
+	t.Parallel()
+
+	t.Run("validation/grid_id_required", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockIWikiAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
+
+		_, err := reg.cloneGrid(context.Background(), cloneGridInputDTO{GridID: "", Target: "target/slug"})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "grid_id is required")
+	})
+
+	t.Run("validation/target_required", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockIWikiAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
+
+		_, err := reg.cloneGrid(context.Background(), cloneGridInputDTO{GridID: "grid-123", Target: ""})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "target is required")
+	})
+
+	t.Run("adapter_wiring/calls_adapter_with_correct_request", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockIWikiAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
+
+		expectedResp := &domain.WikiCloneOperationResponse{
+			OperationID:   "grid-op-789",
+			OperationType: "clone_grid",
+			DryRun:        true,
+			StatusURL:     "https://wiki.example.com/status/grid-op-789",
+		}
+
+		mockAdapter.EXPECT().
+			CloneGrid(gomock.Any(), domain.WikiGridCloneRequest{
+				GridID:   "source-grid",
+				Target:   "target/page",
+				Title:    "Cloned Grid",
+				WithData: true,
+			}).
+			Return(expectedResp, nil)
+
+		result, err := reg.cloneGrid(context.Background(), cloneGridInputDTO{
+			GridID:   "source-grid",
+			Target:   "target/page",
+			Title:    "Cloned Grid",
+			WithData: true,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "grid-op-789", result.OperationID)
+		assert.Equal(t, "clone_grid", result.OperationType)
+		assert.True(t, result.DryRun)
+		assert.Equal(t, "https://wiki.example.com/status/grid-op-789", result.StatusURL)
+	})
+}
+
+func TestTools_AddGridRows(t *testing.T) {
+	t.Parallel()
+
+	t.Run("validation/grid_id_required", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockIWikiAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
+
+		_, err := reg.addGridRows(context.Background(), addGridRowsInputDTO{GridID: "", Rows: []map[string]any{{"col": "val"}}})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "grid_id is required")
+	})
+
+	t.Run("validation/rows_required", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockIWikiAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
+
+		_, err := reg.addGridRows(context.Background(), addGridRowsInputDTO{GridID: "grid-123", Rows: nil})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "rows must contain at least one element")
+	})
+
+	t.Run("adapter_wiring/calls_adapter_with_correct_request", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockIWikiAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
+
+		pos := 5
+		expectedResp := &domain.WikiGridRowsAddResponse{
+			Revision: "rev-123",
+			Results: []domain.WikiGridRowResult{
+				{ID: "row-1", Row: []any{"val1"}, Color: "blue", Pinned: true},
+			},
+		}
+
+		mockAdapter.EXPECT().
+			AddGridRows(gomock.Any(), domain.WikiGridRowsAddRequest{
+				GridID:     "grid-123",
+				Rows:       []map[string]any{{"col": "val"}},
+				AfterRowID: "row-0",
+				Position:   &pos,
+				Revision:   "rev-old",
+			}).
+			Return(expectedResp, nil)
+
+		result, err := reg.addGridRows(context.Background(), addGridRowsInputDTO{
+			GridID:     "grid-123",
+			Rows:       []map[string]any{{"col": "val"}},
+			AfterRowID: "row-0",
+			Position:   &pos,
+			Revision:   "rev-old",
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "rev-123", result.Revision)
+		require.Len(t, result.Results, 1)
+		assert.Equal(t, "row-1", result.Results[0].ID)
+		assert.Equal(t, "blue", result.Results[0].Color)
+		assert.True(t, result.Results[0].Pinned)
+	})
+}
+
+func TestTools_DeleteGridRows(t *testing.T) {
+	t.Parallel()
+
+	t.Run("validation/grid_id_required", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockIWikiAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
+
+		_, err := reg.deleteGridRows(context.Background(), deleteGridRowsInputDTO{GridID: "", RowIDs: []string{"row-1"}})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "grid_id is required")
+	})
+
+	t.Run("validation/row_ids_required", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockIWikiAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
+
+		_, err := reg.deleteGridRows(context.Background(), deleteGridRowsInputDTO{GridID: "grid-123", RowIDs: nil})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "row_ids must contain at least one element")
+	})
+
+	t.Run("adapter_wiring/calls_adapter_with_correct_request", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockIWikiAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
+
+		expectedResp := &domain.WikiRevisionResponse{Revision: "rev-new"}
+
+		mockAdapter.EXPECT().
+			DeleteGridRows(gomock.Any(), domain.WikiGridRowsDeleteRequest{
+				GridID:   "grid-123",
+				RowIDs:   []string{"row-1", "row-2"},
+				Revision: "rev-old",
+			}).
+			Return(expectedResp, nil)
+
+		result, err := reg.deleteGridRows(context.Background(), deleteGridRowsInputDTO{
+			GridID:   "grid-123",
+			RowIDs:   []string{"row-1", "row-2"},
+			Revision: "rev-old",
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "rev-new", result.Revision)
+	})
+}
+
+func TestTools_MoveGridRows(t *testing.T) {
+	t.Parallel()
+
+	t.Run("validation/grid_id_required", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockIWikiAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
+
+		_, err := reg.moveGridRows(context.Background(), moveGridRowsInputDTO{GridID: "", RowID: "row-1"})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "grid_id is required")
+	})
+
+	t.Run("validation/row_id_required", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockIWikiAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
+
+		_, err := reg.moveGridRows(context.Background(), moveGridRowsInputDTO{GridID: "grid-123", RowID: ""})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "row_id is required")
+	})
+
+	t.Run("adapter_wiring/calls_adapter_with_correct_request", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockIWikiAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
+
+		pos := 3
+		cnt := 2
+		expectedResp := &domain.WikiRevisionResponse{Revision: "rev-moved"}
+
+		mockAdapter.EXPECT().
+			MoveGridRows(gomock.Any(), domain.WikiGridRowsMoveRequest{
+				GridID:     "grid-123",
+				RowID:      "row-1",
+				AfterRowID: "row-10",
+				Position:   &pos,
+				RowsCount:  &cnt,
+				Revision:   "rev-old",
+			}).
+			Return(expectedResp, nil)
+
+		result, err := reg.moveGridRows(context.Background(), moveGridRowsInputDTO{
+			GridID:     "grid-123",
+			RowID:      "row-1",
+			AfterRowID: "row-10",
+			Position:   &pos,
+			RowsCount:  &cnt,
+			Revision:   "rev-old",
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "rev-moved", result.Revision)
+	})
+}
+
+func TestTools_AddGridColumns(t *testing.T) {
+	t.Parallel()
+
+	t.Run("validation/grid_id_required", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockIWikiAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
+
+		_, err := reg.addGridColumns(context.Background(), addGridColumnsInputDTO{
+			GridID:  "",
+			Columns: []columnDefinitionInputDTO{{Slug: "col1", Title: "Col1", Type: "string", Required: true}},
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "grid_id is required")
+	})
+
+	t.Run("validation/columns_required", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockIWikiAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
+
+		_, err := reg.addGridColumns(context.Background(), addGridColumnsInputDTO{GridID: "grid-123", Columns: nil})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "columns must contain at least one element")
+	})
+
+	t.Run("adapter_wiring/calls_adapter_with_correct_request", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockIWikiAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
+
+		pos := 0
+		expectedResp := &domain.WikiRevisionResponse{Revision: "rev-col"}
+
+		mockAdapter.EXPECT().
+			AddGridColumns(gomock.Any(), domain.WikiGridColumnsAddRequest{
+				GridID: "grid-123",
+				Columns: []domain.WikiNewColumnDefinition{
+					{
+						Slug:     "new_col",
+						Title:    "New Column",
+						Type:     "string",
+						Required: true,
+						Format:   "plain",
+					},
+				},
+				Position: &pos,
+				Revision: "rev-old",
+			}).
+			Return(expectedResp, nil)
+
+		result, err := reg.addGridColumns(context.Background(), addGridColumnsInputDTO{
+			GridID: "grid-123",
+			Columns: []columnDefinitionInputDTO{
+				{Slug: "new_col", Title: "New Column", Type: "string", Required: true, Format: "plain"},
+			},
+			Position: &pos,
+			Revision: "rev-old",
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "rev-col", result.Revision)
+	})
+}
+
+func TestTools_DeleteGridColumns(t *testing.T) {
+	t.Parallel()
+
+	t.Run("validation/grid_id_required", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockIWikiAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
+
+		_, err := reg.deleteGridColumns(context.Background(), deleteGridColumnsInputDTO{GridID: "", ColumnSlugs: []string{"col1"}})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "grid_id is required")
+	})
+
+	t.Run("validation/column_slugs_required", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockIWikiAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
+
+		_, err := reg.deleteGridColumns(context.Background(), deleteGridColumnsInputDTO{GridID: "grid-123", ColumnSlugs: nil})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "column_slugs must contain at least one element")
+	})
+
+	t.Run("adapter_wiring/calls_adapter_with_correct_request", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockIWikiAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
+
+		expectedResp := &domain.WikiRevisionResponse{Revision: "rev-del-col"}
+
+		mockAdapter.EXPECT().
+			DeleteGridColumns(gomock.Any(), domain.WikiGridColumnsDeleteRequest{
+				GridID:      "grid-123",
+				ColumnSlugs: []string{"col1", "col2"},
+				Revision:    "rev-old",
+			}).
+			Return(expectedResp, nil)
+
+		result, err := reg.deleteGridColumns(context.Background(), deleteGridColumnsInputDTO{
+			GridID:      "grid-123",
+			ColumnSlugs: []string{"col1", "col2"},
+			Revision:    "rev-old",
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "rev-del-col", result.Revision)
+	})
+}
+
+func TestTools_MoveGridColumns(t *testing.T) {
+	t.Parallel()
+
+	t.Run("validation/grid_id_required", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockIWikiAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
+
+		_, err := reg.moveGridColumns(context.Background(), moveGridColumnsInputDTO{GridID: "", ColumnSlug: "col1", Position: 0})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "grid_id is required")
+	})
+
+	t.Run("validation/column_slug_required", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockIWikiAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
+
+		_, err := reg.moveGridColumns(context.Background(), moveGridColumnsInputDTO{GridID: "grid-123", ColumnSlug: "", Position: 0})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "column_slug is required")
+	})
+
+	t.Run("adapter_wiring/calls_adapter_with_correct_request", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockIWikiAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
+
+		cnt := 3
+		expectedResp := &domain.WikiRevisionResponse{Revision: "rev-move-col"}
+
+		mockAdapter.EXPECT().
+			MoveGridColumns(gomock.Any(), domain.WikiGridColumnsMoveRequest{
+				GridID:       "grid-123",
+				ColumnSlug:   "col1",
+				Position:     5,
+				ColumnsCount: &cnt,
+				Revision:     "rev-old",
+			}).
+			Return(expectedResp, nil)
+
+		result, err := reg.moveGridColumns(context.Background(), moveGridColumnsInputDTO{
+			GridID:       "grid-123",
+			ColumnSlug:   "col1",
+			Position:     5,
+			ColumnsCount: &cnt,
+			Revision:     "rev-old",
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "rev-move-col", result.Revision)
 	})
 }

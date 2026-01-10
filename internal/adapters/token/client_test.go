@@ -2,7 +2,6 @@ package token
 
 import (
 	"context"
-	"errors"
 	"regexp"
 	"runtime"
 	"sync"
@@ -117,63 +116,6 @@ func TestProvider_Token_RefreshesAfterPeriodExpires(t *testing.T) {
 	assert.Equal(t, makeValidToken("v2"), tok2)
 }
 
-func TestProvider_ForceRefresh_BypassesCache(t *testing.T) {
-	t.Parallel()
-	ctrl := gomock.NewController(t)
-
-	mockExec := NewMockICommandExecutor(ctrl)
-	cfg := testConfig(time.Hour)
-	provider := NewProvider(cfg)
-	provider.setExecutor(mockExec)
-
-	gomock.InOrder(
-		mockExec.EXPECT().
-			Execute(gomock.Any(), "yc", "iam", "create-token").
-			Return([]byte(makeValidToken("cached")), nil),
-		mockExec.EXPECT().
-			Execute(gomock.Any(), "yc", "iam", "create-token").
-			Return([]byte(makeValidToken("forced")), nil),
-	)
-
-	ctx := context.Background()
-
-	tok1, err1 := provider.Token(ctx)
-	require.NoError(t, err1)
-	assert.Equal(t, makeValidToken("cached"), tok1)
-
-	tok2, err2 := provider.ForceRefresh(ctx)
-	require.NoError(t, err2)
-	assert.Equal(t, makeValidToken("forced"), tok2)
-}
-
-func TestProvider_ForceRefresh_UpdatesCacheForSubsequentCalls(t *testing.T) {
-	t.Parallel()
-	ctrl := gomock.NewController(t)
-
-	mockExec := NewMockICommandExecutor(ctrl)
-	cfg := testConfig(time.Hour)
-	provider := NewProvider(cfg)
-	provider.setExecutor(mockExec)
-
-	gomock.InOrder(
-		mockExec.EXPECT().
-			Execute(gomock.Any(), "yc", "iam", "create-token").
-			Return([]byte(makeValidToken("original")), nil),
-		mockExec.EXPECT().
-			Execute(gomock.Any(), "yc", "iam", "create-token").
-			Return([]byte(makeValidToken("refreshed")), nil),
-	)
-
-	ctx := context.Background()
-
-	_, _ = provider.Token(ctx)
-	_, _ = provider.ForceRefresh(ctx)
-
-	tok, err := provider.Token(ctx)
-	require.NoError(t, err)
-	assert.Equal(t, makeValidToken("refreshed"), tok)
-}
-
 func TestProvider_Token_ConcurrentCallsTriggerSingleExecution(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
@@ -222,32 +164,6 @@ func TestProvider_Token_ConcurrentCallsTriggerSingleExecution(t *testing.T) {
 	}
 
 	assert.Equal(t, int32(1), execCount.Load(), "yc should be executed exactly once")
-}
-
-func TestProvider_ForceRefresh_ErrorDoesNotContainToken(t *testing.T) {
-	t.Parallel()
-	ctrl := gomock.NewController(t)
-
-	mockExec := NewMockICommandExecutor(ctrl)
-	cfg := testConfig(time.Hour)
-	provider := NewProvider(cfg)
-	provider.setExecutor(mockExec)
-
-	tokenV1 := makeValidToken("secret")
-	sensitiveOutput := "partial-token-" + tokenV1 + " remaining output"
-	mockExec.EXPECT().
-		Execute(gomock.Any(), "yc", "iam", "create-token").
-		Return([]byte(tokenV1), nil)
-	mockExec.EXPECT().
-		Execute(gomock.Any(), "yc", "iam", "create-token").
-		Return(nil, errors.New(sensitiveOutput))
-
-	ctx := context.Background()
-	_, _ = provider.Token(ctx)
-	_, err := provider.ForceRefresh(ctx)
-
-	require.Error(t, err)
-	assert.NotContains(t, err.Error(), tokenV1, "error must not leak previously cached token")
 }
 
 func TestProvider_Token_ErrorDoesNotLeakOutputWhenTokenNotFound(t *testing.T) {

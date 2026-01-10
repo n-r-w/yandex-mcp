@@ -15,7 +15,7 @@ import (
 // ErrorParseFunc is a function that parses an HTTP error into a domain error.
 type ErrorParseFunc func(ctx context.Context, statusCode int, body []byte, operation string) error
 
-// APIClient provides shared HTTP request methods with 401 retry logic.
+// APIClient provides shared HTTP request methods for Yandex API adapters.
 type APIClient struct {
 	httpClient    *http.Client
 	tokenProvider ITokenProvider
@@ -58,7 +58,7 @@ func NewAPIClient(cfg APIClientConfig) *APIClient {
 	}
 }
 
-// DoRequest performs an HTTP request with 401 retry logic and returns response headers.
+// DoRequest performs an HTTP request and returns response headers.
 func (c *APIClient) DoRequest(
 	ctx context.Context,
 	method, urlStr string,
@@ -66,29 +66,21 @@ func (c *APIClient) DoRequest(
 	result any,
 	operation string,
 ) (http.Header, error) {
-	resp, err := c.executeHTTPRequest(ctx, method, urlStr, body, false)
+	resp, err := c.executeHTTPRequest(ctx, method, urlStr, body)
 	if err != nil {
 		return nil, c.ErrorLogWrapper(ctx, err)
-	}
-
-	if resp.StatusCode == http.StatusUnauthorized {
-		_ = resp.Body.Close()
-		resp, err = c.executeHTTPRequest(ctx, method, urlStr, body, true)
-		if err != nil {
-			return nil, c.ErrorLogWrapper(ctx, err)
-		}
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	return resp.Header, c.handleResponse(ctx, resp, result, operation)
 }
 
-// DoGET executes a GET request with token injection and 401 retry logic.
+// DoGET executes a GET request with token injection.
 func (c *APIClient) DoGET(ctx context.Context, urlStr string, result any, operation string) (http.Header, error) {
 	return c.DoRequest(ctx, http.MethodGet, urlStr, nil, result, operation)
 }
 
-// DoPOST executes a POST request with token injection and 401 retry logic.
+// DoPOST executes a POST request with token injection.
 func (c *APIClient) DoPOST(
 	ctx context.Context,
 	urlStr string,
@@ -99,7 +91,7 @@ func (c *APIClient) DoPOST(
 	return c.DoRequest(ctx, http.MethodPost, urlStr, body, result, operation)
 }
 
-// DoPATCH executes a PATCH request with token injection and 401 retry logic.
+// DoPATCH executes a PATCH request with token injection.
 func (c *APIClient) DoPATCH(
 	ctx context.Context,
 	urlStr string,
@@ -108,6 +100,11 @@ func (c *APIClient) DoPATCH(
 	operation string,
 ) (http.Header, error) {
 	return c.DoRequest(ctx, http.MethodPatch, urlStr, body, result, operation)
+}
+
+// DoDELETE executes a DELETE request with token injection.
+func (c *APIClient) DoDELETE(ctx context.Context, urlStr string, operation string) (http.Header, error) {
+	return c.DoRequest(ctx, http.MethodDelete, urlStr, nil, nil, operation)
 }
 
 // handleResponse processes the HTTP response and decodes the result.
@@ -142,18 +139,8 @@ func (c *APIClient) executeHTTPRequest(
 	ctx context.Context,
 	method, urlStr string,
 	body any,
-	forceRefresh bool,
 ) (*http.Response, error) {
-	var (
-		token string
-		err   error
-	)
-
-	if forceRefresh {
-		token, err = c.tokenProvider.ForceRefresh(ctx)
-	} else {
-		token, err = c.tokenProvider.Token(ctx)
-	}
+	token, err := c.tokenProvider.Token(ctx)
 	if err != nil {
 		return nil, err
 	}

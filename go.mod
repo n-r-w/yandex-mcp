@@ -7,6 +7,7 @@ require go.uber.org/mock v0.6.0
 require (
 	github.com/caarlos0/env/v11 v11.3.1
 	github.com/modelcontextprotocol/go-sdk v1.2.0
+	github.com/n-r-w/singleflight/v2 v2.0.0
 	github.com/stretchr/testify v1.9.0
 )
 

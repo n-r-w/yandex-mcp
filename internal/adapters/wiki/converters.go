@@ -15,12 +15,12 @@ const (
 	resourceTypeGrid               = "grid"
 )
 
-func pageToWikiPage(p *Page) *domain.WikiPage {
+func pageToWikiPage(p *pageDTO) *domain.WikiPage {
 	if p == nil {
 		return nil
 	}
 	return &domain.WikiPage{
-		ID:         p.ID,
+		ID:         p.ID.String(),
 		PageType:   p.PageType,
 		Slug:       p.Slug,
 		Title:      p.Title,
@@ -30,7 +30,7 @@ func pageToWikiPage(p *Page) *domain.WikiPage {
 	}
 }
 
-func attributesToWikiAttributes(a *Attributes) *domain.WikiAttributes {
+func attributesToWikiAttributes(a *attributesDTO) *domain.WikiAttributes {
 	if a == nil {
 		return nil
 	}
@@ -46,17 +46,17 @@ func attributesToWikiAttributes(a *Attributes) *domain.WikiAttributes {
 	}
 }
 
-func redirectToWikiRedirect(r *Redirect) *domain.WikiRedirect {
+func redirectToWikiRedirect(r *redirectDTO) *domain.WikiRedirect {
 	if r == nil {
 		return nil
 	}
 	return &domain.WikiRedirect{
-		PageID: r.PageID,
+		PageID: r.PageID.String(),
 		Slug:   r.Slug,
 	}
 }
 
-func resourcesPageToWikiResourcesPage(rp *ResourcesPage) (*domain.WikiResourcesPage, error) {
+func resourcesPageToWikiResourcesPage(rp *resourcesPageDTO) (*domain.WikiResourcesPage, error) {
 	if rp == nil {
 		return nil, nil //nolint:nilnil // nil input returns nil output by design
 	}
@@ -75,7 +75,7 @@ func resourcesPageToWikiResourcesPage(rp *ResourcesPage) (*domain.WikiResourcesP
 	}, nil
 }
 
-func resourceToWikiResource(r *Resource) (*domain.WikiResource, error) {
+func resourceToWikiResource(r *resourceDTO) (*domain.WikiResource, error) {
 	if r == nil {
 		return nil, nil //nolint:nilnil // nil input returns nil output by design
 	}
@@ -119,12 +119,12 @@ func convertItemToAttachment(item any) (*domain.WikiAttachment, error) {
 	if err != nil {
 		return nil, fmt.Errorf("marshal item: %w", err)
 	}
-	var att Attachment
+	var att attachmentDTO
 	if err := json.Unmarshal(data, &att); err != nil {
 		return nil, fmt.Errorf("unmarshal attachment: %w", err)
 	}
 	return &domain.WikiAttachment{
-		ID:          att.ID,
+		ID:          att.ID.String(),
 		Name:        att.Name,
 		Size:        att.Size,
 		MIMEType:    att.Mimetype,
@@ -139,12 +139,12 @@ func convertItemToSharepoint(item any) (*domain.WikiSharepointResource, error) {
 	if err != nil {
 		return nil, fmt.Errorf("marshal item: %w", err)
 	}
-	var sp SharepointResource
+	var sp sharepointResourceDTO
 	if err := json.Unmarshal(data, &sp); err != nil {
 		return nil, fmt.Errorf("unmarshal sharepoint: %w", err)
 	}
 	return &domain.WikiSharepointResource{
-		ID:        sp.ID,
+		ID:        sp.ID.String(),
 		Title:     sp.Title,
 		Doctype:   sp.Doctype,
 		CreatedAt: sp.CreatedAt,
@@ -156,18 +156,18 @@ func convertItemToGrid(item any) (*domain.WikiGridResource, error) {
 	if err != nil {
 		return nil, fmt.Errorf("marshal item: %w", err)
 	}
-	var g PageGridSummary
+	var g pageGridSummaryDTO
 	if err := json.Unmarshal(data, &g); err != nil {
 		return nil, fmt.Errorf("unmarshal grid: %w", err)
 	}
 	return &domain.WikiGridResource{
-		ID:        g.ID,
+		ID:        g.ID.String(),
 		Title:     g.Title,
 		CreatedAt: g.CreatedAt,
 	}, nil
 }
 
-func gridsPageToWikiGridsPage(gp *GridsPage) *domain.WikiGridsPage {
+func gridsPageToWikiGridsPage(gp *gridsPageDTO) *domain.WikiGridsPage {
 	if gp == nil {
 		return nil
 	}
@@ -182,7 +182,7 @@ func gridsPageToWikiGridsPage(gp *GridsPage) *domain.WikiGridsPage {
 	}
 }
 
-func gridSummaryToWikiGridSummary(gs *PageGridSummary) domain.WikiGridSummary {
+func gridSummaryToWikiGridSummary(gs *pageGridSummaryDTO) domain.WikiGridSummary {
 	if gs == nil {
 		return domain.WikiGridSummary{
 			ID:        "",
@@ -191,13 +191,13 @@ func gridSummaryToWikiGridSummary(gs *PageGridSummary) domain.WikiGridSummary {
 		}
 	}
 	return domain.WikiGridSummary{
-		ID:        gs.ID,
+		ID:        gs.ID.String(),
 		Title:     gs.Title,
 		CreatedAt: gs.CreatedAt,
 	}
 }
 
-func gridToWikiGrid(g *Grid) *domain.WikiGrid {
+func gridToWikiGrid(g *gridDTO) *domain.WikiGrid {
 	if g == nil {
 		return nil
 	}
@@ -210,7 +210,7 @@ func gridToWikiGrid(g *Grid) *domain.WikiGrid {
 		rows = append(rows, gridRowToWikiGridRow(&g.Rows[i]))
 	}
 	return &domain.WikiGrid{
-		ID:             g.ID,
+		ID:             g.ID.String(),
 		Title:          g.Title,
 		Structure:      structure,
 		Rows:           rows,
@@ -221,7 +221,7 @@ func gridToWikiGrid(g *Grid) *domain.WikiGrid {
 	}
 }
 
-func columnToWikiColumn(c *Column) domain.WikiColumn {
+func columnToWikiColumn(c *columnDTO) domain.WikiColumn {
 	if c == nil {
 		return domain.WikiColumn{
 			Slug:  "",
@@ -236,7 +236,7 @@ func columnToWikiColumn(c *Column) domain.WikiColumn {
 	}
 }
 
-func gridRowToWikiGridRow(r *GridRow) domain.WikiGridRow {
+func gridRowToWikiGridRow(r *gridRowDTO) domain.WikiGridRow {
 	if r == nil {
 		return domain.WikiGridRow{
 			ID:    "",
@@ -250,7 +250,7 @@ func gridRowToWikiGridRow(r *GridRow) domain.WikiGridRow {
 		}
 	}
 	return domain.WikiGridRow{
-		ID:    r.ID,
+		ID:    r.ID.String(),
 		Cells: cells,
 	}
 }

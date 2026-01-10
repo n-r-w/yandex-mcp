@@ -9,7 +9,4 @@ import "context"
 type ITokenProvider interface {
 	// Token returns a valid IAM token, refreshing if needed.
 	Token(ctx context.Context) (string, error)
-
-	// ForceRefresh forces a token refresh and returns the new token.
-	ForceRefresh(ctx context.Context) (string, error)
 }

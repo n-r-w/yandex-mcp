@@ -99,7 +99,7 @@ func TestServer_ToolsRegistered(t *testing.T) {
 
 	session, err := client.Connect(ctx, clientTransport, nil)
 	require.NoError(t, err)
-	defer func() { _ = session.Close() }()
+	t.Cleanup(func() { _ = session.Close() })
 
 	// List tools.
 	toolNames := make([]string, 0, 11)

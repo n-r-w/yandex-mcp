@@ -61,18 +61,62 @@ type TrackerQueue struct {
 	DenyVoting     bool
 }
 
+// TrackerQueueDetail represents a detailed queue in Yandex Tracker.
+// Extends TrackerQueue with additional fields available when getting queue details.
+type TrackerQueueDetail struct {
+	Self            string
+	ID              string
+	Key             string
+	Display         string
+	Name            string
+	Description     string
+	Version         int
+	Lead            *TrackerUser
+	AssignAuto      bool
+	AllowExternals  bool
+	DenyVoting      bool
+	DefaultType     *TrackerIssueType
+	DefaultPriority *TrackerPriority
+}
+
 // TrackerUser represents a user in Yandex Tracker.
 type TrackerUser struct {
 	Self        string
 	ID          string
-	UID         int64
+	UID         string
 	Login       string
 	Display     string
 	FirstName   string
 	LastName    string
 	Email       string
 	CloudUID    string
-	PassportUID int64
+	PassportUID string
+}
+
+// TrackerUserDetail represents a detailed user in Yandex Tracker.
+// Extends TrackerUser with additional fields available when getting user details.
+type TrackerUserDetail struct {
+	Self        string
+	ID          string
+	UID         string
+	TrackerUID  string
+	Login       string
+	Display     string
+	FirstName   string
+	LastName    string
+	Email       string
+	CloudUID    string
+	PassportUID string
+	HasLicense  bool
+	Dismissed   bool
+	External    bool
+}
+
+// TrackerUsersPage represents a paginated list of users.
+type TrackerUsersPage struct {
+	Users      []TrackerUserDetail
+	TotalCount int
+	TotalPages int
 }
 
 // TrackerTransition represents a workflow transition for an issue.
@@ -85,7 +129,7 @@ type TrackerTransition struct {
 
 // TrackerComment represents a comment on an issue.
 type TrackerComment struct {
-	ID        int64
+	ID        string
 	LongID    string
 	Self      string
 	Text      string
@@ -119,4 +163,81 @@ type TrackerQueuesPage struct {
 type TrackerCommentsPage struct {
 	Comments []TrackerComment
 	NextLink string
+}
+
+// TrackerAttachment represents a file attachment in Yandex Tracker.
+type TrackerAttachment struct {
+	ID           string
+	Name         string
+	ContentURL   string
+	ThumbnailURL string
+	Mimetype     string
+	Size         int64
+	CreatedAt    string
+	CreatedBy    *TrackerUser
+	Metadata     *TrackerAttachmentMetadata
+}
+
+// TrackerAttachmentMetadata holds extra metadata for an attachment.
+type TrackerAttachmentMetadata struct {
+	Size string
+}
+
+// TrackerLinkType represents a link type between issues.
+type TrackerLinkType struct {
+	ID      string
+	Inward  string
+	Outward string
+}
+
+// TrackerLinkedIssue represents a linked issue reference.
+type TrackerLinkedIssue struct {
+	Self    string
+	ID      string
+	Key     string
+	Display string
+}
+
+// TrackerLink represents a link between two issues.
+type TrackerLink struct {
+	ID        string
+	Self      string
+	Type      *TrackerLinkType
+	Direction string
+	Object    *TrackerLinkedIssue
+	CreatedBy *TrackerUser
+	UpdatedBy *TrackerUser
+	CreatedAt string
+	UpdatedAt string
+}
+
+// TrackerChangelogFieldChange represents a single field change in changelog.
+type TrackerChangelogFieldChange struct {
+	Field string
+	From  any
+	To    any
+}
+
+// TrackerChangelogEntry represents a single changelog entry for an issue.
+type TrackerChangelogEntry struct {
+	ID        string
+	Self      string
+	Issue     *TrackerLinkedIssue
+	UpdatedAt string
+	UpdatedBy *TrackerUser
+	Type      string
+	Transport string
+	Fields    []TrackerChangelogFieldChange
+}
+
+// TrackerProjectComment represents a comment on a project entity.
+type TrackerProjectComment struct {
+	ID        string
+	LongID    string
+	Self      string
+	Text      string
+	CreatedAt string
+	UpdatedAt string
+	CreatedBy *TrackerUser
+	UpdatedBy *TrackerUser
 }

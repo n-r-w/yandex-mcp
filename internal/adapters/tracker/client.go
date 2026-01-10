@@ -64,7 +64,7 @@ func (c *Client) GetIssue(
 		u.RawQuery = q.Encode()
 	}
 
-	var issue Issue
+	var issue issueDTO
 	if _, err := c.apiClient.DoGET(ctx, u.String(), &issue, "GetIssue"); err != nil {
 		return nil, err
 	}
@@ -110,27 +110,26 @@ func (c *Client) SearchIssues(
 	}
 	u.RawQuery = q.Encode()
 
-	reqBody := searchRequest{
+	reqBody := searchRequestDTO{
 		Filter: apihelpers.StringMapToAnyMap(opts.Filter),
 		Query:  opts.Query,
 		Order:  opts.Order,
 	}
 
-	var issues []Issue
+	var issues []issueDTO
 	headers, err := c.apiClient.DoPOST(ctx, u.String(), reqBody, &issues, "SearchIssues")
 	if err != nil {
 		return nil, err
 	}
 
-	dtoResult := SearchIssuesResult{
-		Issues:      issues,
-		TotalCount:  parseIntHeaderValue(headers, headerXTotalCount),
-		TotalPages:  parseIntHeaderValue(headers, headerXTotalPages),
-		ScrollID:    headers.Get(headerXScrollID),
-		ScrollToken: headers.Get(headerXScrollToken),
-		NextLink:    headers.Get(headerLink),
-	}
-	result := searchIssuesResultToTrackerIssuesPage(dtoResult)
+	result := searchIssuesResultToTrackerIssuesPage(
+		issues,
+		parseIntHeaderValue(headers, headerXTotalCount),
+		parseIntHeaderValue(headers, headerXTotalPages),
+		headers.Get(headerXScrollID),
+		headers.Get(headerXScrollToken),
+		headers.Get(headerLink),
+	)
 	return &result, nil
 }
 
@@ -141,7 +140,7 @@ func (c *Client) CountIssues(ctx context.Context, opts domain.TrackerCountIssues
 		return 0, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
 	}
 
-	reqBody := countRequest{
+	reqBody := countRequestDTO{
 		Filter: apihelpers.StringMapToAnyMap(opts.Filter),
 		Query:  opts.Query,
 	}
@@ -164,7 +163,7 @@ func (c *Client) ListIssueTransitions(
 		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
 	}
 
-	var transitions []Transition
+	var transitions []transitionDTO
 	if _, err := c.apiClient.DoGET(ctx, u.String(), &transitions, "ListIssueTransitions"); err != nil {
 		return nil, err
 	}
@@ -197,18 +196,17 @@ func (c *Client) ListQueues(
 	}
 	u.RawQuery = q.Encode()
 
-	var queues []Queue
+	var queues []queueDTO
 	headers, err := c.apiClient.DoGET(ctx, u.String(), &queues, "ListQueues")
 	if err != nil {
 		return nil, err
 	}
 
-	dtoResult := ListQueuesResult{
-		Queues:     queues,
-		TotalCount: parseIntHeaderValue(headers, headerXTotalCount),
-		TotalPages: parseIntHeaderValue(headers, headerXTotalPages),
-	}
-	result := listQueuesResultToTrackerQueuesPage(dtoResult)
+	result := listQueuesResultToTrackerQueuesPage(
+		queues,
+		parseIntHeaderValue(headers, headerXTotalCount),
+		parseIntHeaderValue(headers, headerXTotalPages),
+	)
 	return &result, nil
 }
 
@@ -230,22 +228,21 @@ func (c *Client) ListIssueComments(
 	if opts.PerPage > 0 {
 		q.Set("perPage", strconv.Itoa(opts.PerPage))
 	}
-	if opts.ID > 0 {
-		q.Set("id", strconv.FormatInt(opts.ID, 10))
+	if opts.ID != "" {
+		q.Set("id", opts.ID)
 	}
 	u.RawQuery = q.Encode()
 
-	var comments []Comment
+	var comments []commentDTO
 	headers, err := c.apiClient.DoGET(ctx, u.String(), &comments, "ListIssueComments")
 	if err != nil {
 		return nil, err
 	}
 
-	dtoResult := ListCommentsResult{
-		Comments: comments,
-		NextLink: headers.Get(headerLink),
-	}
-	result := listCommentsResultToTrackerCommentsPage(dtoResult)
+	result := listCommentsResultToTrackerCommentsPage(
+		comments,
+		headers.Get(headerLink),
+	)
 	return &result, nil
 }
 
@@ -256,7 +253,7 @@ func (c *Client) CreateIssue(
 ) (*domain.TrackerIssueCreateResponse, error) {
 	u := c.baseURL + "/v3/issues"
 
-	body := CreateIssueRequest{
+	body := createIssueRequestDTO{
 		Queue:         req.Queue,
 		Summary:       req.Summary,
 		Description:   req.Description,
@@ -265,11 +262,11 @@ func (c *Client) CreateIssue(
 		Assignee:      req.Assignee,
 		Tags:          req.Tags,
 		Parent:        req.Parent,
-		AttachmentIDs: req.AttachmentIDs,
+		AttachmentIDs: apihelpers.StringsToStringIDs(req.AttachmentIDs),
 		Sprint:        req.Sprint,
 	}
 
-	var issue Issue
+	var issue issueDTO
 	if _, err := c.apiClient.DoPOST(ctx, u, body, &issue, "CreateIssue"); err != nil {
 		return nil, err
 	}
@@ -285,22 +282,53 @@ func (c *Client) UpdateIssue(
 ) (*domain.TrackerIssueUpdateResponse, error) {
 	u := fmt.Sprintf("%s/v3/issues/%s", c.baseURL, url.PathEscape(req.IssueID))
 
-	body := UpdateIssueRequest{
+	body := updateIssueRequestDTO{
 		Summary:     req.Summary,
 		Description: req.Description,
 		Type:        req.Type,
 		Priority:    req.Priority,
 		Assignee:    req.Assignee,
 		Version:     req.Version,
+		Project:     buildUpdateIssueProject(req.ProjectPrimary, req.ProjectSecondaryAdd),
+		Sprint:      buildUpdateIssueSprint(req.Sprint),
 	}
 
-	var issue Issue
+	var issue issueDTO
 	if _, err := c.apiClient.DoPATCH(ctx, u, body, &issue, "UpdateIssue"); err != nil {
 		return nil, err
 	}
 
 	result := issueToTrackerIssue(issue)
 	return &domain.TrackerIssueUpdateResponse{Issue: result}, nil
+}
+
+func buildUpdateIssueProject(primary int, secondaryAdd []int) *updateIssueProjectDTO {
+	if primary == 0 && len(secondaryAdd) == 0 {
+		return nil
+	}
+
+	var secondary *updateIssueProjectSecAddDTO
+	if len(secondaryAdd) > 0 {
+		secondary = &updateIssueProjectSecAddDTO{Add: secondaryAdd}
+	}
+
+	return &updateIssueProjectDTO{
+		Primary:   primary,
+		Secondary: secondary,
+	}
+}
+
+func buildUpdateIssueSprint(sprintIDs []string) []updateIssueSprintDTO {
+	if len(sprintIDs) == 0 {
+		return nil
+	}
+
+	result := make([]updateIssueSprintDTO, len(sprintIDs))
+	for i, id := range sprintIDs {
+		result[i] = updateIssueSprintDTO{ID: apihelpers.StringID(id)}
+	}
+
+	return result
 }
 
 // ExecuteTransition executes a status transition on an issue.
@@ -316,13 +344,13 @@ func (c *Client) ExecuteTransition(
 
 	var body any
 	if req.Comment != "" || len(req.Fields) > 0 {
-		body = ExecuteTransitionRequest{
+		body = executeTransitionRequestDTO{
 			Comment: req.Comment,
 			Fields:  req.Fields,
 		}
 	}
 
-	var transitions []Transition
+	var transitions []transitionDTO
 	if _, err := c.apiClient.DoPOST(ctx, u, body, &transitions, "ExecuteTransition"); err != nil {
 		return nil, err
 	}
@@ -343,16 +371,16 @@ func (c *Client) AddComment(
 	u := fmt.Sprintf("%s/v3/issues/%s/comments", c.baseURL, url.PathEscape(req.IssueID))
 
 	isAddToFollowers := req.IsAddToFollowers
-	body := AddCommentRequest{
+	body := addCommentRequestDTO{
 		Text:              req.Text,
-		AttachmentIDs:     req.AttachmentIDs,
+		AttachmentIDs:     apihelpers.StringsToStringIDs(req.AttachmentIDs),
 		MarkupType:        req.MarkupType,
 		Summonees:         req.Summonees,
 		MaillistSummonees: req.MaillistSummonees,
 		IsAddToFollowers:  &isAddToFollowers,
 	}
 
-	var comment Comment
+	var comment commentDTO
 	if _, err := c.apiClient.DoPOST(ctx, u, body, &comment, "AddComment"); err != nil {
 		return nil, err
 	}
@@ -361,9 +389,338 @@ func (c *Client) AddComment(
 	return &domain.TrackerCommentAddResponse{Comment: result}, nil
 }
 
+// UpdateComment updates an existing comment on an issue.
+func (c *Client) UpdateComment(
+	ctx context.Context,
+	req *domain.TrackerCommentUpdateRequest,
+) (*domain.TrackerCommentUpdateResponse, error) {
+	u := fmt.Sprintf("%s/v3/issues/%s/comments/%s",
+		c.baseURL, url.PathEscape(req.IssueID), url.PathEscape(req.CommentID))
+
+	body := updateCommentRequestDTO{
+		Text:              req.Text,
+		AttachmentIDs:     apihelpers.StringsToStringIDs(req.AttachmentIDs),
+		MarkupType:        req.MarkupType,
+		Summonees:         req.Summonees,
+		MaillistSummonees: req.MaillistSummonees,
+	}
+
+	var comment commentDTO
+	if _, err := c.apiClient.DoPATCH(ctx, u, body, &comment, "UpdateComment"); err != nil {
+		return nil, err
+	}
+
+	result := commentToTrackerComment(comment)
+	return &domain.TrackerCommentUpdateResponse{Comment: result}, nil
+}
+
+// DeleteComment deletes a comment from an issue.
+func (c *Client) DeleteComment(ctx context.Context, req *domain.TrackerCommentDeleteRequest) error {
+	u := fmt.Sprintf("%s/v3/issues/%s/comments/%s",
+		c.baseURL, url.PathEscape(req.IssueID), url.PathEscape(req.CommentID))
+
+	if _, err := c.apiClient.DoDELETE(ctx, u, "DeleteComment"); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ListIssueAttachments lists attachments for an issue.
+func (c *Client) ListIssueAttachments(ctx context.Context, issueID string) ([]domain.TrackerAttachment, error) {
+	u := fmt.Sprintf("%s/v3/issues/%s/attachments", c.baseURL, url.PathEscape(issueID))
+
+	var attachments []attachmentDTO
+	if _, err := c.apiClient.DoGET(ctx, u, &attachments, "ListIssueAttachments"); err != nil {
+		return nil, err
+	}
+
+	result := make([]domain.TrackerAttachment, len(attachments))
+	for i, a := range attachments {
+		result[i] = attachmentToTrackerAttachment(a)
+	}
+
+	return result, nil
+}
+
+// DeleteAttachment deletes an attachment from an issue.
+func (c *Client) DeleteAttachment(ctx context.Context, req *domain.TrackerAttachmentDeleteRequest) error {
+	u := fmt.Sprintf("%s/v3/issues/%s/attachments/%s/",
+		c.baseURL, url.PathEscape(req.IssueID), url.PathEscape(req.FileID))
+
+	if _, err := c.apiClient.DoDELETE(ctx, u, "DeleteAttachment"); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetQueue gets a queue by ID or key.
+func (c *Client) GetQueue(
+	ctx context.Context, queueID string, opts domain.TrackerGetQueueOpts,
+) (*domain.TrackerQueueDetail, error) {
+	u, err := url.Parse(fmt.Sprintf("%s/v3/queues/%s", c.baseURL, url.PathEscape(queueID)))
+	if err != nil {
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
+	}
+
+	if opts.Expand != "" {
+		q := u.Query()
+		q.Set("expand", opts.Expand)
+		u.RawQuery = q.Encode()
+	}
+
+	var queue queueDetailDTO
+	if _, err := c.apiClient.DoGET(ctx, u.String(), &queue, "GetQueue"); err != nil {
+		return nil, err
+	}
+
+	result := queueDetailToTrackerQueueDetail(queue)
+	return &result, nil
+}
+
+// CreateQueue creates a new queue.
+func (c *Client) CreateQueue(
+	ctx context.Context, req *domain.TrackerQueueCreateRequest,
+) (*domain.TrackerQueueCreateResponse, error) {
+	u := c.baseURL + "/v3/queues/"
+
+	body := createQueueRequestDTO{
+		Key:             req.Key,
+		Name:            req.Name,
+		Lead:            req.Lead,
+		DefaultType:     req.DefaultType,
+		DefaultPriority: req.DefaultPriority,
+	}
+
+	var queue queueDetailDTO
+	if _, err := c.apiClient.DoPOST(ctx, u, body, &queue, "CreateQueue"); err != nil {
+		return nil, err
+	}
+
+	result := queueDetailToTrackerQueueDetail(queue)
+	return &domain.TrackerQueueCreateResponse{Queue: result}, nil
+}
+
+// DeleteQueue deletes a queue.
+func (c *Client) DeleteQueue(ctx context.Context, req *domain.TrackerQueueDeleteRequest) error {
+	u := fmt.Sprintf("%s/v3/queues/%s", c.baseURL, url.PathEscape(req.QueueID))
+
+	if _, err := c.apiClient.DoDELETE(ctx, u, "DeleteQueue"); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// RestoreQueue restores a deleted queue.
+func (c *Client) RestoreQueue(
+	ctx context.Context, req *domain.TrackerQueueRestoreRequest,
+) (*domain.TrackerQueueRestoreResponse, error) {
+	u := fmt.Sprintf("%s/v3/queues/%s/_restore", c.baseURL, url.PathEscape(req.QueueID))
+
+	var queue queueDetailDTO
+	if _, err := c.apiClient.DoPOST(ctx, u, nil, &queue, "RestoreQueue"); err != nil {
+		return nil, err
+	}
+
+	result := queueDetailToTrackerQueueDetail(queue)
+	return &domain.TrackerQueueRestoreResponse{Queue: result}, nil
+}
+
+// GetCurrentUser gets the current authenticated user.
+func (c *Client) GetCurrentUser(ctx context.Context) (*domain.TrackerUserDetail, error) {
+	u := c.baseURL + "/v3/myself"
+
+	var user userDetailDTO
+	if _, err := c.apiClient.DoGET(ctx, u, &user, "GetCurrentUser"); err != nil {
+		return nil, err
+	}
+
+	result := userDetailToTrackerUserDetail(user)
+	return &result, nil
+}
+
+// ListUsers lists users with optional pagination.
+func (c *Client) ListUsers(ctx context.Context, opts domain.TrackerListUsersOpts) (*domain.TrackerUsersPage, error) {
+	u, err := url.Parse(c.baseURL + "/v3/users")
+	if err != nil {
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
+	}
+
+	q := u.Query()
+	if opts.PerPage > 0 {
+		q.Set("perPage", strconv.Itoa(opts.PerPage))
+	}
+	if opts.Page > 0 {
+		q.Set("page", strconv.Itoa(opts.Page))
+	}
+	u.RawQuery = q.Encode()
+
+	var users []userDetailDTO
+	headers, err := c.apiClient.DoGET(ctx, u.String(), &users, "ListUsers")
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]domain.TrackerUserDetail, len(users))
+	for i, user := range users {
+		result[i] = userDetailToTrackerUserDetail(user)
+	}
+
+	return &domain.TrackerUsersPage{
+		Users:      result,
+		TotalCount: parseIntHeaderValue(headers, headerXTotalCount),
+		TotalPages: parseIntHeaderValue(headers, headerXTotalPages),
+	}, nil
+}
+
+// GetUser gets a user by ID or login.
+func (c *Client) GetUser(ctx context.Context, userID string) (*domain.TrackerUserDetail, error) {
+	u := fmt.Sprintf("%s/v3/users/%s", c.baseURL, url.PathEscape(userID))
+
+	var user userDetailDTO
+	if _, err := c.apiClient.DoGET(ctx, u, &user, "GetUser"); err != nil {
+		return nil, err
+	}
+
+	result := userDetailToTrackerUserDetail(user)
+	return &result, nil
+}
+
+// ListIssueLinks lists all links for an issue.
+func (c *Client) ListIssueLinks(ctx context.Context, issueID string) ([]domain.TrackerLink, error) {
+	u, err := url.Parse(fmt.Sprintf("%s/v3/issues/%s/links", c.baseURL, url.PathEscape(issueID)))
+	if err != nil {
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
+	}
+
+	var links []linkDTO
+	if _, err := c.apiClient.DoGET(ctx, u.String(), &links, "ListIssueLinks"); err != nil {
+		return nil, err
+	}
+
+	result := make([]domain.TrackerLink, len(links))
+	for i, link := range links {
+		result[i] = linkToTrackerLink(link)
+	}
+	return result, nil
+}
+
+// CreateLink creates a link between issues.
+func (c *Client) CreateLink(
+	ctx context.Context, req *domain.TrackerLinkCreateRequest,
+) (*domain.TrackerLinkCreateResponse, error) {
+	u := fmt.Sprintf("%s/v3/issues/%s/links", c.baseURL, url.PathEscape(req.IssueID))
+
+	body := createLinkRequestDTO{
+		Relationship: req.Relationship,
+		Issue:        req.TargetIssue,
+	}
+
+	var link linkDTO
+	if _, err := c.apiClient.DoPOST(ctx, u, body, &link, "CreateLink"); err != nil {
+		return nil, err
+	}
+
+	return &domain.TrackerLinkCreateResponse{
+		Link: linkToTrackerLink(link),
+	}, nil
+}
+
+// DeleteLink deletes a link.
+func (c *Client) DeleteLink(ctx context.Context, req *domain.TrackerLinkDeleteRequest) error {
+	u := fmt.Sprintf("%s/v3/issues/%s/links/%s", c.baseURL, url.PathEscape(req.IssueID), url.PathEscape(req.LinkID))
+
+	if _, err := c.apiClient.DoDELETE(ctx, u, "DeleteLink"); err != nil {
+		return err
+	}
+	return nil
+}
+
+// GetIssueChangelog gets the changelog for an issue.
+func (c *Client) GetIssueChangelog(
+	ctx context.Context, issueID string, opts domain.TrackerGetChangelogOpts,
+) ([]domain.TrackerChangelogEntry, error) {
+	u, err := url.Parse(fmt.Sprintf("%s/v3/issues/%s/changelog", c.baseURL, url.PathEscape(issueID)))
+	if err != nil {
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
+	}
+
+	if opts.PerPage > 0 {
+		q := u.Query()
+		q.Set("perPage", strconv.Itoa(opts.PerPage))
+		u.RawQuery = q.Encode()
+	}
+
+	var entries []changelogEntryDTO
+	if _, err := c.apiClient.DoGET(ctx, u.String(), &entries, "GetIssueChangelog"); err != nil {
+		return nil, err
+	}
+
+	result := make([]domain.TrackerChangelogEntry, len(entries))
+	for i, entry := range entries {
+		result[i] = changelogEntryToTrackerChangelogEntry(entry)
+	}
+	return result, nil
+}
+
+// MoveIssue moves an issue to another queue.
+func (c *Client) MoveIssue(
+	ctx context.Context, req *domain.TrackerIssueMoveRequest,
+) (*domain.TrackerIssueMoveResponse, error) {
+	u, err := url.Parse(fmt.Sprintf("%s/v3/issues/%s/_move", c.baseURL, url.PathEscape(req.IssueID)))
+	if err != nil {
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
+	}
+
+	q := u.Query()
+	q.Set("queue", req.Queue)
+	if req.InitialStatus {
+		q.Set("InitialStatus", "true")
+	}
+	u.RawQuery = q.Encode()
+
+	var issue issueDTO
+	if _, err := c.apiClient.DoPOST(ctx, u.String(), nil, &issue, "MoveIssue"); err != nil {
+		return nil, err
+	}
+
+	return &domain.TrackerIssueMoveResponse{
+		Issue: issueToTrackerIssue(issue),
+	}, nil
+}
+
+// ListProjectComments lists comments for a project entity.
+func (c *Client) ListProjectComments(
+	ctx context.Context, projectID string, opts domain.TrackerListProjectCommentsOpts,
+) ([]domain.TrackerProjectComment, error) {
+	u, err := url.Parse(fmt.Sprintf("%s/v3/entities/project/%s/comments", c.baseURL, url.PathEscape(projectID)))
+	if err != nil {
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
+	}
+
+	if opts.Expand != "" {
+		q := u.Query()
+		q.Set("expand", opts.Expand)
+		u.RawQuery = q.Encode()
+	}
+
+	var comments []projectCommentDTO
+	if _, err := c.apiClient.DoGET(ctx, u.String(), &comments, "ListProjectComments"); err != nil {
+		return nil, err
+	}
+
+	result := make([]domain.TrackerProjectComment, len(comments))
+	for i, comment := range comments {
+		result[i] = projectCommentToTrackerProjectComment(comment)
+	}
+	return result, nil
+}
+
 // parseError converts an HTTP error response into a domain.UpstreamError.
 func (c *Client) parseError(ctx context.Context, statusCode int, body []byte, operation string) error {
-	var errResp errorResponse
+	var errResp errorResponseDTO
 	var message string
 
 	// Attempt to parse structured error

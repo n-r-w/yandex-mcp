@@ -12,12 +12,12 @@ import (
 // IWikiAdapter defines the interface for Wiki adapter operations consumed by tools.
 type IWikiAdapter interface {
 	GetPageBySlug(ctx context.Context, slug string, opts domain.WikiGetPageOpts) (*domain.WikiPage, error)
-	GetPageByID(ctx context.Context, id int64, opts domain.WikiGetPageOpts) (*domain.WikiPage, error)
+	GetPageByID(ctx context.Context, id string, opts domain.WikiGetPageOpts) (*domain.WikiPage, error)
 	ListPageResources(
-		ctx context.Context, pageID int64, opts domain.WikiListResourcesOpts,
+		ctx context.Context, pageID string, opts domain.WikiListResourcesOpts,
 	) (*domain.WikiResourcesPage, error)
 	ListPageGrids(
-		ctx context.Context, pageID int64, opts domain.WikiListGridsOpts,
+		ctx context.Context, pageID string, opts domain.WikiListGridsOpts,
 	) (*domain.WikiGridsPage, error)
 	GetGridByID(ctx context.Context, gridID string, opts domain.WikiGetGridOpts) (*domain.WikiGrid, error)
 	CreatePage(ctx context.Context, req *domain.WikiPageCreateRequest) (*domain.WikiPageCreateResponse, error)
@@ -27,4 +27,14 @@ type IWikiAdapter interface {
 	UpdateGridCells(
 		ctx context.Context, req *domain.WikiGridCellsUpdateRequest,
 	) (*domain.WikiGridCellsUpdateResponse, error)
+	DeletePage(ctx context.Context, pageID string) (*domain.WikiPageDeleteResponse, error)
+	ClonePage(ctx context.Context, req domain.WikiPageCloneRequest) (*domain.WikiCloneOperationResponse, error)
+	DeleteGrid(ctx context.Context, gridID string) error
+	CloneGrid(ctx context.Context, req domain.WikiGridCloneRequest) (*domain.WikiCloneOperationResponse, error)
+	AddGridRows(ctx context.Context, req domain.WikiGridRowsAddRequest) (*domain.WikiGridRowsAddResponse, error)
+	DeleteGridRows(ctx context.Context, req domain.WikiGridRowsDeleteRequest) (*domain.WikiRevisionResponse, error)
+	MoveGridRows(ctx context.Context, req domain.WikiGridRowsMoveRequest) (*domain.WikiRevisionResponse, error)
+	AddGridColumns(ctx context.Context, req domain.WikiGridColumnsAddRequest) (*domain.WikiRevisionResponse, error)
+	DeleteGridColumns(ctx context.Context, req domain.WikiGridColumnsDeleteRequest) (*domain.WikiRevisionResponse, error)
+	MoveGridColumns(ctx context.Context, req domain.WikiGridColumnsMoveRequest) (*domain.WikiRevisionResponse, error)
 }

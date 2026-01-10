@@ -606,58 +606,7 @@
 
 ---
 
-### 9. Bulk Operations
-
-Bulk operations are executed asynchronously: the create request returns a bulk operation object (`id`, `self`, `status`, `statusText`, progress fields). Use the status endpoints to poll for completion and errors.
-
-#### 9.1 Bulk Update Issues
-- **Endpoint:** `POST /v3/bulkchange/_update`
-- **Operation:** Write
-- **Request Body:**
-  - `issues`: Array of issue keys/IDs, or a query string in Tracker query language
-  - `values`: Fields to update (same value formats as in issue edit requests)
-- **Limitations:** The maximum number of issues per change is 10,000.
-- **Response:** 201 Created with bulk operation object
-- **Source:** https://yandex.ru/support/tracker/en/concepts/bulkchange/bulk-update-issues
-
-#### 9.2 Bulk Move Issues to Another Queue
-- **Endpoint:** `POST /v3/bulkchange/_move`
-- **Operation:** Write
-- **Request Body:**
-  - `queue`: Target queue key
-  - `issues`: Array of issue keys/IDs
-  - Optional:
-    - `values`: Fields to update during move
-    - `moveAllFields`: Move components, versions, and projects (when compatible)
-- **Response:** 201 Created with bulk operation object
-- **Source:** https://yandex.ru/support/tracker/en/concepts/bulkchange/bulk-move-issues
-
-#### 9.3 Bulk Transition Issues (Change Status)
-- **Endpoint:** `POST /v3/bulkchange/_transition`
-- **Operation:** Write
-- **Request Body:**
-  - `transition`: Transition key
-  - `issues`: Array of issue keys/IDs
-  - Optional:
-    - `values`: Extra fields required for the transition (for example, `resolution`)
-- **Response:** 201 Created with bulk operation object
-- **Source:** https://yandex.ru/support/tracker/en/concepts/bulkchange/bulk-transition
-
-#### 9.4 Get Bulk Operation Status
-- **Endpoint:** `GET /v3/bulkchange/<id>`
-- **Operation:** Read
-- **Response:** Bulk operation status object
-
-#### 9.5 Get Bulk Operation Errors (Per Issue)
-- **Endpoint:** `GET /v3/bulkchange/{id}/issues`
-- **Operation:** Read
-- **Response:** JSON array of failed issue operations (includes per-issue error details)
-
-- **Source (status/errors):** https://yandex.ru/support/tracker/en/concepts/bulkchange/bulk-move-info
-
----
-
-### 10. Other Entities
+### 9. Other Entities
 
 #### 10.1 Portfolio and Goal Comments
 - **Endpoint:** `GET /v3/entities/<entity_type>/<entity_ID>/comments`
