@@ -111,7 +111,7 @@ func (c *Client) SearchIssues(
 	u.RawQuery = q.Encode()
 
 	reqBody := searchRequestDTO{
-		Filter: apihelpers.StringMapToAnyMap(opts.Filter),
+		Filter: opts.Filter,
 		Query:  opts.Query,
 		Order:  opts.Order,
 	}
@@ -141,7 +141,7 @@ func (c *Client) CountIssues(ctx context.Context, opts domain.TrackerCountIssues
 	}
 
 	reqBody := countRequestDTO{
-		Filter: apihelpers.StringMapToAnyMap(opts.Filter),
+		Filter: opts.Filter,
 		Query:  opts.Query,
 	}
 

@@ -45,13 +45,8 @@ func (r *Registrator) searchIssues(ctx context.Context, input searchIssuesInputD
 		return nil, r.logError(ctx, errors.New("scroll_ttl_millis must be non-negative"))
 	}
 
-	filter, err := helpers.ConvertFilterToStringMap(ctx, input.Filter, domain.ServiceTracker)
-	if err != nil {
-		return nil, err
-	}
-
 	opts := domain.TrackerSearchIssuesOpts{
-		Filter:          filter,
+		Filter:          input.Filter,
 		Query:           input.Query,
 		Order:           input.Order,
 		Expand:          input.Expand,
@@ -73,13 +68,8 @@ func (r *Registrator) searchIssues(ctx context.Context, input searchIssuesInputD
 
 // countIssues counts Tracker issues matching the filter or query.
 func (r *Registrator) countIssues(ctx context.Context, input countIssuesInputDTO) (*countIssuesOutputDTO, error) {
-	filter, err := helpers.ConvertFilterToStringMap(ctx, input.Filter, domain.ServiceTracker)
-	if err != nil {
-		return nil, err
-	}
-
 	opts := domain.TrackerCountIssuesOpts{
-		Filter: filter,
+		Filter: input.Filter,
 		Query:  input.Query,
 	}
 

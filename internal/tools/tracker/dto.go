@@ -11,32 +11,72 @@ type getIssueInputDTO struct {
 
 // searchIssuesInputDTO is the input for tracker_issue_search tool.
 type searchIssuesInputDTO struct {
-	// Filter is a field-based filter object (e.g., {\"queue\": \"TREK\", \"assignee\": \"empty()\"}).
-	Filter map[string]any `json:"filter,omitempty" jsonschema:"Field-based filter object with key-value pairs"`
-	// Query is a query language filter string.
-	Query string `json:"query,omitempty" jsonschema:"Query language filter string (yandex tracker query syntax). E.g.: Queue:\"TEST\" Status:\"Open\",\"In progress\" (Assignee:me() OR Author:me()) Resolution:empty() Updated:>today()-1w"`
-	// Order specifies sorting field and direction (e.g. +updated or -created).
-	Order string `json:"order,omitempty" jsonschema:"Issue sorting direction and field. Format: [+/-]<field_key>. NOTE: Only used together with filter parameter, not with query"`
-	// Expand specifies additional fields to include.
-	Expand string `json:"expand,omitempty" jsonschema:"Additional fields to include in the response. Possible values: transitions (workflow transitions between statuses), attachments (attached files)"`
-	// PerPage is the number of results per page (standard pagination).
-	PerPage int `json:"per_page,omitempty" jsonschema:"Number of results per page (default: 50). Used for standard pagination (<10,000 results)"`
-	// Page is the page number (standard pagination).
-	Page int `json:"page,omitempty" jsonschema:"Page number (default: 1). Used for standard pagination (<10,000 results)"`
-	// ScrollType is the scroll type: sorted or unsorted.
-	ScrollType string `json:"scroll_type,omitempty" jsonschema:"Scroll type for large result sets (>10,000). Possible values: sorted (use sorting specified in request), unsorted (no sorting). NOTE: Used only in first request of scrollable sequence"`
-	// PerScroll is the max issues per scroll response (max 1000).
-	PerScroll int `json:"per_scroll,omitempty" jsonschema:"Max issues per scroll response (max: 1000, default: 100). Used only in first scroll request"`
+	// Filter is a field-based filter object with key-value pairs.
+	// All values are strings. Multiple values are comma-separated.
+	// Examples:
+	//   - Single value: {"queue": "TREK"}
+	//   - Multiple values: {"status": "Open,In Progress"}
+	//   - Special functions: {"assignee": "me()"}, {"assignee": "empty()"}
+	//   - Combined: {"queue": "CP", "assignee": "me()", "status": "Open,In Progress"}
+	// NOTE: Cannot be used together with 'query' parameter.
+	Filter map[string]string `json:"filter,omitempty" jsonschema:"Field-based filter with key-value pairs. Values: simple values, special functions (me(), empty()), or comma-separated multiple values. Examples: {\"queue\": \"CP\"}, {\"status\": \"Open,In Progress\"}, {\"assignee\": \"me()\"}, {\"queue\": \"CP\", \"assignee\": \"me()\"}. IMPORTANT: Cannot be used together with 'query' - use either filter or query, not both."`
+
+	// Query is a query language filter string using Yandex Tracker query syntax.
+	// Supports complex boolean expressions with operators AND, OR, NOT, date functions.
+	// NOTE: Cannot be used together with 'filter' parameter. Order parameter is ignored when using query.
+	Query string `json:"query,omitempty" jsonschema:"Query language filter (Yandex Tracker syntax). Supports: field=value comparison, AND/OR/NOT operators, parentheses for grouping, date functions (today(), now(), today()-7d, today()+30d), special functions (me(), empty()). Supported fields: Queue, Status, Priority, Assignee, Author, Type, Resolution, Updated, Created, Due. Operators: : (exact match), >, <, >=, <= (numeric/dates). Examples: 'Status: Open', 'Assignee: me() AND Priority: Critical', '(Assignee: me() OR Author: me()) AND NOT Status: Closed', 'Updated: >today()-7d', 'Queue: CP OR BB AND NOT Status: Closed', 'Resolution: empty()'. IMPORTANT: Cannot be used together with 'filter' - use either filter or query, not both. Order parameter is ignored when using query."`
+
+	// Order specifies sorting field and direction.
+	// Format: [+/-]<field_key>
+	// Examples: "+updated" (ascending), "-created" (descending)
+	// NOTE: Only works with 'filter' parameter, ignored when using 'query'.
+	Order string `json:"order,omitempty" jsonschema:"Issue sorting direction and field. Format: [+/-]<field_key>. Examples: '+updated' (ascending), '-created' (descending). Supported fields: created, updated, due, priority, status, id, key. IMPORTANT: Only works with 'filter' parameter, completely ignored when using 'query' parameter."`
+
+	// Expand specifies additional fields to include in the response.
+	// Possible values:
+	//   - "transitions": workflow transitions between statuses
+	//   - "attachments": attached files metadata
+	// Can be combined: "transitions,attachments"
+	Expand string `json:"expand,omitempty" jsonschema:"Additional fields to include in response. Possible values: 'transitions' (workflow transitions between statuses), 'attachments' (attached files metadata). Can be combined: 'transitions,attachments'. Example: 'transitions,attachments'"`
+
+	// PerPage is the number of results per page for standard pagination.
+	// Valid range: 1-50. Default: 50.
+	// NOTE: For result sets < 10,000 issues. Use scroll for larger sets.
+	PerPage int `json:"per_page,omitempty" jsonschema:"Number of results per page for standard pagination. Valid range: 1-50 (default: 50). Use for result sets < 10,000 issues. For larger sets (>10,000), use scroll pagination instead (per_scroll, scroll_id, scroll_type, scroll_ttl_millis)."`
+
+	// Page is the page number for standard pagination (1-based).
+	// Default: 1
+	// NOTE: For result sets < 10,000 issues. Use scroll for larger sets.
+	Page int `json:"page,omitempty" jsonschema:"Page number for standard pagination (1-based, default: 1). Use for result sets < 10,000 issues. For larger sets (>10,000), use scroll pagination instead (per_scroll, scroll_id, scroll_type, scroll_ttl_millis)."`
+
+	// ScrollType determines scroll behavior for large result sets (>10,000 issues).
+	// Possible values:
+	//   - "sorted": use sorting specified in 'order' parameter
+	//   - "unsorted": no sorting applied (faster)
+	// NOTE: Only specified in first scroll request.
+	ScrollType string `json:"scroll_type,omitempty" jsonschema:"Scroll type for large result sets (>10,000 issues). Possible values: 'sorted' (use sorting from 'order' parameter), 'unsorted' (no sorting, faster). Only specified in first scroll request. Use with: per_scroll, scroll_ttl_millis, scroll_id for subsequent requests."`
+
+	// PerScroll is the maximum number of issues per scroll response.
+	// Valid range: 1-1000. Default: 100.
+	// NOTE: Only specified in first scroll request.
+	PerScroll int `json:"per_scroll,omitempty" jsonschema:"Maximum number of issues per scroll response. Valid range: 1-1000 (default: 100). Only specified in first scroll request. Use for result sets >10,000 issues. Combine with: scroll_type, scroll_ttl_millis, and then use scroll_id for subsequent requests."`
+
 	// ScrollTTLMillis is the scroll context lifetime in milliseconds.
-	ScrollTTLMillis int `json:"scroll_ttl_millis,omitempty" jsonschema:"Scroll context lifetime in milliseconds (default: 60000). Used only in first scroll request"`
-	// ScrollID is the scroll page ID for subsequent requests.
-	ScrollID string `json:"scroll_id,omitempty" jsonschema:"Scroll page ID for 2nd and subsequent scroll requests"`
+	// Default: 60000 (60 seconds).
+	// Maximum: 600000 (10 minutes).
+	// NOTE: Only specified in first scroll request.
+	ScrollTTLMillis int `json:"scroll_ttl_millis,omitempty" jsonschema:"Scroll context lifetime in milliseconds. Default: 60000 (60 seconds), maximum: 600000 (10 minutes). Only specified in first scroll request. After expiration, scroll_id becomes invalid and new scroll must be started. Use for result sets >10,000 issues."`
+
+	// ScrollID is the scroll page identifier for pagination.
+	// Returned in first scroll response, used in subsequent requests.
+	// Example: "6962987e5d10fe1be1cacfa9"
+	ScrollID string `json:"scroll_id,omitempty" jsonschema:"Scroll page identifier from previous scroll response. Use in 2nd and subsequent scroll requests to get next page of results. Obtained from 'scroll_id' field in first scroll response. Only for use with scroll pagination (>10,000 results). Example: '6962987e5d10fe1be1cacfa9'. Do not use with standard page/per_page pagination."`
 }
 
 // countIssuesInputDTO is the input for tracker_issue_count tool.
 type countIssuesInputDTO struct {
-	Filter map[string]any `json:"filter,omitempty" jsonschema:"Field-based filter object (e.g., {\"queue\": \"JUNE\", \"assignee\": \"empty()\"})"`
-	Query  string         `json:"query,omitempty" jsonschema:"Query language filter string (yandex tracker syntax)"`
+	Filter map[string]string `json:"filter,omitempty" jsonschema:"Field-based filter object (e.g., {\"queue\": \"JUNE\", \"assignee\": \"empty()\"})"`
+	Query  string            `json:"query,omitempty" jsonschema:"Query language filter string (yandex tracker syntax)"`
 }
 
 // listTransitionsInputDTO is the input for tracker_issue_transitions_list tool.
@@ -71,8 +111,8 @@ type createIssueInputDTO struct {
 	Assignee      string   `json:"assignee,omitempty" jsonschema:"Assignee login"`
 	Tags          []string `json:"tags,omitempty" jsonschema:"Issue tags"`
 	Parent        string   `json:"parent,omitempty" jsonschema:"Parent issue key (e.g., TEST-1)"`
-	AttachmentIDs []string `json:"attachment_ids,omitempty" jsonschema:"Attachment IDs to link"`
-	Sprint        []string `json:"sprint,omitempty" jsonschema:"Sprint IDs to add issue to"`
+	AttachmentIDs []string `json:"attachment_ids,omitempty" jsonschema:"Attachment IDs (strings) to link"`
+	Sprint        []string `json:"sprint,omitempty" jsonschema:"Sprint IDs (strings) to add issue to"`
 }
 
 // updateIssueInputDTO is the input for tracker_issue_update tool.
@@ -86,13 +126,13 @@ type updateIssueInputDTO struct {
 	Version             int      `json:"version,omitempty" jsonschema:"Issue version for optimistic locking"`
 	ProjectPrimary      int      `json:"project_primary,omitempty" jsonschema:"Primary project ID"`
 	ProjectSecondaryAdd []int    `json:"project_secondary_add,omitempty" jsonschema:"Secondary project IDs to add"`
-	Sprint              []string `json:"sprint,omitempty" jsonschema:"Sprint IDs or keys to assign"`
+	Sprint              []string `json:"sprint,omitempty" jsonschema:"Sprint IDs (strings) or keys to assign"`
 }
 
 // executeTransitionInputDTO is the input for tracker_issue_transition_execute tool.
 type executeTransitionInputDTO struct {
 	IssueID      string         `json:"issue_id_or_key" jsonschema:"Issue ID or key (e.g., TEST-1),required"`
-	TransitionID string         `json:"transition_id" jsonschema:"Transition ID,required"`
+	TransitionID string         `json:"transition_id" jsonschema:"Transition ID (string),required"`
 	Comment      string         `json:"comment,omitempty" jsonschema:"Comment to add during transition"`
 	Fields       map[string]any `json:"fields,omitempty" jsonschema:"Additional fields to set during transition"`
 }
@@ -101,7 +141,7 @@ type executeTransitionInputDTO struct {
 type addCommentInputDTO struct {
 	IssueID           string   `json:"issue_id_or_key" jsonschema:"Issue ID or key (e.g., TEST-1),required"`
 	Text              string   `json:"text" jsonschema:"Comment text,required"`
-	AttachmentIDs     []string `json:"attachment_ids,omitempty" jsonschema:"Attachment IDs to link"`
+	AttachmentIDs     []string `json:"attachment_ids,omitempty" jsonschema:"Attachment IDs (strings) to link"`
 	MarkupType        string   `json:"markup_type,omitempty" jsonschema:"Text markup type. Use md for YFM markup"`
 	Summonees         []string `json:"summonees,omitempty" jsonschema:"User logins to summon"`
 	MaillistSummonees []string `json:"maillist_summonees,omitempty" jsonschema:"Mailing list addresses to summon"`
@@ -244,9 +284,9 @@ type commentsListOutputDTO struct {
 // updateCommentInputDTO is the input for tracker_issue_comment_update tool.
 type updateCommentInputDTO struct {
 	IssueID           string   `json:"issue_id_or_key" jsonschema:"Issue ID or key (e.g., TEST-1),required"`
-	CommentID         string   `json:"comment_id" jsonschema:"Comment ID,required"`
+	CommentID         string   `json:"comment_id" jsonschema:"Comment ID (string),required"`
 	Text              string   `json:"text" jsonschema:"Comment text,required"`
-	AttachmentIDs     []string `json:"attachment_ids,omitempty" jsonschema:"Attachment IDs to link"`
+	AttachmentIDs     []string `json:"attachment_ids,omitempty" jsonschema:"Attachment IDs (strings) to link"`
 	MarkupType        string   `json:"markup_type,omitempty" jsonschema:"Text markup type. Use md for YFM markup"`
 	Summonees         []string `json:"summonees,omitempty" jsonschema:"User logins to summon"`
 	MaillistSummonees []string `json:"maillist_summonees,omitempty" jsonschema:"Mailing list addresses to summon"`
@@ -255,7 +295,7 @@ type updateCommentInputDTO struct {
 // deleteCommentInputDTO is the input for tracker_issue_comment_delete tool.
 type deleteCommentInputDTO struct {
 	IssueID   string `json:"issue_id_or_key" jsonschema:"Issue ID or key (e.g., TEST-1),required"`
-	CommentID string `json:"comment_id" jsonschema:"Comment ID,required"`
+	CommentID string `json:"comment_id" jsonschema:"Comment ID (string),required"`
 }
 
 // listAttachmentsInputDTO is the input for tracker_issue_attachments_list tool.
@@ -266,7 +306,7 @@ type listAttachmentsInputDTO struct {
 // deleteAttachmentInputDTO is the input for tracker_issue_attachment_delete tool.
 type deleteAttachmentInputDTO struct {
 	IssueID string `json:"issue_id_or_key" jsonschema:"Issue ID or key (e.g., TEST-1),required"`
-	FileID  string `json:"file_id" jsonschema:"Attachment file ID,required"`
+	FileID  string `json:"file_id" jsonschema:"Attachment file ID (string),required"`
 }
 
 // attachmentOutputDTO represents an issue attachment.
@@ -405,7 +445,7 @@ type createLinkInputDTO struct {
 // deleteLinkInputDTO is the input for tracker_issue_link_delete tool.
 type deleteLinkInputDTO struct {
 	IssueID string `json:"issue_id_or_key" jsonschema:"Issue ID or key (e.g., TEST-1),required"`
-	LinkID  string `json:"link_id" jsonschema:"Link ID to delete,required"`
+	LinkID  string `json:"link_id" jsonschema:"Link ID (string) to delete,required"`
 }
 
 // linkTypeOutputDTO represents a link type.
@@ -485,7 +525,7 @@ type moveIssueInputDTO struct {
 
 // listProjectCommentsInputDTO is the input for tracker_project_comments_list tool.
 type listProjectCommentsInputDTO struct {
-	ProjectID string `json:"project_id" jsonschema:"Project ID or short ID,required"`
+	ProjectID string `json:"project_id" jsonschema:"Project ID (string),required"`
 	Expand    string `json:"expand,omitempty" jsonschema:"Additional fields to include. Possible values: all, html, attachments, reactions"`
 }
 

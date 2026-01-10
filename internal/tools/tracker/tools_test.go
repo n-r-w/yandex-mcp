@@ -174,7 +174,7 @@ func TestTools_SearchIssues(t *testing.T) {
 			Return(expectedResult, nil)
 
 		input := searchIssuesInputDTO{
-			Filter:          map[string]any{"status": "open"},
+			Filter:          map[string]string{"status": "open"},
 			Query:           "Queue: TEST",
 			Order:           "+updated",
 			Expand:          "transitions",
@@ -195,19 +195,6 @@ func TestTools_SearchIssues(t *testing.T) {
 		assert.Equal(t, "token456", result.ScrollToken)
 		assert.Equal(t, "https://api/next", result.NextLink)
 	})
-
-	t.Run("returns error when filter contains non-string value", func(t *testing.T) {
-		t.Parallel()
-		ctrl := gomock.NewController(t)
-		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools())
-
-		_, err := reg.searchIssues(context.Background(), searchIssuesInputDTO{
-			Filter: map[string]any{"status": 123},
-		})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "filter value for key \"status\" must be a string")
-	})
 }
 
 func TestTools_CountIssues(t *testing.T) {
@@ -227,24 +214,11 @@ func TestTools_CountIssues(t *testing.T) {
 			Return(42, nil)
 
 		result, err := reg.countIssues(context.Background(), countIssuesInputDTO{
-			Filter: map[string]any{"assignee": "me"},
+			Filter: map[string]string{"assignee": "me"},
 			Query:  "Queue: PROJ",
 		})
 		require.NoError(t, err)
 		assert.Equal(t, 42, result.Count)
-	})
-
-	t.Run("returns error when filter contains non-string value", func(t *testing.T) {
-		t.Parallel()
-		ctrl := gomock.NewController(t)
-		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools())
-
-		_, err := reg.countIssues(context.Background(), countIssuesInputDTO{
-			Filter: map[string]any{"priority": []int{1, 2, 3}},
-		})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "filter value for key \"priority\" must be a string")
 	})
 }
 

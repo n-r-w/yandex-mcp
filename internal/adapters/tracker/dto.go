@@ -139,15 +139,15 @@ type commentDTO struct {
 
 // searchRequestDTO represents the request body for issue search.
 type searchRequestDTO struct {
-	Filter map[string]any `json:"filter,omitempty"`
-	Query  string         `json:"query,omitempty"`
-	Order  string         `json:"order,omitempty"`
+	Filter map[string]string `json:"filter,omitempty"`
+	Query  string            `json:"query,omitempty"`
+	Order  string            `json:"order,omitempty"`
 }
 
 // countRequestDTO represents the request body for issue count.
 type countRequestDTO struct {
-	Filter map[string]any `json:"filter,omitempty"`
-	Query  string         `json:"query,omitempty"`
+	Filter map[string]string `json:"filter,omitempty"`
+	Query  string            `json:"query,omitempty"`
 }
 
 // errorResponseDTO represents the Tracker API error format.
