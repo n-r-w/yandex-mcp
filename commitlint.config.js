@@ -25,8 +25,8 @@ module.exports = {
     'type-case': [2, 'always', 'lower-case'],
     'type-empty': [2, 'never'],
     'scope-case': [2, 'always', 'lower-case'],
-    'body-max-line-length': [2, 'always', 72],
-    'footer-max-line-length': [2, 'always', 72],
-    'header-max-length': [2, 'always', 72],
+    'body-max-line-length': [2, 'always', 85],
+    'footer-max-line-length': [2, 'always', 85],
+    'header-max-length': [2, 'always', 85],
   },
 };
