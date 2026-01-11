@@ -134,9 +134,6 @@ func (c *Client) ListPageResources(
 	if opts.Types != "" {
 		q.Set("types", opts.Types)
 	}
-	if opts.PageIDLegacy != "" {
-		q.Set("page_id", opts.PageIDLegacy)
-	}
 	u.RawQuery = q.Encode()
 
 	var resp resourcesResponseDTO
@@ -179,9 +176,6 @@ func (c *Client) ListPageGrids(
 	}
 	if opts.OrderDirection != "" {
 		q.Set("order_direction", opts.OrderDirection)
-	}
-	if opts.PageIDLegacy != "" {
-		q.Set("page_id", opts.PageIDLegacy)
 	}
 	u.RawQuery = q.Encode()
 

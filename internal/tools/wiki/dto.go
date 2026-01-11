@@ -28,7 +28,6 @@ type listResourcesInputDTO struct {
 	OrderDirection string `json:"order_direction,omitempty" jsonschema:"Order direction. Possible values: asc, desc. Default: asc"`
 	Q              string `json:"q,omitempty" jsonschema:"Filter resources by title. Maximum: 255 chars"`
 	Types          string `json:"types,omitempty" jsonschema:"Resource types filter. Possible values: attachment, sharepoint_resource, grid. Can be comma-separated for multiple types"`
-	PageIDLegacy   string `json:"page_id_legacy,omitempty" jsonschema:"Legacy page ID (string) for backward-compatibility pagination. Default: 1"`
 }
 
 // listGridsInputDTO is the input for wiki_page_grids_list tool.
@@ -38,7 +37,6 @@ type listGridsInputDTO struct {
 	PageSize       int    `json:"page_size,omitempty" jsonschema:"Number of items per page. Valid range: 1-50. Default: 25"`
 	OrderBy        string `json:"order_by,omitempty" jsonschema:"Field to order by. Possible values: title, created_at"`
 	OrderDirection string `json:"order_direction,omitempty" jsonschema:"Order direction. Possible values: asc, desc. Default: asc"`
-	PageIDLegacy   string `json:"page_id_legacy,omitempty" jsonschema:"Legacy page ID (string) for backward-compatibility pagination. Default: 1"`
 }
 
 // getGridInputDTO is the input for wiki_grid_get tool.

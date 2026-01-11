@@ -8,7 +8,6 @@ type WikiListResourcesOpts struct {
 	OrderDirection string
 	Query          string
 	Types          string
-	PageIDLegacy   string
 }
 
 // WikiListGridsOpts represents options for listing Wiki page grids.
@@ -17,7 +16,6 @@ type WikiListGridsOpts struct {
 	PageSize       int
 	OrderBy        string
 	OrderDirection string
-	PageIDLegacy   string
 }
 
 // WikiGetGridOpts represents options for getting a specific Wiki grid.

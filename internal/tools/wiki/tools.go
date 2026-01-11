@@ -62,7 +62,6 @@ func (r *Registrator) listResources(ctx context.Context, input listResourcesInpu
 		OrderDirection: input.OrderDirection,
 		Query:          input.Q,
 		Types:          input.Types,
-		PageIDLegacy:   input.PageIDLegacy,
 	}
 
 	result, err := r.adapter.ListPageResources(ctx, input.PageID, opts)
@@ -88,7 +87,6 @@ func (r *Registrator) listGrids(ctx context.Context, input listGridsInputDTO) (*
 		PageSize:       input.PageSize,
 		OrderBy:        input.OrderBy,
 		OrderDirection: input.OrderDirection,
-		PageIDLegacy:   input.PageIDLegacy,
 	}
 
 	result, err := r.adapter.ListPageGrids(ctx, input.PageID, opts)

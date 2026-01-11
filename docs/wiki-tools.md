@@ -79,7 +79,6 @@ Lists resources (attachments, grids) for a Yandex Wiki page.
 - `types` (string, optional): Resource types filter.
   - Allowed values: `attachment`, `sharepoint_resource`, `grid`
   - Multiple values can be comma-separated.
-- `page_id_legacy` (string, optional): Legacy page number for backward-compatibility pagination.
 
 ### Output
 
@@ -122,7 +121,6 @@ Lists dynamic tables (grids) for a Yandex Wiki page.
   - Allowed values: `title`, `created_at`
 - `order_direction` (string, optional): Order direction.
   - Allowed values: `asc`, `desc`
-- `page_id_legacy` (string, optional): Legacy page number for backward-compatibility pagination.
 
 ### Output
 
