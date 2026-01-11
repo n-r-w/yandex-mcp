@@ -73,11 +73,11 @@ func TestProvider_Token_CachesBetweenCalls(t *testing.T) {
 
 	ctx := context.Background()
 
-	tok1, err1 := provider.Token(ctx)
+	tok1, err1 := provider.Token(ctx, false)
 	require.NoError(t, err1)
 	assert.Equal(t, makeValidToken("test123"), tok1)
 
-	tok2, err2 := provider.Token(ctx)
+	tok2, err2 := provider.Token(ctx, false)
 	require.NoError(t, err2)
 	assert.Equal(t, makeValidToken("test123"), tok2)
 }
@@ -105,13 +105,13 @@ func TestProvider_Token_RefreshesAfterPeriodExpires(t *testing.T) {
 
 	ctx := context.Background()
 
-	tok1, err1 := provider.Token(ctx)
+	tok1, err1 := provider.Token(ctx, false)
 	require.NoError(t, err1)
 	assert.Equal(t, makeValidToken("v1"), tok1)
 
 	clock.Advance(time.Hour + time.Minute)
 
-	tok2, err2 := provider.Token(ctx)
+	tok2, err2 := provider.Token(ctx, false)
 	require.NoError(t, err2)
 	assert.Equal(t, makeValidToken("v2"), tok2)
 }
@@ -150,7 +150,7 @@ func TestProvider_Token_ConcurrentCallsTriggerSingleExecution(t *testing.T) {
 	for i := range goroutines {
 		go func(idx int) {
 			defer wg.Done()
-			tokens[idx], errs[idx] = provider.Token(ctx)
+			tokens[idx], errs[idx] = provider.Token(ctx, false)
 		}(i)
 	}
 
@@ -186,7 +186,7 @@ Status: unauthorized`
 		Return([]byte(sensitiveOutput), nil)
 
 	ctx := context.Background()
-	_, err := provider.Token(ctx)
+	_, err := provider.Token(ctx, false)
 
 	require.Error(t, err)
 	require.ErrorIs(t, err, errTokenNotFound)
@@ -222,7 +222,7 @@ func TestProvider_Token_ExtractsTokenWithRegex_CleanOutput(t *testing.T) {
 		Return([]byte(validToken), nil)
 
 	ctx := context.Background()
-	tok, err := provider.Token(ctx)
+	tok, err := provider.Token(ctx, false)
 
 	require.NoError(t, err)
 	assert.Equal(t, validToken, tok)
@@ -249,7 +249,7 @@ Additional log data and metadata here...`
 		Return([]byte(noisyOutput), nil)
 
 	ctx := context.Background()
-	tok, err := provider.Token(ctx)
+	tok, err := provider.Token(ctx, false)
 
 	require.NoError(t, err)
 	assert.Equal(t, validToken, tok)
@@ -273,7 +273,7 @@ func TestProvider_Token_ExtractsTokenWithRegex_WhitespaceAndNewlines(t *testing.
 		Return([]byte(outputWithWhitespace), nil)
 
 	ctx := context.Background()
-	tok, err := provider.Token(ctx)
+	tok, err := provider.Token(ctx, false)
 
 	require.NoError(t, err)
 	assert.Equal(t, validToken, tok)
@@ -293,7 +293,7 @@ func TestProvider_Token_ReturnsErrorWhenNoTokenMatch(t *testing.T) {
 		Return([]byte("some random output without a valid token format"), nil)
 
 	ctx := context.Background()
-	_, err := provider.Token(ctx)
+	_, err := provider.Token(ctx, false)
 
 	require.Error(t, err)
 	require.ErrorIs(t, err, errTokenNotFound)
@@ -316,7 +316,7 @@ func TestProvider_Token_ReturnsErrorOnInvalidTokenFormat(t *testing.T) {
 		Return([]byte(invalidToken), nil)
 
 	ctx := context.Background()
-	_, err := provider.Token(ctx)
+	_, err := provider.Token(ctx, false)
 
 	require.Error(t, err)
 	require.ErrorIs(t, err, errTokenNotFound)
@@ -336,7 +336,7 @@ func TestProvider_Token_ReturnsErrorOnEmptyOutput(t *testing.T) {
 		Return([]byte(""), nil)
 
 	ctx := context.Background()
-	_, err := provider.Token(ctx)
+	_, err := provider.Token(ctx, false)
 
 	require.Error(t, err)
 	assert.ErrorIs(t, err, errEmptyToken)
@@ -356,7 +356,7 @@ func TestProvider_Token_ReturnsErrorOnWhitespaceOnlyOutput(t *testing.T) {
 		Return([]byte("   \n\t"), nil)
 
 	ctx := context.Background()
-	_, err := provider.Token(ctx)
+	_, err := provider.Token(ctx, false)
 
 	require.Error(t, err)
 	require.ErrorIs(t, err, errTokenNotFound)
@@ -378,7 +378,7 @@ func TestProvider_Token_ContextCancellationPropagates(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	_, err := provider.Token(ctx)
+	_, err := provider.Token(ctx, false)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, context.Canceled)
 }
@@ -415,7 +415,7 @@ func TestProvider_Token_ConcurrentCallsDuringRefreshShareResult(t *testing.T) {
 
 	ctx := context.Background()
 
-	_, _ = provider.Token(ctx)
+	_, _ = provider.Token(ctx, false)
 
 	clock.Advance(time.Hour + time.Minute)
 
@@ -427,7 +427,7 @@ func TestProvider_Token_ConcurrentCallsDuringRefreshShareResult(t *testing.T) {
 	for i := range goroutines {
 		go func(idx int) {
 			defer wg.Done()
-			tokens[idx], _ = provider.Token(ctx)
+			tokens[idx], _ = provider.Token(ctx, false)
 		}(i)
 	}
 
@@ -467,7 +467,7 @@ func TestProvider_Token_WaiterReceivesRefreshError(t *testing.T) {
 	// Start leader
 	leaderDone := make(chan error, 1)
 	go func() {
-		_, err := provider.Token(ctx)
+		_, err := provider.Token(ctx, false)
 		leaderDone <- err
 	}()
 
@@ -480,7 +480,7 @@ func TestProvider_Token_WaiterReceivesRefreshError(t *testing.T) {
 	waiterDone := make(chan error, 1)
 	go func() {
 		close(waiterStarted)
-		_, err := provider.Token(ctx)
+		_, err := provider.Token(ctx, false)
 		waiterDone <- err
 	}()
 
@@ -503,4 +503,153 @@ func TestProvider_Token_WaiterReceivesRefreshError(t *testing.T) {
 
 	require.Error(t, waiterErr)
 	require.ErrorIs(t, waiterErr, errTokenFetchFailed)
+}
+
+func TestProvider_Token_ForceRefreshBypassesCache(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+
+	mockExec := NewMockICommandExecutor(ctrl)
+	cfg := testConfig(time.Hour)
+	provider := NewProvider(cfg)
+	provider.setExecutor(mockExec)
+
+	// First call gets initial token
+	gomock.InOrder(
+		mockExec.EXPECT().
+			Execute(gomock.Any(), "yc", "iam", "create-token").
+			Return([]byte(makeValidToken("initial")), nil),
+	)
+
+	ctx := context.Background()
+
+	tok1, err1 := provider.Token(ctx, false)
+	require.NoError(t, err1)
+	assert.Equal(t, makeValidToken("initial"), tok1)
+
+	// Second call with forceRefresh=true should bypass cache and fetch new token
+	// even though the cached token is still valid
+	mockExec.EXPECT().
+		Execute(gomock.Any(), "yc", "iam", "create-token").
+		Return([]byte(makeValidToken("forced")), nil)
+
+	tok2, err2 := provider.Token(ctx, true)
+	require.NoError(t, err2)
+	assert.Equal(t, makeValidToken("forced"), tok2)
+}
+
+func TestProvider_Token_ForceRefreshMultipleTimes(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+
+	mockExec := NewMockICommandExecutor(ctrl)
+	cfg := testConfig(time.Hour)
+	provider := NewProvider(cfg)
+	provider.setExecutor(mockExec)
+
+	// Each forceRefresh=true call should trigger a new token fetch
+	gomock.InOrder(
+		mockExec.EXPECT().
+			Execute(gomock.Any(), "yc", "iam", "create-token").
+			Return([]byte(makeValidToken("v1")), nil),
+		mockExec.EXPECT().
+			Execute(gomock.Any(), "yc", "iam", "create-token").
+			Return([]byte(makeValidToken("v2")), nil),
+		mockExec.EXPECT().
+			Execute(gomock.Any(), "yc", "iam", "create-token").
+			Return([]byte(makeValidToken("v3")), nil),
+	)
+
+	ctx := context.Background()
+
+	tok1, err1 := provider.Token(ctx, true)
+	require.NoError(t, err1)
+	assert.Equal(t, makeValidToken("v1"), tok1)
+
+	tok2, err2 := provider.Token(ctx, true)
+	require.NoError(t, err2)
+	assert.Equal(t, makeValidToken("v2"), tok2)
+
+	tok3, err3 := provider.Token(ctx, true)
+	require.NoError(t, err3)
+	assert.Equal(t, makeValidToken("v3"), tok3)
+}
+
+func TestProvider_Token_ForceRefreshAfterCacheExpired(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+
+	mockExec := NewMockICommandExecutor(ctrl)
+	cfg := testConfig(time.Hour)
+	provider := NewProvider(cfg)
+	provider.setExecutor(mockExec)
+
+	clock := newAtomicTime(time.Now())
+	provider.setNowFunc(clock.Now)
+
+	// Initial token fetch
+	gomock.InOrder(
+		mockExec.EXPECT().
+			Execute(gomock.Any(), "yc", "iam", "create-token").
+			Return([]byte(makeValidToken("initial")), nil),
+		mockExec.EXPECT().
+			Execute(gomock.Any(), "yc", "iam", "create-token").
+			Return([]byte(makeValidToken("expired")), nil),
+		mockExec.EXPECT().
+			Execute(gomock.Any(), "yc", "iam", "create-token").
+			Return([]byte(makeValidToken("forced")), nil),
+	)
+
+	ctx := context.Background()
+
+	// Get initial token
+	tok1, err1 := provider.Token(ctx, false)
+	require.NoError(t, err1)
+	assert.Equal(t, makeValidToken("initial"), tok1)
+
+	// Advance time past cache expiry
+	clock.Advance(time.Hour + time.Minute)
+
+	// Call with forceRefresh=false should refresh due to expiry
+	tok2, err2 := provider.Token(ctx, false)
+	require.NoError(t, err2)
+	assert.Equal(t, makeValidToken("expired"), tok2)
+
+	// Immediate call with forceRefresh=true should force another refresh
+	// even though we just refreshed
+	tok3, err3 := provider.Token(ctx, true)
+	require.NoError(t, err3)
+	assert.Equal(t, makeValidToken("forced"), tok3)
+}
+
+func TestProvider_Token_ForceRefreshFalseUsesCache(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+
+	mockExec := NewMockICommandExecutor(ctrl)
+	cfg := testConfig(time.Hour)
+	provider := NewProvider(cfg)
+	provider.setExecutor(mockExec)
+
+	// Only expect one token fetch, even with multiple calls
+	mockExec.EXPECT().
+		Execute(gomock.Any(), "yc", "iam", "create-token").
+		Return([]byte(makeValidToken("cached")), nil).
+		Times(1)
+
+	ctx := context.Background()
+
+	// First call fetches token
+	tok1, err1 := provider.Token(ctx, false)
+	require.NoError(t, err1)
+	assert.Equal(t, makeValidToken("cached"), tok1)
+
+	// Subsequent calls with forceRefresh=false should use cache
+	tok2, err2 := provider.Token(ctx, false)
+	require.NoError(t, err2)
+	assert.Equal(t, makeValidToken("cached"), tok2)
+
+	tok3, err3 := provider.Token(ctx, false)
+	require.NoError(t, err3)
+	assert.Equal(t, makeValidToken("cached"), tok3)
 }

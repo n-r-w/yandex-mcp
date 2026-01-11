@@ -55,10 +55,12 @@ func (p *Provider) setExecutor(exec ICommandExecutor) {
 }
 
 // Token returns a cached IAM token or fetches a new one if cache is stale.
-func (p *Provider) Token(ctx context.Context) (string, error) {
-	// Fast path: check if cached token is still valid
-	if token, ok := p.getCachedToken(); ok {
-		return token, nil
+func (p *Provider) Token(ctx context.Context, forceRefresh bool) (string, error) {
+	if !forceRefresh {
+		// Fast path: check if cached token is still valid
+		if token, ok := p.getCachedToken(); ok {
+			return token, nil
+		}
 	}
 
 	return p.refreshToken(ctx)
@@ -82,15 +84,6 @@ func (p *Provider) getCachedToken() (string, bool) {
 
 // refreshToken fetches a new token from yc CLI with single-flight coordination.
 func (p *Provider) refreshToken(ctx context.Context) (string, error) {
-	// Fast path: check cache again after acquiring lock
-	p.mu.Lock()
-	if p.cachedToken != "" && p.nowFunc().Sub(p.refreshedAt) < p.refreshPeriod {
-		token := p.cachedToken
-		p.mu.Unlock()
-		return token, nil
-	}
-	p.mu.Unlock()
-
 	// Use singleflight to ensure only one refresh happens at a time
 	result, _, err := p.sf.Do(ctx, "token", p.doRefresh)
 	if err != nil {

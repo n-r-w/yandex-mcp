@@ -41,16 +41,16 @@ func (m *MockITokenProvider) EXPECT() *MockITokenProviderMockRecorder {
 }
 
 // Token mocks base method.
-func (m *MockITokenProvider) Token(ctx context.Context) (string, error) {
+func (m *MockITokenProvider) Token(ctx context.Context, forceRefresh bool) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Token", ctx)
+	ret := m.ctrl.Call(m, "Token", ctx, forceRefresh)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Token indicates an expected call of Token.
-func (mr *MockITokenProviderMockRecorder) Token(ctx any) *gomock.Call {
+func (mr *MockITokenProviderMockRecorder) Token(ctx, forceRefresh any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Token", reflect.TypeOf((*MockITokenProvider)(nil).Token), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Token", reflect.TypeOf((*MockITokenProvider)(nil).Token), ctx, forceRefresh)
 }

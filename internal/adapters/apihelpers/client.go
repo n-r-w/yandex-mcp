@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -66,11 +67,31 @@ func (c *APIClient) DoRequest(
 	result any,
 	operation string,
 ) (http.Header, error) {
-	resp, err := c.executeHTTPRequest(ctx, method, urlStr, body)
+	resp, err := c.executeHTTPRequest(ctx, method, urlStr, body, false)
 	if err != nil {
 		return nil, c.ErrorLogWrapper(ctx, err)
 	}
-	defer func() { _ = resp.Body.Close() }()
+
+	// Check status code AFTER successful execution
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+		// Close first response body before retry
+		if err = resp.Body.Close(); err != nil {
+			slog.WarnContext(ctx, "failed to close response body before retry", "error", err)
+		}
+		// Retry once with forced token refresh.
+		// It can solve both `401: "User not authorized"` and
+		// 403: "Action not authorized (insufficient permissions)" (e.g., new permissions received).
+		resp, err = c.executeHTTPRequest(ctx, method, urlStr, body, true)
+		if err != nil {
+			return nil, c.ErrorLogWrapper(ctx, fmt.Errorf("failed retry after token refresh: %w", err))
+		}
+	}
+
+	defer func() {
+		if err = resp.Body.Close(); err != nil {
+			slog.WarnContext(ctx, "failed to close response body", "error", err)
+		}
+	}()
 
 	return resp.Header, c.handleResponse(ctx, resp, result, operation)
 }
@@ -139,8 +160,9 @@ func (c *APIClient) executeHTTPRequest(
 	ctx context.Context,
 	method, urlStr string,
 	body any,
+	tokenForceRefresh bool,
 ) (*http.Response, error) {
-	token, err := c.tokenProvider.Token(ctx)
+	token, err := c.tokenProvider.Token(ctx, tokenForceRefresh)
 	if err != nil {
 		return nil, err
 	}

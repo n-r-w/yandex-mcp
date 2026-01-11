@@ -75,10 +75,10 @@ func TestSanitizeBody_LargeContent(t *testing.T) {
 	t.Parallel()
 
 	largeContent := strings.Repeat("x", 16*1024)
-	result := SanitizeBody(largeContent, MaxSanitizedBodySize)
+	result := SanitizeBody(largeContent, maxSanitizedBodySize)
 
-	require.LessOrEqual(t, len(result), MaxSanitizedBodySize)
-	assert.Len(t, result, MaxSanitizedBodySize)
+	require.LessOrEqual(t, len(result), maxSanitizedBodySize)
+	assert.Len(t, result, maxSanitizedBodySize)
 }
 
 func TestSanitizeBody_RemovesNonPrintableChars(t *testing.T) {
@@ -129,7 +129,7 @@ func TestSanitizeBody_RemovesNonPrintableChars(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			result := SanitizeBody(tt.input, MaxSanitizedBodySize)
+			result := SanitizeBody(tt.input, maxSanitizedBodySize)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -159,7 +159,7 @@ func TestSanitizeBody_HandlesInvalidUTF8(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			result := SanitizeBody(tt.input, MaxSanitizedBodySize)
+			result := SanitizeBody(tt.input, maxSanitizedBodySize)
 			assert.True(t, utf8.ValidString(result), "result must be valid UTF-8")
 		})
 	}
@@ -198,7 +198,7 @@ func TestSanitizeBody_PreservesValidUTF8(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			result := SanitizeBody(tt.input, MaxSanitizedBodySize)
+			result := SanitizeBody(tt.input, maxSanitizedBodySize)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -258,38 +258,6 @@ func TestUpstreamError_Error(t *testing.T) {
 	}
 }
 
-func TestUpstreamError_IsRetryable(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name       string
-		httpStatus int
-		want       bool
-	}{
-		{name: "401 is retryable", httpStatus: 401, want: true},
-		{name: "400 is not retryable", httpStatus: 400, want: false},
-		{name: "403 is not retryable", httpStatus: 403, want: false},
-		{name: "404 is not retryable", httpStatus: 404, want: false},
-		{name: "500 is not retryable", httpStatus: 500, want: false},
-		{name: "503 is not retryable", httpStatus: 503, want: false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			err := UpstreamError{
-				Service:    ServiceWiki,
-				Operation:  "test",
-				HTTPStatus: tt.httpStatus,
-				Code:       "",
-				Message:    "test",
-				Details:    "",
-			}
-			assert.Equal(t, tt.want, err.IsRetryable())
-		})
-	}
-}
-
 func TestNewUpstreamError(t *testing.T) {
 	t.Parallel()
 
@@ -301,5 +269,5 @@ func TestNewUpstreamError(t *testing.T) {
 	assert.Equal(t, 500, err.HTTPStatus)
 	assert.Empty(t, err.Code)
 	assert.Equal(t, "server error", err.Message)
-	require.LessOrEqual(t, len(err.Details), MaxSanitizedBodySize)
+	require.LessOrEqual(t, len(err.Details), maxSanitizedBodySize)
 }

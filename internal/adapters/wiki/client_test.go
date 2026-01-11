@@ -46,7 +46,7 @@ func TestClient_HeaderInjection(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return(testToken, nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return(testToken, nil)
 
 	client := NewClient(newTestConfig(server.URL, testOrgID), tokenProvider)
 
@@ -72,7 +72,7 @@ func TestClient_Non2xx_ReturnsUpstreamError_Sanitized(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
@@ -104,7 +104,7 @@ func TestClient_Non2xx_FallbackMessage(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
@@ -135,7 +135,7 @@ func TestClient_GetPageBySlug_Fields(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
@@ -171,7 +171,7 @@ func TestClient_ListPageResources_Pagination(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
@@ -220,7 +220,7 @@ func TestClient_ListPageResources_EnforcesMaxPageSize(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
@@ -287,7 +287,7 @@ func TestClient_ListPageResources_ResourceUnionMapping(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
@@ -362,7 +362,7 @@ func TestClient_ListPageGrids_Pagination(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
@@ -404,7 +404,7 @@ func TestClient_GetGridByID_WithOptions(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
@@ -453,7 +453,7 @@ func TestClient_GetPageByID_Success(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
@@ -483,7 +483,7 @@ func TestClient_UpstreamError_NoTokenLeak(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return(secretToken, nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return(secretToken, nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
@@ -510,7 +510,7 @@ func TestClient_FullConfig(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
 
 	// Use full config to verify no issues with all fields set
 	cfg := &config.Config{

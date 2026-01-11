@@ -45,7 +45,7 @@ func TestClient_HeaderInjection(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return(testToken, nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return(testToken, nil)
 
 	client := NewClient(newTestConfig(server.URL, testOrgID), tokenProvider)
 
@@ -80,7 +80,7 @@ func TestClient_HeaderInjection_POST(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return(testToken, nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return(testToken, nil)
 
 	client := NewClient(newTestConfig(server.URL, testOrgID), tokenProvider)
 
@@ -108,7 +108,7 @@ func TestClient_Non2xx_ReturnsUpstreamError_Sanitized(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
@@ -140,7 +140,7 @@ func TestClient_Non2xx_FallbackMessage(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
@@ -174,7 +174,7 @@ func TestClient_GetIssue_WithExpand(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
@@ -215,7 +215,7 @@ func TestClient_SearchIssues_StandardPagination(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
@@ -266,7 +266,7 @@ func TestClient_SearchIssues_ScrollPagination(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
@@ -307,7 +307,7 @@ func TestClient_SearchIssues_ScrollPagination_SubsequentRequest(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
@@ -344,7 +344,7 @@ func TestClient_CountIssues_WithFilter(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
@@ -376,7 +376,7 @@ func TestClient_CountIssues_WithQuery(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
@@ -420,7 +420,7 @@ func TestClient_ListIssueTransitions(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
@@ -460,7 +460,7 @@ func TestClient_ListQueues_WithPagination(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
@@ -506,7 +506,7 @@ func TestClient_ListIssueComments_WithPagination(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
@@ -545,7 +545,7 @@ func TestClient_UpstreamError_NoTokenLeak(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return(secretToken, nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return(secretToken, nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
@@ -574,7 +574,7 @@ func TestClient_ErrorCodes_401(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil).Times(2)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
@@ -585,7 +585,7 @@ func TestClient_ErrorCodes_401(t *testing.T) {
 	var upstreamErr domain.UpstreamError
 	require.ErrorAs(t, err, &upstreamErr)
 	assert.Equal(t, http.StatusUnauthorized, upstreamErr.HTTPStatus)
-	assert.Equal(t, int32(1), requestCount.Load())
+	assert.Equal(t, int32(2), requestCount.Load())
 }
 
 func TestClient_ErrorCodes_403(t *testing.T) {
@@ -602,7 +602,7 @@ func TestClient_ErrorCodes_403(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil).Times(2)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
@@ -630,7 +630,7 @@ func TestClient_ErrorCodes_404(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
@@ -658,7 +658,7 @@ func TestClient_ErrorCodes_422(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
@@ -686,7 +686,7 @@ func TestClient_ErrorCodes_429(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
@@ -717,7 +717,7 @@ func TestClient_IssueID_PathEscaping(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
@@ -746,7 +746,7 @@ func TestClient_SearchIssues_QueryLanguage(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
@@ -773,7 +773,7 @@ func TestClient_ErrorResponse_WithErrorsArray(t *testing.T) {
 		server.Close()
 	})
 
-	tokenProvider.EXPECT().Token(gomock.Any()).Return("token", nil)
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 

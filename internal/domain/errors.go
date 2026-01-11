@@ -11,12 +11,9 @@ import (
 )
 
 const (
-	// MaxSanitizedBodySize is the maximum size of sanitized upstream response body.
+	// maxSanitizedBodySize is the maximum size of sanitized upstream response body.
 	// Limited to prevent large error messages in logs and responses.
-	MaxSanitizedBodySize = 4 * 1024 // 4 KiB
-
-	// httpStatusUnauthorized is the HTTP status code for unauthorized requests.
-	httpStatusUnauthorized = 401
+	maxSanitizedBodySize = 4 * 1024 // 4 KiB
 )
 
 // Service represents the upstream Yandex service.
@@ -60,13 +57,6 @@ func (e UpstreamError) Error() string {
 	return b.String()
 }
 
-// IsRetryable returns true if the error indicates a condition where
-// retrying the request (with token refresh) may succeed.
-// Currently only HTTP 401 triggers retry with token refresh.
-func (e UpstreamError) IsRetryable() bool {
-	return e.HTTPStatus == httpStatusUnauthorized
-}
-
 // NewUpstreamError creates a new UpstreamError with sanitized details.
 func NewUpstreamError(
 	service Service,
@@ -82,7 +72,7 @@ func NewUpstreamError(
 		HTTPStatus: httpStatus,
 		Code:       code,
 		Message:    message,
-		Details:    SanitizeBody(rawBody, MaxSanitizedBodySize),
+		Details:    SanitizeBody(rawBody, maxSanitizedBodySize),
 	}
 }
 

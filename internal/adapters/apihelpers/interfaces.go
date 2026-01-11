@@ -8,5 +8,5 @@ import "context"
 // ITokenProvider provides IAM tokens for API authentication.
 type ITokenProvider interface {
 	// Token returns a valid IAM token, refreshing if needed.
-	Token(ctx context.Context) (string, error)
+	Token(ctx context.Context, forceRefresh bool) (string, error)
 }
