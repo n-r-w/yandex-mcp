@@ -5,13 +5,9 @@ An MCP (Model Context Protocol) server that lets MCP-capable clients work with:
 - Yandex Tracker (issues, queues, transitions, comments)
 - Yandex Wiki (pages, attachments/resources, dynamic tables)
 
+The server operates in read-only mode. Modification operations are not supported due to the risk of allowing LLMs to perform such operations.
+
 The project is not an official MCP from Yandex.
-
-## Development Status
-
-- This project is in early development.
-- Read operations have been tested against production instances of Yandex Tracker and Yandex Wiki.
-- The server operates in read-only mode.
 
 ## Tools
 
