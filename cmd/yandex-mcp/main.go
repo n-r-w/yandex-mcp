@@ -50,8 +50,6 @@ func getBuildInfo() buildInfo {
 
 func main() {
 	showVersion := flag.Bool("version", false, "Show version information")
-	wikiWrite := flag.Bool("wiki-write", false, "enable write operations for Yandex Wiki tools")
-	trackerWrite := flag.Bool("tracker-write", false, "enable write operations for Yandex Tracker tools")
 	flag.Parse()
 
 	info := getBuildInfo()
@@ -76,13 +74,13 @@ func main() {
 	}))
 	slog.SetDefault(logger)
 
-	if err := run(info.version, *wikiWrite, *trackerWrite); err != nil {
+	if err := run(info.version); err != nil {
 		slog.Error("server failed", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
 }
 
-func run(serverVersion string, wikiWrite, trackerWrite bool) error {
+func run(serverVersion string) error {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
@@ -101,8 +99,8 @@ func run(serverVersion string, wikiWrite, trackerWrite bool) error {
 	wikiClient := wiki.NewClient(cfg, tokenProvider)
 	trackerClient := tracker.NewClient(cfg, tokenProvider)
 
-	wikiTools := buildWikiToolList(wikiWrite)
-	trackerTools := buildTrackerToolList(trackerWrite)
+	wikiTools := domain.WikiAllTools()
+	trackerTools := domain.TrackerAllTools()
 
 	registrators := []server.IToolsRegistrator{
 		wikitools.NewRegistrator(wikiClient, wikiTools),
@@ -114,27 +112,8 @@ func run(serverVersion string, wikiWrite, trackerWrite bool) error {
 		return err
 	}
 
-	slog.Info("starting MCP server over stdio",
-		slog.Bool("wiki_write", wikiWrite),
-		slog.Bool("tracker_write", trackerWrite),
-	)
+	slog.Info("starting MCP server over stdio")
 
 	transport := &mcp.StdioTransport{}
 	return srv.Run(ctx, transport)
-}
-
-// buildWikiToolList returns the list of wiki tools based on flags.
-func buildWikiToolList(wikiWrite bool) []domain.WikiTool {
-	if wikiWrite {
-		return domain.WikiAllTools()
-	}
-	return domain.WikiReadOnlyTools()
-}
-
-// buildTrackerToolList returns the list of tracker tools based on flags.
-func buildTrackerToolList(trackerWrite bool) []domain.TrackerTool {
-	if trackerWrite {
-		return domain.TrackerAllTools()
-	}
-	return domain.TrackerReadOnlyTools()
 }

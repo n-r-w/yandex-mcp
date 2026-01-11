@@ -41,21 +41,6 @@ func (m *MockITrackerAdapter) EXPECT() *MockITrackerAdapterMockRecorder {
 	return m.recorder
 }
 
-// AddComment mocks base method.
-func (m *MockITrackerAdapter) AddComment(ctx context.Context, req *domain.TrackerCommentAddRequest) (*domain.TrackerCommentAddResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddComment", ctx, req)
-	ret0, _ := ret[0].(*domain.TrackerCommentAddResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// AddComment indicates an expected call of AddComment.
-func (mr *MockITrackerAdapterMockRecorder) AddComment(ctx, req any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddComment", reflect.TypeOf((*MockITrackerAdapter)(nil).AddComment), ctx, req)
-}
-
 // CountIssues mocks base method.
 func (m *MockITrackerAdapter) CountIssues(ctx context.Context, opts domain.TrackerCountIssuesOpts) (int, error) {
 	m.ctrl.T.Helper()
@@ -69,122 +54,6 @@ func (m *MockITrackerAdapter) CountIssues(ctx context.Context, opts domain.Track
 func (mr *MockITrackerAdapterMockRecorder) CountIssues(ctx, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountIssues", reflect.TypeOf((*MockITrackerAdapter)(nil).CountIssues), ctx, opts)
-}
-
-// CreateIssue mocks base method.
-func (m *MockITrackerAdapter) CreateIssue(ctx context.Context, req *domain.TrackerIssueCreateRequest) (*domain.TrackerIssueCreateResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateIssue", ctx, req)
-	ret0, _ := ret[0].(*domain.TrackerIssueCreateResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CreateIssue indicates an expected call of CreateIssue.
-func (mr *MockITrackerAdapterMockRecorder) CreateIssue(ctx, req any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateIssue", reflect.TypeOf((*MockITrackerAdapter)(nil).CreateIssue), ctx, req)
-}
-
-// CreateLink mocks base method.
-func (m *MockITrackerAdapter) CreateLink(ctx context.Context, req *domain.TrackerLinkCreateRequest) (*domain.TrackerLinkCreateResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateLink", ctx, req)
-	ret0, _ := ret[0].(*domain.TrackerLinkCreateResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CreateLink indicates an expected call of CreateLink.
-func (mr *MockITrackerAdapterMockRecorder) CreateLink(ctx, req any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateLink", reflect.TypeOf((*MockITrackerAdapter)(nil).CreateLink), ctx, req)
-}
-
-// CreateQueue mocks base method.
-func (m *MockITrackerAdapter) CreateQueue(ctx context.Context, req *domain.TrackerQueueCreateRequest) (*domain.TrackerQueueCreateResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateQueue", ctx, req)
-	ret0, _ := ret[0].(*domain.TrackerQueueCreateResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CreateQueue indicates an expected call of CreateQueue.
-func (mr *MockITrackerAdapterMockRecorder) CreateQueue(ctx, req any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateQueue", reflect.TypeOf((*MockITrackerAdapter)(nil).CreateQueue), ctx, req)
-}
-
-// DeleteAttachment mocks base method.
-func (m *MockITrackerAdapter) DeleteAttachment(ctx context.Context, req *domain.TrackerAttachmentDeleteRequest) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteAttachment", ctx, req)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeleteAttachment indicates an expected call of DeleteAttachment.
-func (mr *MockITrackerAdapterMockRecorder) DeleteAttachment(ctx, req any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAttachment", reflect.TypeOf((*MockITrackerAdapter)(nil).DeleteAttachment), ctx, req)
-}
-
-// DeleteComment mocks base method.
-func (m *MockITrackerAdapter) DeleteComment(ctx context.Context, req *domain.TrackerCommentDeleteRequest) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteComment", ctx, req)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeleteComment indicates an expected call of DeleteComment.
-func (mr *MockITrackerAdapterMockRecorder) DeleteComment(ctx, req any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteComment", reflect.TypeOf((*MockITrackerAdapter)(nil).DeleteComment), ctx, req)
-}
-
-// DeleteLink mocks base method.
-func (m *MockITrackerAdapter) DeleteLink(ctx context.Context, req *domain.TrackerLinkDeleteRequest) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteLink", ctx, req)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeleteLink indicates an expected call of DeleteLink.
-func (mr *MockITrackerAdapterMockRecorder) DeleteLink(ctx, req any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteLink", reflect.TypeOf((*MockITrackerAdapter)(nil).DeleteLink), ctx, req)
-}
-
-// DeleteQueue mocks base method.
-func (m *MockITrackerAdapter) DeleteQueue(ctx context.Context, req *domain.TrackerQueueDeleteRequest) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteQueue", ctx, req)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeleteQueue indicates an expected call of DeleteQueue.
-func (mr *MockITrackerAdapterMockRecorder) DeleteQueue(ctx, req any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteQueue", reflect.TypeOf((*MockITrackerAdapter)(nil).DeleteQueue), ctx, req)
-}
-
-// ExecuteTransition mocks base method.
-func (m *MockITrackerAdapter) ExecuteTransition(ctx context.Context, req *domain.TrackerTransitionExecuteRequest) (*domain.TrackerTransitionExecuteResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ExecuteTransition", ctx, req)
-	ret0, _ := ret[0].(*domain.TrackerTransitionExecuteResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ExecuteTransition indicates an expected call of ExecuteTransition.
-func (mr *MockITrackerAdapterMockRecorder) ExecuteTransition(ctx, req any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteTransition", reflect.TypeOf((*MockITrackerAdapter)(nil).ExecuteTransition), ctx, req)
 }
 
 // GetCurrentUser mocks base method.
@@ -367,36 +236,6 @@ func (mr *MockITrackerAdapterMockRecorder) ListUsers(ctx, opts any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListUsers", reflect.TypeOf((*MockITrackerAdapter)(nil).ListUsers), ctx, opts)
 }
 
-// MoveIssue mocks base method.
-func (m *MockITrackerAdapter) MoveIssue(ctx context.Context, req *domain.TrackerIssueMoveRequest) (*domain.TrackerIssueMoveResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MoveIssue", ctx, req)
-	ret0, _ := ret[0].(*domain.TrackerIssueMoveResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// MoveIssue indicates an expected call of MoveIssue.
-func (mr *MockITrackerAdapterMockRecorder) MoveIssue(ctx, req any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MoveIssue", reflect.TypeOf((*MockITrackerAdapter)(nil).MoveIssue), ctx, req)
-}
-
-// RestoreQueue mocks base method.
-func (m *MockITrackerAdapter) RestoreQueue(ctx context.Context, req *domain.TrackerQueueRestoreRequest) (*domain.TrackerQueueRestoreResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RestoreQueue", ctx, req)
-	ret0, _ := ret[0].(*domain.TrackerQueueRestoreResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// RestoreQueue indicates an expected call of RestoreQueue.
-func (mr *MockITrackerAdapterMockRecorder) RestoreQueue(ctx, req any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestoreQueue", reflect.TypeOf((*MockITrackerAdapter)(nil).RestoreQueue), ctx, req)
-}
-
 // SearchIssues mocks base method.
 func (m *MockITrackerAdapter) SearchIssues(ctx context.Context, opts domain.TrackerSearchIssuesOpts) (*domain.TrackerIssuesPage, error) {
 	m.ctrl.T.Helper()
@@ -410,34 +249,4 @@ func (m *MockITrackerAdapter) SearchIssues(ctx context.Context, opts domain.Trac
 func (mr *MockITrackerAdapterMockRecorder) SearchIssues(ctx, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchIssues", reflect.TypeOf((*MockITrackerAdapter)(nil).SearchIssues), ctx, opts)
-}
-
-// UpdateComment mocks base method.
-func (m *MockITrackerAdapter) UpdateComment(ctx context.Context, req *domain.TrackerCommentUpdateRequest) (*domain.TrackerCommentUpdateResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateComment", ctx, req)
-	ret0, _ := ret[0].(*domain.TrackerCommentUpdateResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// UpdateComment indicates an expected call of UpdateComment.
-func (mr *MockITrackerAdapterMockRecorder) UpdateComment(ctx, req any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateComment", reflect.TypeOf((*MockITrackerAdapter)(nil).UpdateComment), ctx, req)
-}
-
-// UpdateIssue mocks base method.
-func (m *MockITrackerAdapter) UpdateIssue(ctx context.Context, req *domain.TrackerIssueUpdateRequest) (*domain.TrackerIssueUpdateResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateIssue", ctx, req)
-	ret0, _ := ret[0].(*domain.TrackerIssueUpdateResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// UpdateIssue indicates an expected call of UpdateIssue.
-func (mr *MockITrackerAdapterMockRecorder) UpdateIssue(ctx, req any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateIssue", reflect.TypeOf((*MockITrackerAdapter)(nil).UpdateIssue), ctx, req)
 }

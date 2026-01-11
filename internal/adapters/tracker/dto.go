@@ -157,75 +157,6 @@ type errorResponseDTO struct {
 	StatusCode    int      `json:"statusCode,omitempty"`
 }
 
-// Write operation request DTOs.
-
-// createIssueRequestDTO is the request body for issue creation.
-type createIssueRequestDTO struct {
-	Queue         string                `json:"queue"`
-	Summary       string                `json:"summary"`
-	Description   string                `json:"description,omitempty"`
-	Type          string                `json:"type,omitempty"`
-	Priority      string                `json:"priority,omitempty"`
-	Assignee      string                `json:"assignee,omitempty"`
-	Tags          []string              `json:"tags,omitempty"`
-	Parent        string                `json:"parent,omitempty"`
-	AttachmentIDs []apihelpers.StringID `json:"attachmentIds,omitempty"`
-	Sprint        []string              `json:"sprint,omitempty"`
-}
-
-// updateIssueProjectDTO is the nested project structure for issue update.
-type updateIssueProjectDTO struct {
-	Primary   int                          `json:"primary,omitempty"`
-	Secondary *updateIssueProjectSecAddDTO `json:"secondary,omitempty"`
-}
-
-// updateIssueProjectSecAddDTO is the secondary project add structure.
-type updateIssueProjectSecAddDTO struct {
-	Add []int `json:"add,omitempty"`
-}
-
-// updateIssueSprintDTO is the sprint reference for issue update.
-type updateIssueSprintDTO struct {
-	ID apihelpers.StringID `json:"id"`
-}
-
-// updateIssueRequestDTO is the request body for issue update.
-type updateIssueRequestDTO struct {
-	Summary     string                 `json:"summary,omitempty"`
-	Description string                 `json:"description,omitempty"`
-	Type        string                 `json:"type,omitempty"`
-	Priority    string                 `json:"priority,omitempty"`
-	Assignee    string                 `json:"assignee,omitempty"`
-	Version     int                    `json:"version,omitempty"`
-	Project     *updateIssueProjectDTO `json:"project,omitempty"`
-	Sprint      []updateIssueSprintDTO `json:"sprint,omitempty"`
-}
-
-// executeTransitionRequestDTO is the request body for transition execution.
-type executeTransitionRequestDTO struct {
-	Comment string         `json:"comment,omitempty"`
-	Fields  map[string]any `json:"fields,omitempty"`
-}
-
-// addCommentRequestDTO is the request body for adding a comment.
-type addCommentRequestDTO struct {
-	Text              string                `json:"text"`
-	AttachmentIDs     []apihelpers.StringID `json:"attachmentIds,omitempty"`
-	MarkupType        string                `json:"markupType,omitempty"`
-	Summonees         []string              `json:"summonees,omitempty"`
-	MaillistSummonees []string              `json:"maillistSummonees,omitempty"`
-	IsAddToFollowers  *bool                 `json:"isAddToFollowers,omitempty"`
-}
-
-// updateCommentRequestDTO is the request body for updating a comment.
-type updateCommentRequestDTO struct {
-	Text              string                `json:"text"`
-	AttachmentIDs     []apihelpers.StringID `json:"attachmentIds,omitempty"`
-	MarkupType        string                `json:"markupType,omitempty"`
-	Summonees         []string              `json:"summonees,omitempty"`
-	MaillistSummonees []string              `json:"maillistSummonees,omitempty"`
-}
-
 // attachmentDTO represents a file attachment in the Tracker API.
 type attachmentDTO struct {
 	ID        apihelpers.StringID    `json:"id"`
@@ -279,15 +210,6 @@ type userDetailDTO struct {
 	External    bool                `json:"external,omitempty"`
 }
 
-// createQueueRequestDTO is the request body for queue creation.
-type createQueueRequestDTO struct {
-	Key             string `json:"key"`
-	Name            string `json:"name"`
-	Lead            string `json:"lead"`
-	DefaultType     string `json:"defaultType"`
-	DefaultPriority string `json:"defaultPriority"`
-}
-
 // linkDTO represents an issue link in the Tracker API.
 type linkDTO struct {
 	ID        apihelpers.StringID `json:"id"`
@@ -314,12 +236,6 @@ type linkedIssueDTO struct {
 	ID      apihelpers.StringID `json:"id"`
 	Key     string              `json:"key"`
 	Display string              `json:"display,omitempty"`
-}
-
-// createLinkRequestDTO is the request body for creating a link.
-type createLinkRequestDTO struct {
-	Relationship string `json:"relationship"`
-	Issue        string `json:"issue"`
 }
 
 // changelogEntryDTO represents a single changelog entry in the Tracker API.

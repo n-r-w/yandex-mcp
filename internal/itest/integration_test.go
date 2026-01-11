@@ -54,8 +54,8 @@ func TestServerIntegration_ReadOnlyToolsRegistered(t *testing.T) {
 	trackerMock := trackertools.NewMockITrackerAdapter(ctrl)
 
 	registrators := []server.IToolsRegistrator{
-		wikitools.NewRegistrator(wikiMock, domain.WikiReadOnlyTools()),
-		trackertools.NewRegistrator(trackerMock, domain.TrackerReadOnlyTools()),
+		wikitools.NewRegistrator(wikiMock, domain.WikiAllTools()),
+		trackertools.NewRegistrator(trackerMock, domain.TrackerAllTools()),
 	}
 
 	srv, err := server.New("v1.0.0", registrators)
@@ -63,11 +63,11 @@ func TestServerIntegration_ReadOnlyToolsRegistered(t *testing.T) {
 
 	toolNames := listToolNames(t, srv)
 
-	expectedTools := make([]string, 0, len(domain.WikiReadOnlyTools())+len(domain.TrackerReadOnlyTools()))
-	for _, tool := range domain.WikiReadOnlyTools() {
+	expectedTools := make([]string, 0, len(domain.WikiAllTools())+len(domain.TrackerAllTools()))
+	for _, tool := range domain.WikiAllTools() {
 		expectedTools = append(expectedTools, tool.String())
 	}
-	for _, tool := range domain.TrackerReadOnlyTools() {
+	for _, tool := range domain.TrackerAllTools() {
 		expectedTools = append(expectedTools, tool.String())
 	}
 

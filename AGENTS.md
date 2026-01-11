@@ -9,10 +9,6 @@ THIS IS A NEW PROJECT, NOT IN PRODUCTION YET. NO DATA IN DATABASE YET. FEEL FREE
 - Yandex Tracker
 - Yandex Wiki
 
-## Command Line Options
-- `--wiki-write` enable write operations for Yandex Wiki tools (default: false)
-- `--tracker-write` enable write operations for Yandex Tracker tools (default: false)
-
 ## Tech stack
 - go 1.25.5
 - `github.com/modelcontextprotocol/go-sdk` for MCP server implementation
@@ -22,6 +18,7 @@ THIS IS A NEW PROJECT, NOT IN PRODUCTION YET. NO DATA IN DATABASE YET. FEEL FREE
 - `log/slog` for logging (must use structured logging with context)
 
 ## Instructions
+- MUST NOT edit AGENTS.md without DIRECT user request.
 - MUST generate new documentation in English unless user specifically requests another language.
 - When updating documents, the original language of the document must be used.
 - MUST ALWAYS use English version of official sources.

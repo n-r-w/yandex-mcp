@@ -21,9 +21,6 @@ func TestWikiToolLists_Complete(t *testing.T) {
 		seen[tool] = true
 	}
 
-	// Read + Write should equal All
-	combined := append(domain.WikiReadOnlyTools(), domain.WikiWriteTools()...)
-	assert.ElementsMatch(t, domain.WikiAllTools(), combined, "WikiReadOnlyTools + WikiWriteTools should equal WikiAllTools")
 }
 
 func TestTrackerToolLists_Complete(t *testing.T) {
@@ -39,9 +36,6 @@ func TestTrackerToolLists_Complete(t *testing.T) {
 		seen[tool] = true
 	}
 
-	// Read + Write should equal All
-	combined := append(domain.TrackerReadOnlyTools(), domain.TrackerWriteTools()...)
-	assert.ElementsMatch(t, domain.TrackerAllTools(), combined, "TrackerReadOnlyTools + TrackerWriteTools should equal TrackerAllTools")
 }
 
 func TestTrackerTool_String_AllToolsHaveNames(t *testing.T) {

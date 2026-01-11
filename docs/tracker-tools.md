@@ -5,16 +5,6 @@ This document lists the MCP tools implemented under `internal/tools/tracker/`.
 Tool names and one-line descriptions are taken from tool registration in `internal/tools/tracker/service.go`.
 Input/output schemas are derived from the MCP handler layer DTOs in `internal/tools/tracker/dto.go`.
 
-## Write operations gating
-
-By default, the server registers only read-only Tracker tools.
-
-To enable Tracker write tools, start the server with:
-
-- `--tracker-write` (default: false)
-
-Write-gated tools in this document are explicitly marked.
-
 ## Conventions
 
 - Types are described using JSON-compatible terms (string, number/integer, boolean, array, object).
@@ -105,16 +95,16 @@ Searches Yandex Tracker issues using filter or query.
 - `expand` (string, optional): Additional fields to include.
   - Allowed values: `transitions`, `attachments`
 - `per_page` (integer, optional): Number of results per page (standard pagination).
-  - Tool validation: must be non-negative.
+  - Tool validation: Valid range: 1-50
 - `page` (integer, optional): Page number (standard pagination).
   - Tool validation: must be non-negative.
 - `scroll_type` (string, optional): Scroll type for large result sets.
   - Allowed values: `sorted`, `unsorted`
   - Note: used only in the first request of a scroll sequence.
 - `per_scroll` (integer, optional): Max issues per scroll response.
-  - Tool validation: must be non-negative and must not exceed 1000.
+  - Tool validation: Valid range: 1-1000
 - `scroll_ttl_millis` (integer, optional): Scroll context lifetime in milliseconds.
-  - Tool validation: must be non-negative.
+  - Tool validation: Default: 60000, maximum: 600000
 - `scroll_id` (string, optional): Scroll page ID for 2nd and subsequent scroll requests.
 
 ### Output
@@ -169,7 +159,7 @@ Lists Yandex Tracker queues.
 ### Input
 
 - `expand` (string, optional): Additional fields to include.
-  - Allowed values: `projects`, `components`, `versions`, `types`, `team`, `workflows`
+  - Allowed values: `projects`, `components`, `versions`, `types`, `team`, `workflows`, `all`
 - `per_page` (integer, optional): Number of queues per page.
   - Tool validation: must be non-negative.
 - `page` (integer, optional): Page number.
@@ -230,133 +220,17 @@ Returns `CommentsListOutput`:
 - `created_by` (object, optional): `UserOutput`
 - `updated_by` (object, optional): `UserOutput`
 
-## tracker_issue_create
 
-Creates a new Yandex Tracker issue.
 
-This tool is write-gated and requires `--tracker-write`.
 
-### Input
 
-- `queue` (string, required): Queue key.
-- `summary` (string, required): Issue summary.
-- `description` (string, optional): Issue description.
-- `type` (string, optional): Issue type key.
-- `priority` (string, optional): Priority key.
-- `assignee` (string, optional): Assignee login.
-- `tags` (array of string, optional): Issue tags.
-- `parent` (string, optional): Parent issue key.
-- `attachment_ids` (array of string, optional): Attachment IDs to link.
-- `sprint` (array of string, optional): Sprint IDs to add issue to.
 
-### Output
-
-Returns `IssueOutput`.
-
-## tracker_issue_update
-
-Updates an existing Yandex Tracker issue.
-
-This tool is write-gated and requires `--tracker-write`.
-
-### Input
-
-- `issue_id_or_key` (string, required): Issue ID or key.
-- `summary` (string, optional): Issue summary.
-- `description` (string, optional): Issue description.
-- `type` (string, optional): Issue type key.
-- `priority` (string, optional): Priority key.
-- `assignee` (string, optional): Assignee login.
-- `project_primary` (integer, optional): Primary project ID.
-- `project_secondary_add` (array of integer, optional): Secondary project IDs to add.
-- `sprint` (array of string, optional): Sprint IDs or keys to assign.
-- `version` (integer, optional): Issue version for optimistic locking.
-
-Note: the tool requires at least one of `summary`, `description`, `type`, `priority`, `assignee`, `project_primary`, `project_secondary_add`, `sprint` to be provided.
-
-### Output
-
-Returns `IssueOutput`.
-
-## tracker_issue_transition_execute
-
-Executes a status transition on a Yandex Tracker issue.
-
-This tool is write-gated and requires `--tracker-write`.
-
-### Input
-
-- `issue_id_or_key` (string, required): Issue ID or key.
-- `transition_id` (string, required): Transition ID.
-- `comment` (string, optional): Comment to add during transition.
-- `fields` (object, optional): Additional fields to set during transition.
-
-### Output
-
-Returns `TransitionsListOutput`.
-
-## tracker_issue_comment_add
-
-Adds a comment to a Yandex Tracker issue.
-
-This tool is write-gated and requires `--tracker-write`.
-
-### Input
-
-- `issue_id_or_key` (string, required): Issue ID or key.
-- `text` (string, required): Comment text.
-- `attachment_ids` (array of string, optional): Attachment IDs to link.
-- `markup_type` (string, optional): Text markup type. Use `md` for YFM markup.
-- `summonees` (array of string, optional): User logins to summon.
-- `maillist_summonees` (array of string, optional): Mailing list addresses to summon.
-- `is_add_to_followers` (boolean, optional): Add summoned users to followers.
-
-### Output
-
-Returns `CommentOutput` (same shape as in `tracker_issue_comments_list`).
-
-## tracker_issue_comment_update
-
-Updates an existing comment on a Yandex Tracker issue.
-
-This tool is write-gated and requires `--tracker-write`.
-
-### Input
-
-- `issue_id_or_key` (string, required): Issue ID or key (for example, `TEST-1`).
-- `comment_id` (string, required): Comment ID.
-- `text` (string, required): Comment text.
-- `attachment_ids` (array of string, optional): Attachment IDs to link.
-- `markup_type` (string, optional): Text markup type. Use `md` for YFM markup.
-- `summonees` (array of string, optional): User logins to summon.
-- `maillist_summonees` (array of string, optional): Mailing list addresses to summon.
-
-### Output
-
-Returns `CommentOutput` (same shape as in `tracker_issue_comments_list`).
-
-## tracker_issue_comment_delete
-
-Deletes a comment from a Yandex Tracker issue.
-
-This tool is write-gated and requires `--tracker-write`.
-
-### Input
-
-- `issue_id_or_key` (string, required): Issue ID or key (for example, `TEST-1`).
-- `comment_id` (string, required): Comment ID.
-
-### Output
-
-Returns `DeleteCommentOutput`:
-
-- `success` (boolean)
 
 ## tracker_issue_attachments_list
 
 Lists attachments for a Yandex Tracker issue.
 
-This tool is read-only (available without `--tracker-write`).
+This tool is read-only.
 
 ### Input
 
@@ -383,23 +257,6 @@ Returns `AttachmentsListOutput`:
 `AttachmentMetadataOutput`:
 
 - `size` (string, optional)
-
-## tracker_issue_attachment_delete
-
-Deletes an attachment from a Yandex Tracker issue.
-
-This tool is write-gated and requires `--tracker-write`.
-
-### Input
-
-- `issue_id_or_key` (string, required): Issue ID or key (for example, `TEST-1`).
-- `file_id` (string, required): Attachment file ID.
-
-### Output
-
-Returns `DeleteAttachmentOutput`:
-
-- `success` (boolean)
 
 
 ## tracker_queue_get
@@ -430,53 +287,8 @@ Returns `QueueDetailOutput`:
 - `default_type` (object, optional): `TypeOutput`
 - `default_priority` (object, optional): `PriorityOutput`
 
-## tracker_queue_create
 
-Creates a new Yandex Tracker queue.
 
-This tool is write-gated and requires `--tracker-write`.
-
-### Input
-
-- `key` (string, required): Queue key (for example, `MYQUEUE`).
-- `name` (string, required): Queue name.
-- `lead` (string, required): Queue lead login or user ID.
-- `default_type` (string, required): Default issue type key or ID.
-- `default_priority` (string, required): Default priority key or ID.
-
-### Output
-
-Returns `QueueDetailOutput`.
-
-## tracker_queue_delete
-
-Deletes a Yandex Tracker queue.
-
-This tool is write-gated and requires `--tracker-write`.
-
-### Input
-
-- `queue_id_or_key` (string, required): Queue ID or key (for example, `MYQUEUE`).
-
-### Output
-
-Returns `DeleteQueueOutput`:
-
-- `success` (boolean)
-
-## tracker_queue_restore
-
-Restores a deleted Yandex Tracker queue.
-
-This tool is write-gated and requires `--tracker-write`.
-
-### Input
-
-- `queue_id_or_key` (string, required): Queue ID or key (for example, `MYQUEUE`).
-
-### Output
-
-Returns `QueueDetailOutput`.
 
 ## tracker_user_current
 
@@ -576,38 +388,7 @@ Returns `LinksListOutput`:
 - `key` (string)
 - `display` (string, optional)
 
-## tracker_issue_link_create
 
-Creates a link between Yandex Tracker issues.
-
-This tool is write-gated and requires `--tracker-write`.
-
-### Input
-
-- `issue_id_or_key` (string, required): Issue ID or key (for example, `TEST-1`).
-- `relationship` (string, required): Link type ID (for example, `relates`, `depends`, `duplicates`).
-- `target_issue` (string, required): Target issue ID or key to link to.
-
-### Output
-
-Returns `LinkOutput` (same shape as in `tracker_issue_links_list`).
-
-## tracker_issue_link_delete
-
-Deletes a link from a Yandex Tracker issue.
-
-This tool is write-gated and requires `--tracker-write`.
-
-### Input
-
-- `issue_id_or_key` (string, required): Issue ID or key (for example, `TEST-1`).
-- `link_id` (string, required): Link ID to delete.
-
-### Output
-
-Returns `DeleteLinkOutput`:
-
-- `success` (boolean)
 
 ## tracker_issue_changelog
 
@@ -643,21 +424,6 @@ Returns `ChangelogOutput`:
 - `from` (any, optional)
 - `to` (any, optional)
 
-## tracker_issue_move
-
-Moves a Yandex Tracker issue to another queue.
-
-This tool is write-gated and requires `--tracker-write`.
-
-### Input
-
-- `issue_id_or_key` (string, required): Issue ID or key (for example, `TEST-1`).
-- `queue` (string, required): Target queue key (for example, `NEWQUEUE`).
-- `initial_status` (boolean, optional): Reset issue status to initial value when moving.
-
-### Output
-
-Returns `IssueOutput`.
 
 ## tracker_project_comments_list
 
@@ -685,14 +451,3 @@ Returns `ProjectCommentsListOutput`:
 - `updated_at` (string, optional)
 - `created_by` (object, optional): `UserOutput`
 - `updated_by` (object, optional): `UserOutput`
-
-## Planned / Requires Additional Research
-
-Items in this section are not implemented and are not available as MCP tools yet.
-
-- Tracker attachment upload via multipart/form-data (upload a file, then link it to an issue comment or issue attachments).
-  - Requires: MCP-compatible file transfer approach, request/response schema confirmation, limits, and error mapping.
-  - Tentative tool names (not callable): `tracker_attachment_upload`, `tracker_issue_attachment_upload`
-- Tracker agile boards and sprints management (read/write operations on boards, board columns, board sprints, sprint details).
-  - Requires: request/response schemas, pagination behavior, optimistic locking headers (If-Match / ETag), and deletion semantics.
-  - Tentative tool names (not callable): `tracker_boards_list`, `tracker_board_get`, `tracker_board_create`, `tracker_board_update`, `tracker_board_delete`, `tracker_board_columns_list`, `tracker_board_sprints_list`, `tracker_sprint_get`, `tracker_sprint_create`

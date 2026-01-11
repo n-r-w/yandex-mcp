@@ -11,7 +11,7 @@ The project is not an official MCP from Yandex.
 
 - This project is in early development.
 - Read operations have been tested against production instances of Yandex Tracker and Yandex Wiki.
-- Write operations have not been validated against production instances, i'm not that brave :)
+- The server operates in read-only mode.
 
 ## Tools
 
@@ -24,35 +24,13 @@ Exact JSON schemas (including validation rules) are also available via MCP tool 
 
 ### Yandex Wiki tools
 
-Enabled by default (read-only):
-
 - `wiki_page_get` — Retrieves a Yandex Wiki page by its slug (URL path)
 - `wiki_page_get_by_id` — Retrieves a Yandex Wiki page by its numeric ID
 - `wiki_page_resources_list` — Lists resources (attachments, grids) for a Yandex Wiki page
 - `wiki_page_grids_list` — Lists dynamic tables (grids) for a Yandex Wiki page
 - `wiki_grid_get` — Retrieves a Yandex Wiki dynamic table (grid) by its ID
 
-Require `--wiki-write` (write operations; not tested):
-
-- `wiki_page_create` — Creates a new Yandex Wiki page
-- `wiki_page_update` — Updates an existing Yandex Wiki page
-- `wiki_page_append_content` — Appends content to an existing Yandex Wiki page
-- `wiki_grid_create` — Creates a new Yandex Wiki dynamic table (grid)
-- `wiki_grid_update_cells` — Updates cells in a Yandex Wiki dynamic table (grid)
-- `wiki_page_delete` — Deletes a Yandex Wiki page
-- `wiki_page_clone` — Clones a Yandex Wiki page (async operation)
-- `wiki_grid_delete` — Deletes a Yandex Wiki dynamic table (grid)
-- `wiki_grid_clone` — Clones a Yandex Wiki dynamic table (grid) (async operation)
-- `wiki_grid_rows_add` — Adds rows to a Yandex Wiki dynamic table (grid)
-- `wiki_grid_rows_delete` — Deletes rows from a Yandex Wiki dynamic table (grid)
-- `wiki_grid_rows_move` — Moves rows within a Yandex Wiki dynamic table (grid)
-- `wiki_grid_columns_add` — Adds columns to a Yandex Wiki dynamic table (grid)
-- `wiki_grid_columns_delete` — Deletes columns from a Yandex Wiki dynamic table (grid)
-- `wiki_grid_columns_move` — Moves columns within a Yandex Wiki dynamic table (grid)
-
 ### Yandex Tracker tools
-
-Enabled by default (read-only):
 
 - `tracker_issue_get` — Retrieves a Yandex Tracker issue by its ID or key
 - `tracker_issue_search` — Searches Yandex Tracker issues using filter or query
@@ -68,22 +46,6 @@ Enabled by default (read-only):
 - `tracker_issue_links_list` — Lists links for a Yandex Tracker issue
 - `tracker_issue_changelog` — Retrieves the changelog for a Yandex Tracker issue
 - `tracker_project_comments_list` — Lists comments for a Yandex Tracker project entity
-
-Require `--tracker-write` (write operations; not tested):
-
-- `tracker_issue_create` — Creates a new Yandex Tracker issue
-- `tracker_issue_update` — Updates an existing Yandex Tracker issue
-- `tracker_issue_transition_execute` — Executes a status transition on a Yandex Tracker issue
-- `tracker_issue_comment_add` — Adds a comment to a Yandex Tracker issue
-- `tracker_issue_comment_update` — Updates a comment on a Yandex Tracker issue
-- `tracker_issue_comment_delete` — Deletes a comment from a Yandex Tracker issue
-- `tracker_issue_attachment_delete` — Deletes an attachment from a Yandex Tracker issue
-- `tracker_queue_create` — Creates a new Yandex Tracker queue
-- `tracker_queue_delete` — Deletes a Yandex Tracker queue
-- `tracker_queue_restore` — Restores a deleted Yandex Tracker queue
-- `tracker_issue_link_create` — Creates a link between Yandex Tracker issues
-- `tracker_issue_link_delete` — Deletes a link between Yandex Tracker issues
-- `tracker_issue_move` — Moves a Yandex Tracker issue to another queue
 
 ## Installation
 
@@ -210,11 +172,6 @@ Notes:
 
 - The `command` must point to the built executable (for this repo, `task build` produces `bin/yandex-mcp`).
 - The server communicates over stdio; clients should use a stdio transport.
-
-### CLI arguments
-
-- `--wiki-write` (default: `false`) — enable write operations for Yandex Wiki tools
-- `--tracker-write` (default: `false`) — enable write operations for Yandex Tracker tools
 
 ## Yandex API reference (official)
 

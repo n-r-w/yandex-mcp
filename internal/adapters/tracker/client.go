@@ -246,186 +246,6 @@ func (c *Client) ListIssueComments(
 	return &result, nil
 }
 
-// CreateIssue creates a new Tracker issue.
-func (c *Client) CreateIssue(
-	ctx context.Context,
-	req *domain.TrackerIssueCreateRequest,
-) (*domain.TrackerIssueCreateResponse, error) {
-	u := c.baseURL + "/v3/issues"
-
-	body := createIssueRequestDTO{
-		Queue:         req.Queue,
-		Summary:       req.Summary,
-		Description:   req.Description,
-		Type:          req.Type,
-		Priority:      req.Priority,
-		Assignee:      req.Assignee,
-		Tags:          req.Tags,
-		Parent:        req.Parent,
-		AttachmentIDs: apihelpers.StringsToStringIDs(req.AttachmentIDs),
-		Sprint:        req.Sprint,
-	}
-
-	var issue issueDTO
-	if _, err := c.apiClient.DoPOST(ctx, u, body, &issue, "CreateIssue"); err != nil {
-		return nil, err
-	}
-
-	result := issueToTrackerIssue(issue)
-	return &domain.TrackerIssueCreateResponse{Issue: result}, nil
-}
-
-// UpdateIssue updates an existing Tracker issue.
-func (c *Client) UpdateIssue(
-	ctx context.Context,
-	req *domain.TrackerIssueUpdateRequest,
-) (*domain.TrackerIssueUpdateResponse, error) {
-	u := fmt.Sprintf("%s/v3/issues/%s", c.baseURL, url.PathEscape(req.IssueID))
-
-	body := updateIssueRequestDTO{
-		Summary:     req.Summary,
-		Description: req.Description,
-		Type:        req.Type,
-		Priority:    req.Priority,
-		Assignee:    req.Assignee,
-		Version:     req.Version,
-		Project:     buildUpdateIssueProject(req.ProjectPrimary, req.ProjectSecondaryAdd),
-		Sprint:      buildUpdateIssueSprint(req.Sprint),
-	}
-
-	var issue issueDTO
-	if _, err := c.apiClient.DoPATCH(ctx, u, body, &issue, "UpdateIssue"); err != nil {
-		return nil, err
-	}
-
-	result := issueToTrackerIssue(issue)
-	return &domain.TrackerIssueUpdateResponse{Issue: result}, nil
-}
-
-func buildUpdateIssueProject(primary int, secondaryAdd []int) *updateIssueProjectDTO {
-	if primary == 0 && len(secondaryAdd) == 0 {
-		return nil
-	}
-
-	var secondary *updateIssueProjectSecAddDTO
-	if len(secondaryAdd) > 0 {
-		secondary = &updateIssueProjectSecAddDTO{Add: secondaryAdd}
-	}
-
-	return &updateIssueProjectDTO{
-		Primary:   primary,
-		Secondary: secondary,
-	}
-}
-
-func buildUpdateIssueSprint(sprintIDs []string) []updateIssueSprintDTO {
-	if len(sprintIDs) == 0 {
-		return nil
-	}
-
-	result := make([]updateIssueSprintDTO, len(sprintIDs))
-	for i, id := range sprintIDs {
-		result[i] = updateIssueSprintDTO{ID: apihelpers.StringID(id)}
-	}
-
-	return result
-}
-
-// ExecuteTransition executes a status transition on an issue.
-func (c *Client) ExecuteTransition(
-	ctx context.Context,
-	req *domain.TrackerTransitionExecuteRequest,
-) (*domain.TrackerTransitionExecuteResponse, error) {
-	u := fmt.Sprintf("%s/v3/issues/%s/transitions/%s/_execute",
-		c.baseURL,
-		url.PathEscape(req.IssueID),
-		url.PathEscape(req.TransitionID),
-	)
-
-	var body any
-	if req.Comment != "" || len(req.Fields) > 0 {
-		body = executeTransitionRequestDTO{
-			Comment: req.Comment,
-			Fields:  req.Fields,
-		}
-	}
-
-	var transitions []transitionDTO
-	if _, err := c.apiClient.DoPOST(ctx, u, body, &transitions, "ExecuteTransition"); err != nil {
-		return nil, err
-	}
-
-	result := make([]domain.TrackerTransition, len(transitions))
-	for i, t := range transitions {
-		result[i] = transitionToTrackerTransition(t)
-	}
-
-	return &domain.TrackerTransitionExecuteResponse{Transitions: result}, nil
-}
-
-// AddComment adds a comment to an issue.
-func (c *Client) AddComment(
-	ctx context.Context,
-	req *domain.TrackerCommentAddRequest,
-) (*domain.TrackerCommentAddResponse, error) {
-	u := fmt.Sprintf("%s/v3/issues/%s/comments", c.baseURL, url.PathEscape(req.IssueID))
-
-	isAddToFollowers := req.IsAddToFollowers
-	body := addCommentRequestDTO{
-		Text:              req.Text,
-		AttachmentIDs:     apihelpers.StringsToStringIDs(req.AttachmentIDs),
-		MarkupType:        req.MarkupType,
-		Summonees:         req.Summonees,
-		MaillistSummonees: req.MaillistSummonees,
-		IsAddToFollowers:  &isAddToFollowers,
-	}
-
-	var comment commentDTO
-	if _, err := c.apiClient.DoPOST(ctx, u, body, &comment, "AddComment"); err != nil {
-		return nil, err
-	}
-
-	result := commentToTrackerComment(comment)
-	return &domain.TrackerCommentAddResponse{Comment: result}, nil
-}
-
-// UpdateComment updates an existing comment on an issue.
-func (c *Client) UpdateComment(
-	ctx context.Context,
-	req *domain.TrackerCommentUpdateRequest,
-) (*domain.TrackerCommentUpdateResponse, error) {
-	u := fmt.Sprintf("%s/v3/issues/%s/comments/%s",
-		c.baseURL, url.PathEscape(req.IssueID), url.PathEscape(req.CommentID))
-
-	body := updateCommentRequestDTO{
-		Text:              req.Text,
-		AttachmentIDs:     apihelpers.StringsToStringIDs(req.AttachmentIDs),
-		MarkupType:        req.MarkupType,
-		Summonees:         req.Summonees,
-		MaillistSummonees: req.MaillistSummonees,
-	}
-
-	var comment commentDTO
-	if _, err := c.apiClient.DoPATCH(ctx, u, body, &comment, "UpdateComment"); err != nil {
-		return nil, err
-	}
-
-	result := commentToTrackerComment(comment)
-	return &domain.TrackerCommentUpdateResponse{Comment: result}, nil
-}
-
-// DeleteComment deletes a comment from an issue.
-func (c *Client) DeleteComment(ctx context.Context, req *domain.TrackerCommentDeleteRequest) error {
-	u := fmt.Sprintf("%s/v3/issues/%s/comments/%s",
-		c.baseURL, url.PathEscape(req.IssueID), url.PathEscape(req.CommentID))
-
-	if _, err := c.apiClient.DoDELETE(ctx, u, "DeleteComment"); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // ListIssueAttachments lists attachments for an issue.
 func (c *Client) ListIssueAttachments(ctx context.Context, issueID string) ([]domain.TrackerAttachment, error) {
 	u := fmt.Sprintf("%s/v3/issues/%s/attachments", c.baseURL, url.PathEscape(issueID))
@@ -441,18 +261,6 @@ func (c *Client) ListIssueAttachments(ctx context.Context, issueID string) ([]do
 	}
 
 	return result, nil
-}
-
-// DeleteAttachment deletes an attachment from an issue.
-func (c *Client) DeleteAttachment(ctx context.Context, req *domain.TrackerAttachmentDeleteRequest) error {
-	u := fmt.Sprintf("%s/v3/issues/%s/attachments/%s/",
-		c.baseURL, url.PathEscape(req.IssueID), url.PathEscape(req.FileID))
-
-	if _, err := c.apiClient.DoDELETE(ctx, u, "DeleteAttachment"); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // GetQueue gets a queue by ID or key.
@@ -477,55 +285,6 @@ func (c *Client) GetQueue(
 
 	result := queueDetailToTrackerQueueDetail(queue)
 	return &result, nil
-}
-
-// CreateQueue creates a new queue.
-func (c *Client) CreateQueue(
-	ctx context.Context, req *domain.TrackerQueueCreateRequest,
-) (*domain.TrackerQueueCreateResponse, error) {
-	u := c.baseURL + "/v3/queues/"
-
-	body := createQueueRequestDTO{
-		Key:             req.Key,
-		Name:            req.Name,
-		Lead:            req.Lead,
-		DefaultType:     req.DefaultType,
-		DefaultPriority: req.DefaultPriority,
-	}
-
-	var queue queueDetailDTO
-	if _, err := c.apiClient.DoPOST(ctx, u, body, &queue, "CreateQueue"); err != nil {
-		return nil, err
-	}
-
-	result := queueDetailToTrackerQueueDetail(queue)
-	return &domain.TrackerQueueCreateResponse{Queue: result}, nil
-}
-
-// DeleteQueue deletes a queue.
-func (c *Client) DeleteQueue(ctx context.Context, req *domain.TrackerQueueDeleteRequest) error {
-	u := fmt.Sprintf("%s/v3/queues/%s", c.baseURL, url.PathEscape(req.QueueID))
-
-	if _, err := c.apiClient.DoDELETE(ctx, u, "DeleteQueue"); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// RestoreQueue restores a deleted queue.
-func (c *Client) RestoreQueue(
-	ctx context.Context, req *domain.TrackerQueueRestoreRequest,
-) (*domain.TrackerQueueRestoreResponse, error) {
-	u := fmt.Sprintf("%s/v3/queues/%s/_restore", c.baseURL, url.PathEscape(req.QueueID))
-
-	var queue queueDetailDTO
-	if _, err := c.apiClient.DoPOST(ctx, u, nil, &queue, "RestoreQueue"); err != nil {
-		return nil, err
-	}
-
-	result := queueDetailToTrackerQueueDetail(queue)
-	return &domain.TrackerQueueRestoreResponse{Queue: result}, nil
 }
 
 // GetCurrentUser gets the current authenticated user.
@@ -607,37 +366,6 @@ func (c *Client) ListIssueLinks(ctx context.Context, issueID string) ([]domain.T
 	return result, nil
 }
 
-// CreateLink creates a link between issues.
-func (c *Client) CreateLink(
-	ctx context.Context, req *domain.TrackerLinkCreateRequest,
-) (*domain.TrackerLinkCreateResponse, error) {
-	u := fmt.Sprintf("%s/v3/issues/%s/links", c.baseURL, url.PathEscape(req.IssueID))
-
-	body := createLinkRequestDTO{
-		Relationship: req.Relationship,
-		Issue:        req.TargetIssue,
-	}
-
-	var link linkDTO
-	if _, err := c.apiClient.DoPOST(ctx, u, body, &link, "CreateLink"); err != nil {
-		return nil, err
-	}
-
-	return &domain.TrackerLinkCreateResponse{
-		Link: linkToTrackerLink(link),
-	}, nil
-}
-
-// DeleteLink deletes a link.
-func (c *Client) DeleteLink(ctx context.Context, req *domain.TrackerLinkDeleteRequest) error {
-	u := fmt.Sprintf("%s/v3/issues/%s/links/%s", c.baseURL, url.PathEscape(req.IssueID), url.PathEscape(req.LinkID))
-
-	if _, err := c.apiClient.DoDELETE(ctx, u, "DeleteLink"); err != nil {
-		return err
-	}
-	return nil
-}
-
 // GetIssueChangelog gets the changelog for an issue.
 func (c *Client) GetIssueChangelog(
 	ctx context.Context, issueID string, opts domain.TrackerGetChangelogOpts,
@@ -663,32 +391,6 @@ func (c *Client) GetIssueChangelog(
 		result[i] = changelogEntryToTrackerChangelogEntry(entry)
 	}
 	return result, nil
-}
-
-// MoveIssue moves an issue to another queue.
-func (c *Client) MoveIssue(
-	ctx context.Context, req *domain.TrackerIssueMoveRequest,
-) (*domain.TrackerIssueMoveResponse, error) {
-	u, err := url.Parse(fmt.Sprintf("%s/v3/issues/%s/_move", c.baseURL, url.PathEscape(req.IssueID)))
-	if err != nil {
-		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
-	}
-
-	q := u.Query()
-	q.Set("queue", req.Queue)
-	if req.InitialStatus {
-		q.Set("InitialStatus", "true")
-	}
-	u.RawQuery = q.Encode()
-
-	var issue issueDTO
-	if _, err := c.apiClient.DoPOST(ctx, u.String(), nil, &issue, "MoveIssue"); err != nil {
-		return nil, err
-	}
-
-	return &domain.TrackerIssueMoveResponse{
-		Issue: issueToTrackerIssue(issue),
-	}, nil
 }
 
 // ListProjectComments lists comments for a project entity.
