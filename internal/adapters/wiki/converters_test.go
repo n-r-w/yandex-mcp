@@ -36,7 +36,12 @@ func TestPageToWikiPage(t *testing.T) {
 			},
 			Redirect: &redirectDTO{
 				PageID: "456",
-				Slug:   "users/docs/old-readme",
+				RedirectTarget: &redirectTargetDTO{
+					ID:       "789",
+					Slug:     "users/docs/old-readme",
+					Title:    "Old Readme",
+					PageType: "wiki_page",
+				},
 			},
 		}
 
@@ -61,7 +66,11 @@ func TestPageToWikiPage(t *testing.T) {
 
 		require.NotNil(t, result.Redirect)
 		assert.Equal(t, "456", result.Redirect.PageID)
-		assert.Equal(t, "users/docs/old-readme", result.Redirect.Slug)
+		require.NotNil(t, result.Redirect.RedirectTarget)
+		assert.Equal(t, "789", result.Redirect.RedirectTarget.ID)
+		assert.Equal(t, "users/docs/old-readme", result.Redirect.RedirectTarget.Slug)
+		assert.Equal(t, "Old Readme", result.Redirect.RedirectTarget.Title)
+		assert.Equal(t, "wiki_page", result.Redirect.RedirectTarget.PageType)
 	})
 
 	t.Run("handles nil attributes and redirect", func(t *testing.T) {

@@ -35,10 +35,21 @@ func mapPageToOutput(p *domain.WikiPage) *pageOutputDTO {
 	}
 
 	if p.Redirect != nil {
-		out.Redirect = &redirectOutputDTO{
-			PageID: p.Redirect.PageID,
-			Slug:   p.Redirect.Slug,
+		redirect := &redirectOutputDTO{
+			PageID:         p.Redirect.PageID,
+			RedirectTarget: nil,
 		}
+
+		if p.Redirect.RedirectTarget != nil {
+			redirect.RedirectTarget = &redirectTargetOutputDTO{
+				ID:       p.Redirect.RedirectTarget.ID,
+				Slug:     p.Redirect.RedirectTarget.Slug,
+				Title:    p.Redirect.RedirectTarget.Title,
+				PageType: p.Redirect.RedirectTarget.PageType,
+			}
+		}
+
+		out.Redirect = redirect
 	}
 
 	return out

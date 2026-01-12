@@ -25,8 +25,16 @@ type WikiAttributes struct {
 
 // WikiRedirect represents redirect information for a Wiki page.
 type WikiRedirect struct {
-	PageID string
-	Slug   string
+	PageID         string
+	RedirectTarget *WikiRedirectTarget
+}
+
+// WikiRedirectTarget represents the target page of a redirect.
+type WikiRedirectTarget struct {
+	ID       string
+	Slug     string
+	Title    string
+	PageType string
 }
 
 // WikiResourcesPage represents a paginated list of Wiki resources.

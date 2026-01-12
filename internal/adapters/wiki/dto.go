@@ -27,8 +27,16 @@ type attributesDTO struct {
 
 // redirectDTO represents page redirect info.
 type redirectDTO struct {
-	PageID apihelpers.StringID `json:"page_id"`
-	Slug   string              `json:"slug"`
+	PageID         apihelpers.StringID `json:"page_id"`
+	RedirectTarget *redirectTargetDTO  `json:"redirect_target,omitempty"`
+}
+
+// redirectTargetDTO represents the target page of a redirect.
+type redirectTargetDTO struct {
+	ID       string `json:"id"`
+	Slug     string `json:"slug"`
+	Title    string `json:"title"`
+	PageType string `json:"page_type"`
 }
 
 // resourceDTO represents a page resource (attachment, grid, or sharepoint resource).

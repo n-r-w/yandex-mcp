@@ -50,9 +50,20 @@ func redirectToWikiRedirect(r *redirectDTO) *domain.WikiRedirect {
 	if r == nil {
 		return nil
 	}
+
+	var target *domain.WikiRedirectTarget
+	if r.RedirectTarget != nil {
+		target = &domain.WikiRedirectTarget{
+			ID:       r.RedirectTarget.ID,
+			Slug:     r.RedirectTarget.Slug,
+			Title:    r.RedirectTarget.Title,
+			PageType: r.RedirectTarget.PageType,
+		}
+	}
+
 	return &domain.WikiRedirect{
-		PageID: r.PageID.String(),
-		Slug:   r.Slug,
+		PageID:         r.PageID.String(),
+		RedirectTarget: target,
 	}
 }
 

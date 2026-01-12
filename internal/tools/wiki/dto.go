@@ -77,8 +77,16 @@ type attributesOutputDTO struct {
 
 // redirectOutputDTO contains page redirect info.
 type redirectOutputDTO struct {
-	PageID string `json:"page_id"`
-	Slug   string `json:"slug"`
+	PageID         string                   `json:"page_id"`
+	RedirectTarget *redirectTargetOutputDTO `json:"redirect_target,omitempty"`
+}
+
+// redirectTargetOutputDTO represents the target of a redirect.
+type redirectTargetOutputDTO struct {
+	ID       string `json:"id"`
+	Slug     string `json:"slug"`
+	Title    string `json:"title"`
+	PageType string `json:"page_type"`
 }
 
 // resourcesListOutputDTO is the output for wiki_page_resources_list tool.
