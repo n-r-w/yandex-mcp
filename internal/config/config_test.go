@@ -145,6 +145,7 @@ func TestLoad_DefaultAttachExtensions(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, defaultAttachExtensions(), cfg.AttachAllowedExtensions)
+	assert.Equal(t, defaultTextAttachExtensions(), cfg.AttachViewExtensions)
 	assert.Nil(t, cfg.AttachAllowedDirs)
 }
 
@@ -156,6 +157,16 @@ func TestLoad_AttachExtensionsOverride(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, []string{"txt", "md", "tar.gz"}, cfg.AttachAllowedExtensions)
+}
+
+func TestLoad_AttachViewExtensionsOverride(t *testing.T) {
+	t.Setenv("YANDEX_CLOUD_ORG_ID", "test-org")
+	t.Setenv("YANDEX_MCP_ATTACH_VIEW_EXT", "txt,md,rtf")
+
+	cfg, err := Load()
+
+	require.NoError(t, err)
+	assert.Equal(t, []string{"txt", "md", "rtf"}, cfg.AttachViewExtensions)
 }
 
 func TestLoad_AttachDirsOverride(t *testing.T) {
@@ -188,4 +199,15 @@ func TestLoad_AttachExtensionsInvalid(t *testing.T) {
 	require.Error(t, err)
 	assert.Nil(t, cfg)
 	assert.Contains(t, err.Error(), "YANDEX_MCP_ATTACH_EXT")
+}
+
+func TestLoad_AttachViewExtensionsInvalid(t *testing.T) {
+	t.Setenv("YANDEX_CLOUD_ORG_ID", "test-org")
+	t.Setenv("YANDEX_MCP_ATTACH_VIEW_EXT", "t*xt")
+
+	cfg, err := Load()
+
+	require.Error(t, err)
+	assert.Nil(t, cfg)
+	assert.Contains(t, err.Error(), "YANDEX_MCP_ATTACH_VIEW_EXT")
 }

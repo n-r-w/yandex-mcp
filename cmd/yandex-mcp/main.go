@@ -108,6 +108,7 @@ func run(serverVersion string) error {
 			trackerClient,
 			trackerTools,
 			cfg.AttachAllowedExtensions,
+			cfg.AttachViewExtensions,
 			cfg.AttachAllowedDirs,
 		),
 	}

@@ -11,6 +11,7 @@ type Registrator struct {
 	adapter           ITrackerAdapter
 	enabledTools      map[domain.TrackerTool]bool
 	allowedExtensions []string
+	allowedViewExts   []string
 	allowedDirs       []string
 }
 
@@ -22,6 +23,7 @@ func NewRegistrator(
 	adapter ITrackerAdapter,
 	enabledTools []domain.TrackerTool,
 	allowedExtensions []string,
+	allowedViewExts []string,
 	allowedDirs []string,
 ) *Registrator {
 	toolMap := make(map[domain.TrackerTool]bool, len(enabledTools))
@@ -33,6 +35,7 @@ func NewRegistrator(
 		adapter:           adapter,
 		enabledTools:      toolMap,
 		allowedExtensions: normalizeAllowedExtensions(allowedExtensions),
+		allowedViewExts:   normalizeAllowedExtensions(allowedViewExts),
 		allowedDirs:       normalizeAllowedDirs(allowedDirs),
 	}
 }
@@ -91,7 +94,7 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 	if r.enabledTools[domain.TrackerToolAttachmentGet] {
 		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
 			Name:        domain.TrackerToolAttachmentGet.String(),
-			Description: "Downloads a file attached to a Yandex Tracker issue",
+			Description: "Downloads a file attached to a Yandex Tracker issue; requires exactly one of save_path or get_content",
 		}, server.MakeHandler(r.getAttachment))
 	}
 

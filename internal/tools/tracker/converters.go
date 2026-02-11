@@ -249,6 +249,7 @@ func mapAttachmentsToOutput(attachments []domain.TrackerAttachment) *attachments
 func mapAttachmentContentToOutput(
 	content *domain.TrackerAttachmentContent,
 	savedPath string,
+	inlineContent string,
 ) *attachmentContentOutputDTO {
 	if content == nil {
 		return nil
@@ -257,6 +258,7 @@ func mapAttachmentContentToOutput(
 		FileName:    content.FileName,
 		ContentType: content.ContentType,
 		SavedPath:   savedPath,
+		Content:     inlineContent,
 		Size:        int64(len(content.Data)),
 	}
 }

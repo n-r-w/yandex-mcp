@@ -81,7 +81,7 @@ func TestServer_ToolsRegistered(t *testing.T) {
 	srv, err := New("v1.0.0", registrators)
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	// Connect to server using in-memory transport.
 	client := mcp.NewClient(

@@ -1,7 +1,6 @@
 package itest
 
 import (
-	"context"
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -17,13 +16,14 @@ import (
 
 var (
 	defaultAttachExtensions = []string{"txt"}
+	defaultAttachViewExts   = []string{"txt"}
 	defaultAttachDirs       []string
 )
 
 func listToolNames(t *testing.T, srv *server.Server) []string {
 	t.Helper()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	client := mcp.NewClient(
 		&mcp.Implementation{ //nolint:exhaustruct // optional fields use defaults
@@ -64,6 +64,7 @@ func TestServerIntegration_ReadOnlyToolsRegistered(t *testing.T) {
 			trackerMock,
 			domain.TrackerAllTools(),
 			defaultAttachExtensions,
+			defaultAttachViewExts,
 			defaultAttachDirs,
 		),
 	}
@@ -100,6 +101,7 @@ func TestServerIntegration_AllowlistGating_ReducedList(t *testing.T) {
 			trackerMock,
 			trackerTools,
 			defaultAttachExtensions,
+			defaultAttachViewExts,
 			defaultAttachDirs,
 		),
 	}
@@ -131,6 +133,7 @@ func TestServerIntegration_EmptyAllowlist_NoToolsRegistered(t *testing.T) {
 			trackerMock,
 			nil,
 			defaultAttachExtensions,
+			defaultAttachViewExts,
 			defaultAttachDirs,
 		),
 	}

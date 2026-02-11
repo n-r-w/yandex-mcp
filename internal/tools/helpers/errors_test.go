@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -84,7 +83,7 @@ func TestToSafeError(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			result := ToSafeError(context.Background(), tt.serviceName, tt.err)
+			result := ToSafeError(t.Context(), tt.serviceName, tt.err)
 			assert.Contains(t, result.Error(), tt.wantContains)
 		})
 	}
@@ -93,6 +92,6 @@ func TestToSafeError(t *testing.T) {
 func TestToSafeError_WithNilError(t *testing.T) {
 	t.Parallel()
 
-	result := ToSafeError(context.Background(), "test-service", nil)
+	result := ToSafeError(t.Context(), "test-service", nil)
 	assert.NoError(t, result, "ToSafeError should return nil when given nil error")
 }

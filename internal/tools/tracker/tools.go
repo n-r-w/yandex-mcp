@@ -174,19 +174,27 @@ func (r *Registrator) getAttachment(
 	if input.FileName == "" {
 		return nil, errors.New("file_name is required")
 	}
-	if input.SavePath == "" {
-		return nil, errors.New("save_path is required")
+	if input.SavePath == "" && !input.GetContent {
+		return nil, errors.New("save_path or get_content is required")
+	}
+	if input.SavePath != "" && input.GetContent {
+		return nil, errors.New("save_path and get_content cannot be used together")
+	}
+	if input.GetContent {
+		if err := r.validateAttachmentViewExtension(input.FileName); err != nil {
+			return nil, err
+		}
 	}
 
-	fullPath, savedPath, err := r.resolveSavePath(ctx, input.SavePath)
-	if err != nil {
-		return nil, err
-	}
-	if !input.Override {
-		if _, err := os.Stat(fullPath); err == nil {
-			return nil, errors.New("save_path already exists")
-		} else if !os.IsNotExist(err) {
-			return nil, r.logError(ctx, fmt.Errorf("check save_path: %w", err))
+	var (
+		fullPath  string
+		savedPath string
+	)
+	if input.SavePath != "" {
+		var err error
+		fullPath, savedPath, err = r.prepareSavePath(ctx, input.SavePath, input.Override)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -195,11 +203,17 @@ func (r *Registrator) getAttachment(
 		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
 	}
 
-	if err := r.writeAttachment(fullPath, input.Override, content.Data); err != nil {
-		return nil, r.logError(ctx, err)
+	inlineContent := ""
+	if input.GetContent {
+		inlineContent = string(content.Data)
+	}
+	if input.SavePath != "" {
+		if err := r.writeAttachment(fullPath, input.Override, content.Data); err != nil {
+			return nil, r.logError(ctx, err)
+		}
 	}
 
-	return mapAttachmentContentToOutput(content, savedPath), nil
+	return mapAttachmentContentToOutput(content, savedPath, inlineContent), nil
 }
 
 // getAttachmentPreview downloads an attachment thumbnail for an issue.
@@ -216,16 +230,9 @@ func (r *Registrator) getAttachmentPreview(
 		return nil, errors.New("save_path is required")
 	}
 
-	fullPath, savedPath, err := r.resolveSavePath(ctx, input.SavePath)
+	fullPath, savedPath, err := r.prepareSavePath(ctx, input.SavePath, input.Override)
 	if err != nil {
 		return nil, err
-	}
-	if !input.Override {
-		if _, err := os.Stat(fullPath); err == nil {
-			return nil, errors.New("save_path already exists")
-		} else if !os.IsNotExist(err) {
-			return nil, r.logError(ctx, fmt.Errorf("check save_path: %w", err))
-		}
 	}
 
 	content, err := r.adapter.GetIssueAttachmentPreview(ctx, input.IssueID, input.AttachmentID)
@@ -237,7 +244,7 @@ func (r *Registrator) getAttachmentPreview(
 		return nil, r.logError(ctx, err)
 	}
 
-	return mapAttachmentContentToOutput(content, savedPath), nil
+	return mapAttachmentContentToOutput(content, savedPath, ""), nil
 }
 
 // resolveSavePath validates the absolute save path against attachment safety rules.
@@ -346,6 +353,24 @@ func (r *Registrator) allowedPathsSummary() string {
 	return formatHomeAllowedPaths(homeDir)
 }
 
+// prepareSavePath validates the destination path and checks overwrite rules.
+func (r *Registrator) prepareSavePath(ctx context.Context, savePath string, override bool) (string, string, error) {
+	fullPath, savedPath, err := r.resolveSavePath(ctx, savePath)
+	if err != nil {
+		return "", "", err
+	}
+	if override {
+		return fullPath, savedPath, nil
+	}
+	if _, err := os.Stat(fullPath); err == nil {
+		return "", "", errors.New("save_path already exists")
+	} else if !os.IsNotExist(err) {
+		return "", "", r.logError(ctx, fmt.Errorf("check save_path: %w", err))
+	}
+
+	return fullPath, savedPath, nil
+}
+
 // validateAttachmentExtension blocks unsupported file types to reduce risk.
 func (r *Registrator) validateAttachmentExtension(cleanPath string) error {
 	allowedExtensions := formatAllowedExtensions(r.allowedExtensions)
@@ -359,6 +384,21 @@ func (r *Registrator) validateAttachmentExtension(cleanPath string) error {
 		}
 	}
 	return fmt.Errorf("save_path extension is not allowed; allowed extensions: %s", allowedExtensions)
+}
+
+// validateAttachmentViewExtension blocks unsupported file types for inline viewing.
+func (r *Registrator) validateAttachmentViewExtension(fileName string) error {
+	allowedExtensions := formatAllowedExtensions(r.allowedViewExts)
+	if len(r.allowedViewExts) == 0 {
+		return fmt.Errorf("get_content extensions list is empty; allowed extensions: %s", allowedExtensions)
+	}
+	baseName := strings.ToLower(filepath.Base(fileName))
+	for _, ext := range r.allowedViewExts {
+		if strings.HasSuffix(baseName, ext) {
+			return nil
+		}
+	}
+	return fmt.Errorf("file_name extension is not allowed for get_content; allowed extensions: %s", allowedExtensions)
 }
 
 // validateAttachmentDirectory enforces the write scope to prevent unintended writes.

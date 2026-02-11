@@ -1,7 +1,6 @@
 package tracker
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -50,7 +49,7 @@ func TestClient_HeaderInjection(t *testing.T) {
 	client := NewClient(newTestConfig(server.URL, testOrgID), tokenProvider)
 
 	//nolint:exhaustruct // test only checks headers
-	_, err := client.GetIssue(context.Background(), "TEST-1", domain.TrackerGetIssueOpts{})
+	_, err := client.GetIssue(t.Context(), "TEST-1", domain.TrackerGetIssueOpts{})
 	require.NoError(t, err)
 
 	assert.Equal(t, "Bearer "+testToken, capturedHeaders.Get(apihelpers.HeaderAuthorization))
@@ -85,7 +84,7 @@ func TestClient_HeaderInjection_POST(t *testing.T) {
 	client := NewClient(newTestConfig(server.URL, testOrgID), tokenProvider)
 
 	//nolint:exhaustruct // test only checks headers
-	_, err := client.SearchIssues(context.Background(), domain.TrackerSearchIssuesOpts{})
+	_, err := client.SearchIssues(t.Context(), domain.TrackerSearchIssuesOpts{})
 	require.NoError(t, err)
 
 	assert.Equal(t, "Bearer "+testToken, capturedHeaders.Get(apihelpers.HeaderAuthorization))
@@ -113,7 +112,7 @@ func TestClient_Non2xx_ReturnsUpstreamError_Sanitized(t *testing.T) {
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
 	//nolint:exhaustruct // test checks error conversion
-	_, err := client.GetIssue(context.Background(), "TEST-999", domain.TrackerGetIssueOpts{})
+	_, err := client.GetIssue(t.Context(), "TEST-999", domain.TrackerGetIssueOpts{})
 	require.Error(t, err)
 
 	var upstreamErr domain.UpstreamError
@@ -145,7 +144,7 @@ func TestClient_Non2xx_FallbackMessage(t *testing.T) {
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
 	//nolint:exhaustruct // test checks fallback message
-	_, err := client.GetIssue(context.Background(), "TEST-1", domain.TrackerGetIssueOpts{})
+	_, err := client.GetIssue(t.Context(), "TEST-1", domain.TrackerGetIssueOpts{})
 	require.Error(t, err)
 
 	var upstreamErr domain.UpstreamError
@@ -178,7 +177,7 @@ func TestClient_GetIssue_WithExpand(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	issue, err := client.GetIssue(context.Background(), "TEST-42", domain.TrackerGetIssueOpts{Expand: "attachments"})
+	issue, err := client.GetIssue(t.Context(), "TEST-42", domain.TrackerGetIssueOpts{Expand: "attachments"})
 	require.NoError(t, err)
 
 	assert.Equal(t, http.MethodGet, capturedMethod)
@@ -220,7 +219,7 @@ func TestClient_SearchIssues_StandardPagination(t *testing.T) {
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
 	//nolint:exhaustruct // test uses partial opts
-	result, err := client.SearchIssues(context.Background(), domain.TrackerSearchIssuesOpts{
+	result, err := client.SearchIssues(t.Context(), domain.TrackerSearchIssuesOpts{
 		Filter:  map[string]string{"queue": "TEST"},
 		Order:   "+updated",
 		PerPage: 20,
@@ -271,7 +270,7 @@ func TestClient_SearchIssues_ScrollPagination(t *testing.T) {
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
 	//nolint:exhaustruct // test uses scroll pagination opts
-	result, err := client.SearchIssues(context.Background(), domain.TrackerSearchIssuesOpts{
+	result, err := client.SearchIssues(t.Context(), domain.TrackerSearchIssuesOpts{
 		Query:           "Queue: TEST",
 		ScrollType:      "sorted",
 		PerScroll:       500,
@@ -312,7 +311,7 @@ func TestClient_SearchIssues_ScrollPagination_SubsequentRequest(t *testing.T) {
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
 	//nolint:exhaustruct // test uses only scrollID
-	result, err := client.SearchIssues(context.Background(), domain.TrackerSearchIssuesOpts{
+	result, err := client.SearchIssues(t.Context(), domain.TrackerSearchIssuesOpts{
 		ScrollID: "scroll-id-abc123",
 	})
 	require.NoError(t, err)
@@ -349,7 +348,7 @@ func TestClient_CountIssues_WithFilter(t *testing.T) {
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
 	//nolint:exhaustruct // test uses only filter
-	count, err := client.CountIssues(context.Background(), domain.TrackerCountIssuesOpts{
+	count, err := client.CountIssues(t.Context(), domain.TrackerCountIssuesOpts{
 		Filter: map[string]string{"queue": "JUNE", "assignee": "empty()"},
 	})
 	require.NoError(t, err)
@@ -381,7 +380,7 @@ func TestClient_CountIssues_WithQuery(t *testing.T) {
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
 	//nolint:exhaustruct // test uses only query
-	count, err := client.CountIssues(context.Background(), domain.TrackerCountIssuesOpts{
+	count, err := client.CountIssues(t.Context(), domain.TrackerCountIssuesOpts{
 		Query: "Queue: TEST Assignee: me()",
 	})
 	require.NoError(t, err)
@@ -424,7 +423,7 @@ func TestClient_ListIssueTransitions(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	transitions, err := client.ListIssueTransitions(context.Background(), "TEST-42")
+	transitions, err := client.ListIssueTransitions(t.Context(), "TEST-42")
 	require.NoError(t, err)
 
 	assert.Equal(t, http.MethodGet, capturedMethod)
@@ -464,7 +463,7 @@ func TestClient_ListQueues_WithPagination(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	result, err := client.ListQueues(context.Background(), domain.TrackerListQueuesOpts{
+	result, err := client.ListQueues(t.Context(), domain.TrackerListQueuesOpts{
 		Expand:  "projects,team",
 		PerPage: 10,
 		Page:    2,
@@ -510,7 +509,7 @@ func TestClient_ListIssueComments_WithPagination(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	result, err := client.ListIssueComments(context.Background(), "TEST-1", domain.TrackerListCommentsOpts{
+	result, err := client.ListIssueComments(t.Context(), "TEST-1", domain.TrackerListCommentsOpts{
 		Expand:  "attachments",
 		PerPage: 25,
 		ID:      "50",
@@ -552,7 +551,7 @@ func TestClient_GetIssueAttachment(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	result, err := client.GetIssueAttachment(context.Background(), "TEST-1", "4159", "attachment.txt")
+	result, err := client.GetIssueAttachment(t.Context(), "TEST-1", "4159", "attachment.txt")
 	require.NoError(t, err)
 	assert.Equal(t, http.MethodGet, capturedMethod)
 	assert.Contains(t, capturedURL, "/v3/issues/TEST-1/attachments/4159/attachment.txt")
@@ -584,7 +583,7 @@ func TestClient_GetIssueAttachmentPreview(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	result, err := client.GetIssueAttachmentPreview(context.Background(), "TEST-1", "4159")
+	result, err := client.GetIssueAttachmentPreview(t.Context(), "TEST-1", "4159")
 	require.NoError(t, err)
 	assert.Equal(t, http.MethodGet, capturedMethod)
 	assert.Contains(t, capturedURL, "/v3/issues/TEST-1/thumbnails/4159")
@@ -613,7 +612,7 @@ func TestClient_UpstreamError_NoTokenLeak(t *testing.T) {
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
 	//nolint:exhaustruct // test checks token leak
-	_, err := client.GetIssue(context.Background(), "TEST-1", domain.TrackerGetIssueOpts{})
+	_, err := client.GetIssue(t.Context(), "TEST-1", domain.TrackerGetIssueOpts{})
 	require.Error(t, err)
 
 	errStr := err.Error()
@@ -642,7 +641,7 @@ func TestClient_ErrorCodes_401(t *testing.T) {
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
 	//nolint:exhaustruct // test checks 401 handling
-	_, err := client.GetIssue(context.Background(), "TEST-1", domain.TrackerGetIssueOpts{})
+	_, err := client.GetIssue(t.Context(), "TEST-1", domain.TrackerGetIssueOpts{})
 	require.Error(t, err)
 
 	var upstreamErr domain.UpstreamError
@@ -670,7 +669,7 @@ func TestClient_ErrorCodes_403(t *testing.T) {
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
 	//nolint:exhaustruct // test checks 403 handling
-	_, err := client.GetIssue(context.Background(), "TEST-1", domain.TrackerGetIssueOpts{})
+	_, err := client.GetIssue(t.Context(), "TEST-1", domain.TrackerGetIssueOpts{})
 	require.Error(t, err)
 
 	var upstreamErr domain.UpstreamError
@@ -698,7 +697,7 @@ func TestClient_ErrorCodes_404(t *testing.T) {
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
 	//nolint:exhaustruct // test checks 404 handling
-	_, err := client.GetIssue(context.Background(), "TEST-999", domain.TrackerGetIssueOpts{})
+	_, err := client.GetIssue(t.Context(), "TEST-999", domain.TrackerGetIssueOpts{})
 	require.Error(t, err)
 
 	var upstreamErr domain.UpstreamError
@@ -726,7 +725,7 @@ func TestClient_ErrorCodes_422(t *testing.T) {
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
 	//nolint:exhaustruct // test checks 422 handling
-	_, err := client.SearchIssues(context.Background(), domain.TrackerSearchIssuesOpts{Query: "invalid"})
+	_, err := client.SearchIssues(t.Context(), domain.TrackerSearchIssuesOpts{Query: "invalid"})
 	require.Error(t, err)
 
 	var upstreamErr domain.UpstreamError
@@ -754,7 +753,7 @@ func TestClient_ErrorCodes_429(t *testing.T) {
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
 	//nolint:exhaustruct // test checks 429 handling
-	_, err := client.SearchIssues(context.Background(), domain.TrackerSearchIssuesOpts{})
+	_, err := client.SearchIssues(t.Context(), domain.TrackerSearchIssuesOpts{})
 	require.Error(t, err)
 
 	var upstreamErr domain.UpstreamError
@@ -785,7 +784,7 @@ func TestClient_IssueID_PathEscaping(t *testing.T) {
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
 	//nolint:exhaustruct // test checks path escaping
-	_, err := client.GetIssue(context.Background(), "TEST/SPECIAL-1", domain.TrackerGetIssueOpts{})
+	_, err := client.GetIssue(t.Context(), "TEST/SPECIAL-1", domain.TrackerGetIssueOpts{})
 	require.NoError(t, err)
 
 	// RequestURI should contain properly escaped path
@@ -814,7 +813,7 @@ func TestClient_SearchIssues_QueryLanguage(t *testing.T) {
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
 	//nolint:exhaustruct // test checks query language
-	_, err := client.SearchIssues(context.Background(), domain.TrackerSearchIssuesOpts{
+	_, err := client.SearchIssues(t.Context(), domain.TrackerSearchIssuesOpts{
 		Query: `epic: notEmpty() Queue: TREK "Sort by": Updated DESC`,
 	})
 	require.NoError(t, err)
@@ -841,7 +840,7 @@ func TestClient_ErrorResponse_WithErrorsArray(t *testing.T) {
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
 	//nolint:exhaustruct // test checks error array
-	_, err := client.GetIssue(context.Background(), "TEST-1", domain.TrackerGetIssueOpts{})
+	_, err := client.GetIssue(t.Context(), "TEST-1", domain.TrackerGetIssueOpts{})
 	require.Error(t, err)
 
 	var upstreamErr domain.UpstreamError

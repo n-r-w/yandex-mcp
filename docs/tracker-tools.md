@@ -260,15 +260,20 @@ Returns `AttachmentsListOutput`:
 
 ## tracker_issue_attachment_get
 
-Downloads a file attached to a Yandex Tracker issue and saves it to the local workspace.
+Downloads a file attached to a Yandex Tracker issue. Either saves it to the local workspace or returns text content.
 
 ### Input
 
 - `issue_id_or_key` (string, required): Issue ID or key (for example, `TEST-1`).
 - `attachment_id` (string, required): Attachment ID (for example, `4159`).
 - `file_name` (string, required): Attachment file name (for example, `attachment.txt`).
-- `save_path` (string, required): Absolute path to save the attachment (for example, `/Users/me/attachments/attachment.txt`).
+- `save_path` (string, optional): Absolute path to save the attachment (for example, `/Users/me/attachments/attachment.txt`).
+- `get_content` (boolean, optional): Return text content in output when `true`.
 - `override` (boolean, optional): Overwrite existing file if `true` (default: `false`).
+
+Requirement:
+
+- Exactly one of `save_path` or `get_content` must be provided.
 
 Notes:
 
@@ -277,6 +282,9 @@ Notes:
 - The allowlist can be replaced via `YANDEX_MCP_ATTACH_EXT` (comma-separated, without dots).
 - By default, `save_path` must be inside the user home directory, must not point to the home root, and must not be within a hidden top-level home subdirectory (for example, `~/.ssh`).
 - The directory restriction can be fully replaced via `YANDEX_MCP_ATTACH_DIR` (comma-separated absolute paths). When it is set, only the provided directories (and their subdirectories) are allowed.
+- When `get_content` is used, the file extension is validated against the text allowlist.
+- The extension for `get_content` is validated using the `file_name` value.
+- The text allowlist can be replaced via `YANDEX_MCP_ATTACH_VIEW_EXT` (comma-separated, without dots).
 
 ### Output
 
@@ -284,7 +292,8 @@ Returns `AttachmentContentOutput`:
 
 - `file_name` (string, optional)
 - `content_type` (string, optional)
-- `saved_path` (string): Path where the attachment was saved (relative to workspace).
+- `saved_path` (string, optional): Path where the attachment was saved (relative to workspace).
+- `content` (string, optional): Attachment text content (raw bytes interpreted as UTF-8) when `get_content` is `true`.
 - `size` (integer): Attachment size in bytes.
 
 ## tracker_issue_attachment_preview_get

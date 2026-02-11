@@ -38,6 +38,9 @@ type Config struct {
 	// AttachAllowedExtensions is the list of allowed attachment extensions (without dots).
 	AttachAllowedExtensions []string
 
+	// AttachViewExtensions is the list of allowed attachment extensions for inline viewing (without dots).
+	AttachViewExtensions []string
+
 	// AttachAllowedDirs is the list of absolute directories allowed for saving attachments.
 	AttachAllowedDirs []string
 }
@@ -50,6 +53,7 @@ type envConfig struct {
 	RefreshPeriodHours int    `env:"YANDEX_IAM_TOKEN_REFRESH_PERIOD" envDefault:"10"`
 	HTTPTimeoutSeconds int    `env:"YANDEX_HTTP_TIMEOUT" envDefault:"30"`
 	AttachExtensions   string `env:"YANDEX_MCP_ATTACH_EXT"`
+	AttachViewExts     string `env:"YANDEX_MCP_ATTACH_VIEW_EXT"`
 	AttachDirs         string `env:"YANDEX_MCP_ATTACH_DIR"`
 }
 
@@ -69,6 +73,14 @@ func Load() (*Config, error) {
 		allowedExtensions = defaultAttachExtensions()
 	}
 
+	viewExtensions, err := parseExtensionEnv(ec.AttachViewExts, "YANDEX_MCP_ATTACH_VIEW_EXT")
+	if err != nil {
+		return nil, err
+	}
+	if len(viewExtensions) == 0 {
+		viewExtensions = defaultTextAttachExtensions()
+	}
+
 	allowedDirs, err := parseDirEnv(ec.AttachDirs, "YANDEX_MCP_ATTACH_DIR")
 	if err != nil {
 		return nil, err
@@ -81,6 +93,7 @@ func Load() (*Config, error) {
 		IAMTokenRefreshPeriod:   resolveRefreshPeriod(ec.RefreshPeriodHours),
 		HTTPTimeout:             time.Duration(ec.HTTPTimeoutSeconds) * time.Second,
 		AttachAllowedExtensions: allowedExtensions,
+		AttachViewExtensions:    viewExtensions,
 		AttachAllowedDirs:       allowedDirs,
 	}
 
@@ -98,8 +111,8 @@ func applyDefault(value, defaultValue string) string {
 	return value
 }
 
-// defaultAttachExtensions provides the default allowlist for attachment saving.
-func defaultAttachExtensions() []string {
+// defaultTextAttachExtensions provides the default allowlist for inline text viewing.
+func defaultTextAttachExtensions() []string {
 	return []string{
 		"txt",
 		"json",
@@ -107,16 +120,27 @@ func defaultAttachExtensions() []string {
 		"yaml",
 		"yml",
 		"md",
+		"csv",
+		"tsv",
+		"rtf",
+	}
+}
+
+// defaultAttachExtensions provides the default allowlist for attachment saving.
+func defaultAttachExtensions() []string {
+	return append(defaultTextAttachExtensions(), defaultNonTextAttachExtensions()...)
+}
+
+// defaultNonTextAttachExtensions provides the default allowlist additions for non-text files.
+func defaultNonTextAttachExtensions() []string {
+	return []string{
 		"pdf",
 		"doc",
 		"docx",
-		"rtf",
 		"odt",
 		"xls",
 		"xlsx",
 		"ods",
-		"csv",
-		"tsv",
 		"ppt",
 		"pptx",
 		"odp",
@@ -241,6 +265,9 @@ func (c *Config) validate() error {
 	}
 	if len(c.AttachAllowedExtensions) == 0 {
 		errs = append(errs, errors.New("YANDEX_MCP_ATTACH_EXT resolved to an empty list"))
+	}
+	if len(c.AttachViewExtensions) == 0 {
+		errs = append(errs, errors.New("YANDEX_MCP_ATTACH_VIEW_EXT resolved to an empty list"))
 	}
 
 	return errors.Join(errs...)

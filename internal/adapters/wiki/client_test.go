@@ -2,7 +2,6 @@
 package wiki
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -50,7 +49,7 @@ func TestClient_HeaderInjection(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, testOrgID), tokenProvider)
 
-	_, err := client.GetPageBySlug(context.Background(), "test/page", domain.WikiGetPageOpts{})
+	_, err := client.GetPageBySlug(t.Context(), "test/page", domain.WikiGetPageOpts{})
 	require.NoError(t, err)
 
 	assert.Equal(t, "Bearer "+testToken, capturedHeaders.Get(apihelpers.HeaderAuthorization))
@@ -76,7 +75,7 @@ func TestClient_Non2xx_ReturnsUpstreamError_Sanitized(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	_, err := client.GetPageByID(context.Background(), "123", domain.WikiGetPageOpts{})
+	_, err := client.GetPageByID(t.Context(), "123", domain.WikiGetPageOpts{})
 	require.Error(t, err)
 
 	var upstreamErr domain.UpstreamError
@@ -108,7 +107,7 @@ func TestClient_Non2xx_FallbackMessage(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	_, err := client.GetPageBySlug(context.Background(), "test/page", domain.WikiGetPageOpts{})
+	_, err := client.GetPageBySlug(t.Context(), "test/page", domain.WikiGetPageOpts{})
 	require.Error(t, err)
 
 	var upstreamErr domain.UpstreamError
@@ -139,7 +138,7 @@ func TestClient_GetPageBySlug_Fields(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	page, err := client.GetPageBySlug(context.Background(), "test/page", domain.WikiGetPageOpts{Fields: []string{"content", "attributes"}})
+	page, err := client.GetPageBySlug(t.Context(), "test/page", domain.WikiGetPageOpts{Fields: []string{"content", "attributes"}})
 	require.NoError(t, err)
 
 	assert.Contains(t, capturedURL, "slug=test%2Fpage")
@@ -175,7 +174,7 @@ func TestClient_ListPageResources_Pagination(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	result, err := client.ListPageResources(context.Background(), "42", domain.WikiListResourcesOpts{
+	result, err := client.ListPageResources(t.Context(), "42", domain.WikiListResourcesOpts{
 		Cursor:         "start-cursor",
 		PageSize:       25,
 		OrderBy:        "created_at",
@@ -224,7 +223,7 @@ func TestClient_ListPageResources_EnforcesMaxPageSize(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	_, err := client.ListPageResources(context.Background(), "1", domain.WikiListResourcesOpts{
+	_, err := client.ListPageResources(t.Context(), "1", domain.WikiListResourcesOpts{
 		Cursor:         "",
 		PageSize:       100, // exceeds max of 50
 		OrderBy:        "",
@@ -291,7 +290,7 @@ func TestClient_ListPageResources_ResourceUnionMapping(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	result, err := client.ListPageResources(context.Background(), "1", domain.WikiListResourcesOpts{
+	result, err := client.ListPageResources(t.Context(), "1", domain.WikiListResourcesOpts{
 		Cursor:         "",
 		PageSize:       0,
 		OrderBy:        "",
@@ -366,7 +365,7 @@ func TestClient_ListPageGrids_Pagination(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	result, err := client.ListPageGrids(context.Background(), "99", domain.WikiListGridsOpts{
+	result, err := client.ListPageGrids(t.Context(), "99", domain.WikiListGridsOpts{
 		Cursor:         "",
 		PageSize:       30,
 		OrderBy:        "title",
@@ -408,7 +407,7 @@ func TestClient_GetGridByID_WithOptions(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	grid, err := client.GetGridByID(context.Background(), "abc-123", domain.WikiGetGridOpts{
+	grid, err := client.GetGridByID(t.Context(), "abc-123", domain.WikiGetGridOpts{
 		Fields:   []string{"attributes", "user_permissions"},
 		Filter:   "status=active",
 		OnlyCols: "col1,col2",
@@ -457,7 +456,7 @@ func TestClient_GetPageByID_Success(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	page, err := client.GetPageByID(context.Background(), "42", domain.WikiGetPageOpts{Fields: []string{"content"}})
+	page, err := client.GetPageByID(t.Context(), "42", domain.WikiGetPageOpts{Fields: []string{"content"}})
 	require.NoError(t, err)
 
 	assert.Contains(t, capturedURL, "/v1/pages/42")
@@ -487,7 +486,7 @@ func TestClient_UpstreamError_NoTokenLeak(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	_, err := client.GetPageBySlug(context.Background(), "test/page", domain.WikiGetPageOpts{})
+	_, err := client.GetPageBySlug(t.Context(), "test/page", domain.WikiGetPageOpts{})
 	require.Error(t, err)
 
 	errStr := err.Error()
@@ -521,6 +520,6 @@ func TestClient_FullConfig(t *testing.T) {
 	}
 	client := NewClient(cfg, tokenProvider)
 
-	_, err := client.GetPageBySlug(context.Background(), "test/page", domain.WikiGetPageOpts{})
+	_, err := client.GetPageBySlug(t.Context(), "test/page", domain.WikiGetPageOpts{})
 	require.NoError(t, err)
 }

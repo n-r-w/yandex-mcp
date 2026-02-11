@@ -2,7 +2,6 @@
 package tracker
 
 import (
-	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -17,6 +16,7 @@ import (
 
 var (
 	defaultAttachExtensions = []string{"txt", "png"}
+	defaultAttachViewExts   = []string{"txt"}
 	defaultAttachDirs       []string
 )
 
@@ -27,9 +27,9 @@ func TestTools_GetIssue(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
-		_, err := reg.getIssue(context.Background(), getIssueInputDTO{})
+		_, err := reg.getIssue(t.Context(), getIssueInputDTO{})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "issue_id_or_key is required")
 	})
@@ -38,7 +38,7 @@ func TestTools_GetIssue(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
 		expectedIssue := &domain.TrackerIssue{
 			Self:    "https://api.tracker/v3/issues/TEST-123",
@@ -53,7 +53,7 @@ func TestTools_GetIssue(t *testing.T) {
 			GetIssue(gomock.Any(), "TEST-123", domain.TrackerGetIssueOpts{Expand: "attachments"}).
 			Return(expectedIssue, nil)
 
-		result, err := reg.getIssue(context.Background(), getIssueInputDTO{
+		result, err := reg.getIssue(t.Context(), getIssueInputDTO{
 			IssueID: "TEST-123",
 			Expand:  "attachments",
 		})
@@ -68,7 +68,7 @@ func TestTools_GetIssue(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
 		upstreamErr := domain.UpstreamError{
 			Service:    domain.ServiceTracker,
@@ -81,7 +81,7 @@ func TestTools_GetIssue(t *testing.T) {
 			GetIssue(gomock.Any(), "MISSING-1", domain.TrackerGetIssueOpts{}).
 			Return(nil, upstreamErr)
 
-		_, err := reg.getIssue(context.Background(), getIssueInputDTO{IssueID: "MISSING-1"})
+		_, err := reg.getIssue(t.Context(), getIssueInputDTO{IssueID: "MISSING-1"})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), domain.ServiceTracker)
 		assert.Contains(t, err.Error(), "GetIssue")
@@ -96,9 +96,9 @@ func TestTools_SearchIssues(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
-		_, err := reg.searchIssues(context.Background(), searchIssuesInputDTO{PerPage: -1})
+		_, err := reg.searchIssues(t.Context(), searchIssuesInputDTO{PerPage: -1})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "per_page must be non-negative")
 	})
@@ -107,9 +107,9 @@ func TestTools_SearchIssues(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
-		_, err := reg.searchIssues(context.Background(), searchIssuesInputDTO{Page: -1})
+		_, err := reg.searchIssues(t.Context(), searchIssuesInputDTO{Page: -1})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "page must be non-negative")
 	})
@@ -118,9 +118,9 @@ func TestTools_SearchIssues(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
-		_, err := reg.searchIssues(context.Background(), searchIssuesInputDTO{PerScroll: -1})
+		_, err := reg.searchIssues(t.Context(), searchIssuesInputDTO{PerScroll: -1})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "per_scroll must be non-negative")
 	})
@@ -129,9 +129,9 @@ func TestTools_SearchIssues(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
-		_, err := reg.searchIssues(context.Background(), searchIssuesInputDTO{PerScroll: 1001})
+		_, err := reg.searchIssues(t.Context(), searchIssuesInputDTO{PerScroll: 1001})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "per_scroll must not exceed 1000")
 	})
@@ -140,9 +140,9 @@ func TestTools_SearchIssues(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
-		_, err := reg.searchIssues(context.Background(), searchIssuesInputDTO{ScrollTTLMillis: -1})
+		_, err := reg.searchIssues(t.Context(), searchIssuesInputDTO{ScrollTTLMillis: -1})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "scroll_ttl_millis must be non-negative")
 	})
@@ -151,7 +151,7 @@ func TestTools_SearchIssues(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
 		expectedResult := &domain.TrackerIssuesPage{
 			Issues: []domain.TrackerIssue{
@@ -193,7 +193,7 @@ func TestTools_SearchIssues(t *testing.T) {
 			ScrollID:        "prevScroll",
 		}
 
-		result, err := reg.searchIssues(context.Background(), input)
+		result, err := reg.searchIssues(t.Context(), input)
 		require.NoError(t, err)
 		assert.Len(t, result.Issues, 2)
 		assert.Equal(t, 100, result.TotalCount)
@@ -211,7 +211,7 @@ func TestTools_CountIssues(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
 		mockAdapter.EXPECT().
 			CountIssues(gomock.Any(), domain.TrackerCountIssuesOpts{
@@ -220,7 +220,7 @@ func TestTools_CountIssues(t *testing.T) {
 			}).
 			Return(42, nil)
 
-		result, err := reg.countIssues(context.Background(), countIssuesInputDTO{
+		result, err := reg.countIssues(t.Context(), countIssuesInputDTO{
 			Filter: map[string]string{"assignee": "me"},
 			Query:  "Queue: PROJ",
 		})
@@ -236,9 +236,9 @@ func TestTools_ListTransitions(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
-		_, err := reg.listTransitions(context.Background(), listTransitionsInputDTO{})
+		_, err := reg.listTransitions(t.Context(), listTransitionsInputDTO{})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "issue_id_or_key is required")
 	})
@@ -247,7 +247,7 @@ func TestTools_ListTransitions(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
 		expectedTransitions := []domain.TrackerTransition{
 			{
@@ -268,7 +268,7 @@ func TestTools_ListTransitions(t *testing.T) {
 			ListIssueTransitions(gomock.Any(), "ISSUE-1").
 			Return(expectedTransitions, nil)
 
-		result, err := reg.listTransitions(context.Background(), listTransitionsInputDTO{
+		result, err := reg.listTransitions(t.Context(), listTransitionsInputDTO{
 			IssueID: "ISSUE-1",
 		})
 		require.NoError(t, err)
@@ -286,9 +286,9 @@ func TestTools_ListQueues(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
-		_, err := reg.listQueues(context.Background(), listQueuesInputDTO{PerPage: -1})
+		_, err := reg.listQueues(t.Context(), listQueuesInputDTO{PerPage: -1})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "per_page must be non-negative")
 	})
@@ -297,9 +297,9 @@ func TestTools_ListQueues(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
-		_, err := reg.listQueues(context.Background(), listQueuesInputDTO{Page: -1})
+		_, err := reg.listQueues(t.Context(), listQueuesInputDTO{Page: -1})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "page must be non-negative")
 	})
@@ -308,7 +308,7 @@ func TestTools_ListQueues(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
 		expectedResult := &domain.TrackerQueuesPage{
 			Queues: []domain.TrackerQueue{
@@ -327,7 +327,7 @@ func TestTools_ListQueues(t *testing.T) {
 			}).
 			Return(expectedResult, nil)
 
-		result, err := reg.listQueues(context.Background(), listQueuesInputDTO{
+		result, err := reg.listQueues(t.Context(), listQueuesInputDTO{
 			Expand:  "lead",
 			PerPage: 10,
 			Page:    1,
@@ -347,9 +347,9 @@ func TestTools_ListComments(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
-		_, err := reg.listComments(context.Background(), listCommentsInputDTO{})
+		_, err := reg.listComments(t.Context(), listCommentsInputDTO{})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "issue_id_or_key is required")
 	})
@@ -358,9 +358,9 @@ func TestTools_ListComments(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
-		_, err := reg.listComments(context.Background(), listCommentsInputDTO{
+		_, err := reg.listComments(t.Context(), listCommentsInputDTO{
 			IssueID: "TEST-1",
 			PerPage: -1,
 		})
@@ -372,7 +372,7 @@ func TestTools_ListComments(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
 		expectedResult := &domain.TrackerCommentsPage{
 			Comments: []domain.TrackerComment{
@@ -400,7 +400,7 @@ func TestTools_ListComments(t *testing.T) {
 			}).
 			Return(expectedResult, nil)
 
-		result, err := reg.listComments(context.Background(), listCommentsInputDTO{
+		result, err := reg.listComments(t.Context(), listCommentsInputDTO{
 			IssueID: "TEST-1",
 			Expand:  "html",
 			PerPage: 20,
@@ -422,7 +422,7 @@ func TestTools_ErrorShaping(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
 		upstreamErr := domain.NewUpstreamError(
 			domain.ServiceTracker,
@@ -437,7 +437,7 @@ func TestTools_ErrorShaping(t *testing.T) {
 			GetIssue(gomock.Any(), "TEST-1", domain.TrackerGetIssueOpts{}).
 			Return(nil, upstreamErr)
 
-		_, err := reg.getIssue(context.Background(), getIssueInputDTO{IssueID: "TEST-1"})
+		_, err := reg.getIssue(t.Context(), getIssueInputDTO{IssueID: "TEST-1"})
 		require.Error(t, err)
 		errStr := err.Error()
 		assert.Contains(t, errStr, domain.ServiceTracker)
@@ -450,7 +450,7 @@ func TestTools_ErrorShaping(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
 		// Simulate an error that contains sensitive data
 		sensitiveErr := errors.New("connection failed: Authorization header: Bearer secret-token-123")
@@ -459,7 +459,7 @@ func TestTools_ErrorShaping(t *testing.T) {
 			GetIssue(gomock.Any(), "TEST-1", domain.TrackerGetIssueOpts{}).
 			Return(nil, sensitiveErr)
 
-		_, err := reg.getIssue(context.Background(), getIssueInputDTO{IssueID: "TEST-1"})
+		_, err := reg.getIssue(t.Context(), getIssueInputDTO{IssueID: "TEST-1"})
 		require.Error(t, err)
 		errStr := err.Error()
 		// Non-upstream errors should return a generic safe message
@@ -476,7 +476,7 @@ func TestTools_MapsAllIssueFields(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
 		expectedIssue := &domain.TrackerIssue{
 			Self:            "https://api/issues/1",
@@ -504,7 +504,7 @@ func TestTools_MapsAllIssueFields(t *testing.T) {
 			GetIssue(gomock.Any(), "PROJ-1", domain.TrackerGetIssueOpts{}).
 			Return(expectedIssue, nil)
 
-		result, err := reg.getIssue(context.Background(), getIssueInputDTO{IssueID: "PROJ-1"})
+		result, err := reg.getIssue(t.Context(), getIssueInputDTO{IssueID: "PROJ-1"})
 		require.NoError(t, err)
 
 		assert.Equal(t, "https://api/issues/1", result.Self)
@@ -551,9 +551,9 @@ func TestTools_ListAttachments(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
-		_, err := reg.listAttachments(context.Background(), listAttachmentsInputDTO{})
+		_, err := reg.listAttachments(t.Context(), listAttachmentsInputDTO{})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "issue_id_or_key is required")
 	})
@@ -562,7 +562,7 @@ func TestTools_ListAttachments(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
 		expectedAttachments := []domain.TrackerAttachment{
 			{
@@ -588,7 +588,7 @@ func TestTools_ListAttachments(t *testing.T) {
 			ListIssueAttachments(gomock.Any(), "TEST-1").
 			Return(expectedAttachments, nil)
 
-		result, err := reg.listAttachments(context.Background(), listAttachmentsInputDTO{
+		result, err := reg.listAttachments(t.Context(), listAttachmentsInputDTO{
 			IssueID: "TEST-1",
 		})
 		require.NoError(t, err)
@@ -605,13 +605,13 @@ func TestTools_ListAttachments(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
 		mockAdapter.EXPECT().
 			ListIssueAttachments(gomock.Any(), "TEST-2").
 			Return([]domain.TrackerAttachment{}, nil)
 
-		result, err := reg.listAttachments(context.Background(), listAttachmentsInputDTO{
+		result, err := reg.listAttachments(t.Context(), listAttachmentsInputDTO{
 			IssueID: "TEST-2",
 		})
 		require.NoError(t, err)
@@ -622,7 +622,7 @@ func TestTools_ListAttachments(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
 		upstreamErr := domain.NewUpstreamError(
 			domain.ServiceTracker,
@@ -637,7 +637,7 @@ func TestTools_ListAttachments(t *testing.T) {
 			ListIssueAttachments(gomock.Any(), gomock.Any()).
 			Return(nil, upstreamErr)
 
-		_, err := reg.listAttachments(context.Background(), listAttachmentsInputDTO{
+		_, err := reg.listAttachments(t.Context(), listAttachmentsInputDTO{
 			IssueID: "TEST-1",
 		})
 		require.Error(t, err)
@@ -655,9 +655,9 @@ func TestTools_GetAttachment(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
-		_, err := reg.getAttachment(context.Background(), getAttachmentInputDTO{})
+		_, err := reg.getAttachment(t.Context(), getAttachmentInputDTO{})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "issue_id_or_key is required")
 	})
@@ -666,9 +666,9 @@ func TestTools_GetAttachment(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
-		_, err := reg.getAttachment(context.Background(), getAttachmentInputDTO{
+		_, err := reg.getAttachment(t.Context(), getAttachmentInputDTO{
 			IssueID: "TEST-1",
 		})
 		require.Error(t, err)
@@ -679,9 +679,9 @@ func TestTools_GetAttachment(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
-		_, err := reg.getAttachment(context.Background(), getAttachmentInputDTO{
+		_, err := reg.getAttachment(t.Context(), getAttachmentInputDTO{
 			IssueID:      "TEST-1",
 			AttachmentID: "4159",
 		})
@@ -693,24 +693,58 @@ func TestTools_GetAttachment(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
-		_, err := reg.getAttachment(context.Background(), getAttachmentInputDTO{
+		_, err := reg.getAttachment(t.Context(), getAttachmentInputDTO{
 			IssueID:      "TEST-1",
 			AttachmentID: "4159",
 			FileName:     "attachment.txt",
 		})
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "save_path is required")
+		assert.Contains(t, err.Error(), "save_path or get_content is required")
+	})
+
+	t.Run("validation/save_path_and_get_content", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockITrackerAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
+
+		_, err := reg.getAttachment(t.Context(), getAttachmentInputDTO{
+			IssueID:      "TEST-1",
+			AttachmentID: "4159",
+			FileName:     "attachment.txt",
+			SavePath:     "/tmp/attachment.txt",
+			GetContent:   true,
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "save_path and get_content cannot be used together")
+	})
+
+	t.Run("validation/get_content_extension_not_allowed", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockITrackerAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
+
+		_, err := reg.getAttachment(t.Context(), getAttachmentInputDTO{
+			IssueID:      "TEST-1",
+			AttachmentID: "4159",
+			FileName:     "attachment.png",
+			GetContent:   true,
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "file_name extension is not allowed for get_content")
+		assert.Contains(t, err.Error(), "txt")
 	})
 
 	t.Run("validation/save_path_must_be_absolute", func(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
-		_, err := reg.getAttachment(context.Background(), getAttachmentInputDTO{
+		_, err := reg.getAttachment(t.Context(), getAttachmentInputDTO{
 			IssueID:      "TEST-1",
 			AttachmentID: "4159",
 			FileName:     "attachment.txt",
@@ -725,11 +759,11 @@ func TestTools_GetAttachment(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 		tmpDir := t.TempDir()
 		reg.allowedDirs = []string{tmpDir}
 
-		_, err := reg.getAttachment(context.Background(), getAttachmentInputDTO{
+		_, err := reg.getAttachment(t.Context(), getAttachmentInputDTO{
 			IssueID:      "TEST-1",
 			AttachmentID: "4159",
 			FileName:     "attachment.exe",
@@ -745,12 +779,12 @@ func TestTools_GetAttachment(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 		allowedDir := t.TempDir()
 		outsideDir := t.TempDir()
 		reg.allowedDirs = []string{allowedDir}
 
-		_, err := reg.getAttachment(context.Background(), getAttachmentInputDTO{
+		_, err := reg.getAttachment(t.Context(), getAttachmentInputDTO{
 			IssueID:      "TEST-1",
 			AttachmentID: "4159",
 			FileName:     "attachment.txt",
@@ -766,12 +800,12 @@ func TestTools_GetAttachment(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 		homeDir, err := os.UserHomeDir()
 		require.NoError(t, err)
 		outsidePath := filepath.Join(filepath.Dir(homeDir), "tmp", "attachment.txt")
 
-		_, err = reg.getAttachment(context.Background(), getAttachmentInputDTO{
+		_, err = reg.getAttachment(t.Context(), getAttachmentInputDTO{
 			IssueID:      "TEST-1",
 			AttachmentID: "4159",
 			FileName:     "attachment.txt",
@@ -787,12 +821,12 @@ func TestTools_GetAttachment(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 		homeDir, err := os.UserHomeDir()
 		require.NoError(t, err)
 		hiddenPath := filepath.Join(homeDir, ".ssh", "attachment.txt")
 
-		_, err = reg.getAttachment(context.Background(), getAttachmentInputDTO{
+		_, err = reg.getAttachment(t.Context(), getAttachmentInputDTO{
 			IssueID:      "TEST-1",
 			AttachmentID: "4159",
 			FileName:     "attachment.txt",
@@ -808,7 +842,7 @@ func TestTools_GetAttachment(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 		baseDir := t.TempDir()
 		reg.allowedDirs = []string{baseDir}
 		savePath := filepath.Join(baseDir, "attachments", "attachment.txt")
@@ -824,7 +858,7 @@ func TestTools_GetAttachment(t *testing.T) {
 			GetIssueAttachment(gomock.Any(), "TEST-1", "4159", "attachment.txt").
 			Return(expected, nil)
 
-		result, err := reg.getAttachment(context.Background(), getAttachmentInputDTO{
+		result, err := reg.getAttachment(t.Context(), getAttachmentInputDTO{
 			IssueID:      "TEST-1",
 			AttachmentID: "4159",
 			FileName:     "attachment.txt",
@@ -841,11 +875,42 @@ func TestTools_GetAttachment(t *testing.T) {
 		assert.Equal(t, payload, stored)
 	})
 
+	t.Run("adapter/call_and_returns_inline_content", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockITrackerAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
+
+		payload := []byte("inline text")
+		expected := &domain.TrackerAttachmentContent{
+			FileName:    "attachment.txt",
+			ContentType: "text/plain",
+			Data:        payload,
+		}
+
+		mockAdapter.EXPECT().
+			GetIssueAttachment(gomock.Any(), "TEST-1", "4159", "attachment.txt").
+			Return(expected, nil)
+
+		result, err := reg.getAttachment(t.Context(), getAttachmentInputDTO{
+			IssueID:      "TEST-1",
+			AttachmentID: "4159",
+			FileName:     "attachment.txt",
+			GetContent:   true,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "attachment.txt", result.FileName)
+		assert.Equal(t, "text/plain", result.ContentType)
+		assert.Equal(t, "inline text", result.Content)
+		assert.Empty(t, result.SavedPath)
+		assert.Equal(t, int64(len(payload)), result.Size)
+	})
+
 	t.Run("validation/save_path_exists_without_override", func(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 		baseDir := t.TempDir()
 		reg.allowedDirs = []string{baseDir}
 		savePath := filepath.Join(baseDir, "attachments", "existing.txt")
@@ -853,7 +918,7 @@ func TestTools_GetAttachment(t *testing.T) {
 		require.NoError(t, os.MkdirAll(filepath.Dir(fullPath), 0o755))
 		require.NoError(t, os.WriteFile(fullPath, []byte("data"), 0o644))
 
-		_, err := reg.getAttachment(context.Background(), getAttachmentInputDTO{
+		_, err := reg.getAttachment(t.Context(), getAttachmentInputDTO{
 			IssueID:      "TEST-1",
 			AttachmentID: "4159",
 			FileName:     "attachment.txt",
@@ -868,7 +933,7 @@ func TestTools_GetAttachment(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 		baseDir := t.TempDir()
 		reg.allowedDirs = []string{baseDir}
 
@@ -885,7 +950,7 @@ func TestTools_GetAttachment(t *testing.T) {
 			GetIssueAttachment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(nil, upstreamErr)
 
-		_, err := reg.getAttachment(context.Background(), getAttachmentInputDTO{
+		_, err := reg.getAttachment(t.Context(), getAttachmentInputDTO{
 			IssueID:      "TEST-1",
 			AttachmentID: "4159",
 			FileName:     "attachment.txt",
@@ -906,9 +971,9 @@ func TestTools_GetAttachmentPreview(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
-		_, err := reg.getAttachmentPreview(context.Background(), getAttachmentPreviewInputDTO{})
+		_, err := reg.getAttachmentPreview(t.Context(), getAttachmentPreviewInputDTO{})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "issue_id_or_key is required")
 	})
@@ -917,9 +982,9 @@ func TestTools_GetAttachmentPreview(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
-		_, err := reg.getAttachmentPreview(context.Background(), getAttachmentPreviewInputDTO{
+		_, err := reg.getAttachmentPreview(t.Context(), getAttachmentPreviewInputDTO{
 			IssueID: "TEST-1",
 		})
 		require.Error(t, err)
@@ -930,9 +995,9 @@ func TestTools_GetAttachmentPreview(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
-		_, err := reg.getAttachmentPreview(context.Background(), getAttachmentPreviewInputDTO{
+		_, err := reg.getAttachmentPreview(t.Context(), getAttachmentPreviewInputDTO{
 			IssueID:      "TEST-1",
 			AttachmentID: "4159",
 		})
@@ -944,7 +1009,7 @@ func TestTools_GetAttachmentPreview(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 		baseDir := t.TempDir()
 		reg.allowedDirs = []string{baseDir}
 		savePath := filepath.Join(baseDir, "attachments", "preview.png")
@@ -959,7 +1024,7 @@ func TestTools_GetAttachmentPreview(t *testing.T) {
 			GetIssueAttachmentPreview(gomock.Any(), "TEST-1", "4159").
 			Return(expected, nil)
 
-		result, err := reg.getAttachmentPreview(context.Background(), getAttachmentPreviewInputDTO{
+		result, err := reg.getAttachmentPreview(t.Context(), getAttachmentPreviewInputDTO{
 			IssueID:      "TEST-1",
 			AttachmentID: "4159",
 			SavePath:     savePath,
@@ -978,7 +1043,7 @@ func TestTools_GetAttachmentPreview(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 		baseDir := t.TempDir()
 		reg.allowedDirs = []string{baseDir}
 
@@ -995,7 +1060,7 @@ func TestTools_GetAttachmentPreview(t *testing.T) {
 			GetIssueAttachmentPreview(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(nil, upstreamErr)
 
-		_, err := reg.getAttachmentPreview(context.Background(), getAttachmentPreviewInputDTO{
+		_, err := reg.getAttachmentPreview(t.Context(), getAttachmentPreviewInputDTO{
 			IssueID:      "TEST-1",
 			AttachmentID: "4159",
 			SavePath:     filepath.Join(baseDir, "attachments", "preview.png"),
@@ -1015,9 +1080,9 @@ func TestTools_GetQueue(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
-		_, err := reg.getQueue(context.Background(), getQueueInputDTO{})
+		_, err := reg.getQueue(t.Context(), getQueueInputDTO{})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "queue_id_or_key is required")
 	})
@@ -1026,7 +1091,7 @@ func TestTools_GetQueue(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
 		expectedQueue := &domain.TrackerQueueDetail{
 			Self:        "https://api/v3/queues/TEST",
@@ -1043,7 +1108,7 @@ func TestTools_GetQueue(t *testing.T) {
 			}).
 			Return(expectedQueue, nil)
 
-		result, err := reg.getQueue(context.Background(), getQueueInputDTO{
+		result, err := reg.getQueue(t.Context(), getQueueInputDTO{
 			QueueID: "TEST",
 			Expand:  "all",
 		})
@@ -1056,7 +1121,7 @@ func TestTools_GetQueue(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
 		upstreamErr := domain.NewUpstreamError(
 			domain.ServiceTracker,
@@ -1071,7 +1136,7 @@ func TestTools_GetQueue(t *testing.T) {
 			GetQueue(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(nil, upstreamErr)
 
-		_, err := reg.getQueue(context.Background(), getQueueInputDTO{
+		_, err := reg.getQueue(t.Context(), getQueueInputDTO{
 			QueueID: "NONEXISTENT",
 		})
 		require.Error(t, err)
@@ -1089,7 +1154,7 @@ func TestTools_GetCurrentUser(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
 		expectedUser := &domain.TrackerUserDetail{
 			Self:       "https://api/v3/users/1",
@@ -1109,7 +1174,7 @@ func TestTools_GetCurrentUser(t *testing.T) {
 			GetCurrentUser(gomock.Any()).
 			Return(expectedUser, nil)
 
-		result, err := reg.getCurrentUser(context.Background(), getCurrentUserInputDTO{})
+		result, err := reg.getCurrentUser(t.Context(), getCurrentUserInputDTO{})
 		require.NoError(t, err)
 		assert.Equal(t, "testuser", result.Login)
 		assert.Equal(t, "Test User", result.Display)
@@ -1121,7 +1186,7 @@ func TestTools_GetCurrentUser(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
 		upstreamErr := domain.NewUpstreamError(
 			domain.ServiceTracker,
@@ -1136,7 +1201,7 @@ func TestTools_GetCurrentUser(t *testing.T) {
 			GetCurrentUser(gomock.Any()).
 			Return(nil, upstreamErr)
 
-		_, err := reg.getCurrentUser(context.Background(), getCurrentUserInputDTO{})
+		_, err := reg.getCurrentUser(t.Context(), getCurrentUserInputDTO{})
 		require.Error(t, err)
 		errStr := err.Error()
 		assert.Contains(t, errStr, domain.ServiceTracker)
@@ -1152,9 +1217,9 @@ func TestTools_ListUsers(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
-		_, err := reg.listUsers(context.Background(), listUsersInputDTO{PerPage: -1})
+		_, err := reg.listUsers(t.Context(), listUsersInputDTO{PerPage: -1})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "per_page must be non-negative")
 	})
@@ -1163,9 +1228,9 @@ func TestTools_ListUsers(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
-		_, err := reg.listUsers(context.Background(), listUsersInputDTO{Page: -1})
+		_, err := reg.listUsers(t.Context(), listUsersInputDTO{Page: -1})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "page must be non-negative")
 	})
@@ -1174,7 +1239,7 @@ func TestTools_ListUsers(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
 		expectedResult := &domain.TrackerUsersPage{
 			Users: []domain.TrackerUserDetail{
@@ -1200,7 +1265,7 @@ func TestTools_ListUsers(t *testing.T) {
 			}).
 			Return(expectedResult, nil)
 
-		result, err := reg.listUsers(context.Background(), listUsersInputDTO{
+		result, err := reg.listUsers(t.Context(), listUsersInputDTO{
 			PerPage: 10,
 			Page:    2,
 		})
@@ -1215,7 +1280,7 @@ func TestTools_ListUsers(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
 		upstreamErr := domain.NewUpstreamError(
 			domain.ServiceTracker,
@@ -1230,7 +1295,7 @@ func TestTools_ListUsers(t *testing.T) {
 			ListUsers(gomock.Any(), gomock.Any()).
 			Return(nil, upstreamErr)
 
-		_, err := reg.listUsers(context.Background(), listUsersInputDTO{})
+		_, err := reg.listUsers(t.Context(), listUsersInputDTO{})
 		require.Error(t, err)
 		errStr := err.Error()
 		assert.Contains(t, errStr, domain.ServiceTracker)
@@ -1246,9 +1311,9 @@ func TestTools_GetUser(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
-		_, err := reg.getUser(context.Background(), getUserInputDTO{})
+		_, err := reg.getUser(t.Context(), getUserInputDTO{})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "user_id is required")
 	})
@@ -1257,7 +1322,7 @@ func TestTools_GetUser(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
 		expectedUser := &domain.TrackerUserDetail{
 			Self:    "https://api.tracker/v3/users/testuser",
@@ -1271,7 +1336,7 @@ func TestTools_GetUser(t *testing.T) {
 			GetUser(gomock.Any(), "testuser").
 			Return(expectedUser, nil)
 
-		result, err := reg.getUser(context.Background(), getUserInputDTO{
+		result, err := reg.getUser(t.Context(), getUserInputDTO{
 			UserID: "testuser",
 		})
 		require.NoError(t, err)
@@ -1284,7 +1349,7 @@ func TestTools_GetUser(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
 		upstreamErr := domain.NewUpstreamError(
 			domain.ServiceTracker,
@@ -1299,7 +1364,7 @@ func TestTools_GetUser(t *testing.T) {
 			GetUser(gomock.Any(), gomock.Any()).
 			Return(nil, upstreamErr)
 
-		_, err := reg.getUser(context.Background(), getUserInputDTO{
+		_, err := reg.getUser(t.Context(), getUserInputDTO{
 			UserID: "nonexistent",
 		})
 		require.Error(t, err)
@@ -1317,9 +1382,9 @@ func TestTools_ListLinks(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
-		_, err := reg.listLinks(context.Background(), listLinksInputDTO{})
+		_, err := reg.listLinks(t.Context(), listLinksInputDTO{})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "issue_id_or_key is required")
 	})
@@ -1328,7 +1393,7 @@ func TestTools_ListLinks(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
 		expectedLinks := []domain.TrackerLink{
 			{
@@ -1353,7 +1418,7 @@ func TestTools_ListLinks(t *testing.T) {
 			ListIssueLinks(gomock.Any(), "TEST-1").
 			Return(expectedLinks, nil)
 
-		result, err := reg.listLinks(context.Background(), listLinksInputDTO{
+		result, err := reg.listLinks(t.Context(), listLinksInputDTO{
 			IssueID: "TEST-1",
 		})
 		require.NoError(t, err)
@@ -1366,7 +1431,7 @@ func TestTools_ListLinks(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
 		upstreamErr := domain.NewUpstreamError(
 			domain.ServiceTracker,
@@ -1381,7 +1446,7 @@ func TestTools_ListLinks(t *testing.T) {
 			ListIssueLinks(gomock.Any(), gomock.Any()).
 			Return(nil, upstreamErr)
 
-		_, err := reg.listLinks(context.Background(), listLinksInputDTO{
+		_, err := reg.listLinks(t.Context(), listLinksInputDTO{
 			IssueID: "NONEXISTENT",
 		})
 		require.Error(t, err)
@@ -1399,9 +1464,9 @@ func TestTools_GetChangelog(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
-		_, err := reg.getChangelog(context.Background(), getChangelogInputDTO{})
+		_, err := reg.getChangelog(t.Context(), getChangelogInputDTO{})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "issue_id_or_key is required")
 	})
@@ -1410,9 +1475,9 @@ func TestTools_GetChangelog(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
-		_, err := reg.getChangelog(context.Background(), getChangelogInputDTO{
+		_, err := reg.getChangelog(t.Context(), getChangelogInputDTO{
 			IssueID: "TEST-1",
 			PerPage: -1,
 		})
@@ -1424,7 +1489,7 @@ func TestTools_GetChangelog(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
 		expectedEntries := []domain.TrackerChangelogEntry{
 			{
@@ -1444,7 +1509,7 @@ func TestTools_GetChangelog(t *testing.T) {
 			}).
 			Return(expectedEntries, nil)
 
-		result, err := reg.getChangelog(context.Background(), getChangelogInputDTO{
+		result, err := reg.getChangelog(t.Context(), getChangelogInputDTO{
 			IssueID: "TEST-1",
 			PerPage: 100,
 		})
@@ -1458,7 +1523,7 @@ func TestTools_GetChangelog(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
 		upstreamErr := domain.NewUpstreamError(
 			domain.ServiceTracker,
@@ -1473,7 +1538,7 @@ func TestTools_GetChangelog(t *testing.T) {
 			GetIssueChangelog(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(nil, upstreamErr)
 
-		_, err := reg.getChangelog(context.Background(), getChangelogInputDTO{
+		_, err := reg.getChangelog(t.Context(), getChangelogInputDTO{
 			IssueID: "NONEXISTENT",
 		})
 		require.Error(t, err)
@@ -1491,9 +1556,9 @@ func TestTools_ListProjectComments(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
-		_, err := reg.listProjectComments(context.Background(), listProjectCommentsInputDTO{})
+		_, err := reg.listProjectComments(t.Context(), listProjectCommentsInputDTO{})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "project_id is required")
 	})
@@ -1502,7 +1567,7 @@ func TestTools_ListProjectComments(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
 		expectedComments := []domain.TrackerProjectComment{
 			{
@@ -1520,7 +1585,7 @@ func TestTools_ListProjectComments(t *testing.T) {
 			}).
 			Return(expectedComments, nil)
 
-		result, err := reg.listProjectComments(context.Background(), listProjectCommentsInputDTO{
+		result, err := reg.listProjectComments(t.Context(), listProjectCommentsInputDTO{
 			ProjectID: "123",
 			Expand:    "all",
 		})
@@ -1534,7 +1599,7 @@ func TestTools_ListProjectComments(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
-		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
 
 		upstreamErr := domain.NewUpstreamError(
 			domain.ServiceTracker,
@@ -1549,7 +1614,7 @@ func TestTools_ListProjectComments(t *testing.T) {
 			ListProjectComments(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(nil, upstreamErr)
 
-		_, err := reg.listProjectComments(context.Background(), listProjectCommentsInputDTO{
+		_, err := reg.listProjectComments(t.Context(), listProjectCommentsInputDTO{
 			ProjectID: "nonexistent",
 		})
 		require.Error(t, err)
