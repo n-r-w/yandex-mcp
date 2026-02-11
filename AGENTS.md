@@ -42,7 +42,7 @@ THIS IS A NEW PROJECT, NOT IN PRODUCTION YET. NO DATA IN DATABASE YET. FEEL FREE
     7) All internal constants should be in const.go file
     8) All mock generation commands should be in `interfaces.go`
 5. Use `golangci-lint-v2` for linting
-6. Use following finctions to log system errors: internal/adapters/token/errors.go:LogError, internal/domain/errors.go:LogError
+6. Use following functions to log system errors: internal/adapters/token/errors.go:LogError, internal/domain/errors.go:LogError
 7. Use `t.Context()` instead of `context.Background()` in tests
 
 ## Documentation
