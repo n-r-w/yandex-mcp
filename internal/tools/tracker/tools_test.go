@@ -3,8 +3,9 @@ package tracker
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -683,11 +684,28 @@ func TestTools_GetAttachment(t *testing.T) {
 		assert.Contains(t, err.Error(), "file_name is required")
 	})
 
+	t.Run("validation/save_path_empty", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockITrackerAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools())
+
+		_, err := reg.getAttachment(context.Background(), getAttachmentInputDTO{
+			IssueID:      "TEST-1",
+			AttachmentID: "4159",
+			FileName:     "attachment.txt",
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "save_path is required")
+	})
+
 	t.Run("adapter/call_and_returns_content", func(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
 		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools())
+		reg.baseDir = t.TempDir()
+		savePath := filepath.Join("attachments", "attachment.txt")
 
 		payload := []byte("hello world")
 		expected := &domain.TrackerAttachmentContent{
@@ -704,12 +722,39 @@ func TestTools_GetAttachment(t *testing.T) {
 			IssueID:      "TEST-1",
 			AttachmentID: "4159",
 			FileName:     "attachment.txt",
+			SavePath:     savePath,
 		})
 		require.NoError(t, err)
 		assert.Equal(t, "attachment.txt", result.FileName)
 		assert.Equal(t, "text/plain", result.ContentType)
-		assert.Equal(t, base64.StdEncoding.EncodeToString(payload), result.ContentBase64)
 		assert.Equal(t, int64(len(payload)), result.Size)
+		assert.Equal(t, savePath, result.SavedPath)
+
+		stored, err := os.ReadFile(filepath.Join(reg.baseDir, savePath))
+		require.NoError(t, err)
+		assert.Equal(t, payload, stored)
+	})
+
+	t.Run("validation/save_path_exists_without_override", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockITrackerAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools())
+		reg.baseDir = t.TempDir()
+		savePath := filepath.Join("attachments", "existing.txt")
+		fullPath := filepath.Join(reg.baseDir, savePath)
+		require.NoError(t, os.MkdirAll(filepath.Dir(fullPath), 0o755))
+		require.NoError(t, os.WriteFile(fullPath, []byte("data"), 0o644))
+
+		_, err := reg.getAttachment(context.Background(), getAttachmentInputDTO{
+			IssueID:      "TEST-1",
+			AttachmentID: "4159",
+			FileName:     "attachment.txt",
+			SavePath:     savePath,
+			Override:     false,
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "save_path already exists")
 	})
 
 	t.Run("error/upstream_error_shaped", func(t *testing.T) {
@@ -735,6 +780,7 @@ func TestTools_GetAttachment(t *testing.T) {
 			IssueID:      "TEST-1",
 			AttachmentID: "4159",
 			FileName:     "attachment.txt",
+			SavePath:     filepath.Join("attachments", "attachment.txt"),
 		})
 		require.Error(t, err)
 		errStr := err.Error()
@@ -771,11 +817,27 @@ func TestTools_GetAttachmentPreview(t *testing.T) {
 		assert.Contains(t, err.Error(), "attachment_id is required")
 	})
 
+	t.Run("validation/save_path_empty", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockITrackerAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools())
+
+		_, err := reg.getAttachmentPreview(context.Background(), getAttachmentPreviewInputDTO{
+			IssueID:      "TEST-1",
+			AttachmentID: "4159",
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "save_path is required")
+	})
+
 	t.Run("adapter/call_and_returns_preview", func(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
 		mockAdapter := NewMockITrackerAdapter(ctrl)
 		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools())
+		reg.baseDir = t.TempDir()
+		savePath := filepath.Join("attachments", "preview.png")
 
 		payload := []byte{0x1, 0x2, 0x3}
 		expected := &domain.TrackerAttachmentContent{
@@ -790,11 +852,16 @@ func TestTools_GetAttachmentPreview(t *testing.T) {
 		result, err := reg.getAttachmentPreview(context.Background(), getAttachmentPreviewInputDTO{
 			IssueID:      "TEST-1",
 			AttachmentID: "4159",
+			SavePath:     savePath,
 		})
 		require.NoError(t, err)
 		assert.Equal(t, "image/png", result.ContentType)
-		assert.Equal(t, base64.StdEncoding.EncodeToString(payload), result.ContentBase64)
 		assert.Equal(t, int64(len(payload)), result.Size)
+		assert.Equal(t, savePath, result.SavedPath)
+
+		stored, err := os.ReadFile(filepath.Join(reg.baseDir, savePath))
+		require.NoError(t, err)
+		assert.Equal(t, payload, stored)
 	})
 
 	t.Run("error/upstream_error_shaped", func(t *testing.T) {
@@ -819,6 +886,7 @@ func TestTools_GetAttachmentPreview(t *testing.T) {
 		_, err := reg.getAttachmentPreview(context.Background(), getAttachmentPreviewInputDTO{
 			IssueID:      "TEST-1",
 			AttachmentID: "4159",
+			SavePath:     filepath.Join("attachments", "preview.png"),
 		})
 		require.Error(t, err)
 		errStr := err.Error()

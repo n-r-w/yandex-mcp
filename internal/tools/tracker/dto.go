@@ -109,12 +109,16 @@ type getAttachmentInputDTO struct {
 	IssueID      string `json:"issue_id_or_key" jsonschema:"Issue ID or key (e.g., TEST-1),required"`
 	AttachmentID string `json:"attachment_id" jsonschema:"Attachment ID as string. Example: '4159',required"`
 	FileName     string `json:"file_name" jsonschema:"Attachment file name including extension. Example: 'attachment.txt',required"`
+	SavePath     string `json:"save_path" jsonschema:"Path to save the attachment relative to current workspace. Example: 'attachments/attachment.txt',required"`
+	Override     bool   `json:"override,omitempty" jsonschema:"Overwrite existing file if true (default: false). Example: true"`
 }
 
 // getAttachmentPreviewInputDTO is the input for tracker_issue_attachment_preview_get tool.
 type getAttachmentPreviewInputDTO struct {
 	IssueID      string `json:"issue_id_or_key" jsonschema:"Issue ID or key (e.g., TEST-1),required"`
 	AttachmentID string `json:"attachment_id" jsonschema:"Attachment ID as string. Example: '4159',required"`
+	SavePath     string `json:"save_path" jsonschema:"Path to save the attachment preview relative to current workspace. Example: 'attachments/preview.png',required"`
+	Override     bool   `json:"override,omitempty" jsonschema:"Overwrite existing file if true (default: false). Example: true"`
 }
 
 // getQueueInputDTO is the input for tracker_queue_get tool.
@@ -314,10 +318,10 @@ type attachmentsListOutputDTO struct {
 
 // attachmentContentOutputDTO represents downloaded attachment content.
 type attachmentContentOutputDTO struct {
-	FileName      string `json:"file_name,omitempty"`
-	ContentType   string `json:"content_type,omitempty"`
-	ContentBase64 string `json:"content_base64"`
-	Size          int64  `json:"size"`
+	FileName    string `json:"file_name,omitempty"`
+	ContentType string `json:"content_type,omitempty"`
+	SavedPath   string `json:"saved_path"`
+	Size        int64  `json:"size"`
 }
 
 // queueDetailOutputDTO represents a detailed queue response.

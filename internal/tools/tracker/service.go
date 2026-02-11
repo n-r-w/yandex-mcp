@@ -1,8 +1,6 @@
 package tracker
 
 import (
-	"context"
-
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/n-r-w/yandex-mcp/internal/domain"
 	"github.com/n-r-w/yandex-mcp/internal/server"
@@ -12,6 +10,7 @@ import (
 type Registrator struct {
 	adapter      ITrackerAdapter
 	enabledTools map[domain.TrackerTool]bool
+	baseDir      string
 }
 
 // Compile-time assertion that Registrator implements server.IToolsRegistrator.
@@ -27,6 +26,7 @@ func NewRegistrator(adapter ITrackerAdapter, enabledTools []domain.TrackerTool) 
 	return &Registrator{
 		adapter:      adapter,
 		enabledTools: toolMap,
+		baseDir:      "",
 	}
 }
 
@@ -145,8 +145,4 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 	}
 
 	return nil
-}
-
-func (r *Registrator) logError(ctx context.Context, err error) error {
-	return domain.LogError(ctx, string(domain.ServiceTracker), err)
 }

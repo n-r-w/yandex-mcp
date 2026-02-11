@@ -260,15 +260,15 @@ Returns `AttachmentsListOutput`:
 
 ## tracker_issue_attachment_get
 
-Downloads a file attached to a Yandex Tracker issue.
-
-This tool is read-only.
+Downloads a file attached to a Yandex Tracker issue and saves it to the local workspace.
 
 ### Input
 
 - `issue_id_or_key` (string, required): Issue ID or key (for example, `TEST-1`).
 - `attachment_id` (string, required): Attachment ID (for example, `4159`).
 - `file_name` (string, required): Attachment file name (for example, `attachment.txt`).
+- `save_path` (string, required): Path to save the attachment relative to the current workspace (for example, `attachments/attachment.txt`).
+- `override` (boolean, optional): Overwrite existing file if `true` (default: `false`).
 
 ### Output
 
@@ -276,19 +276,19 @@ Returns `AttachmentContentOutput`:
 
 - `file_name` (string, optional)
 - `content_type` (string, optional)
-- `content_base64` (string): Base64-encoded attachment content.
+- `saved_path` (string): Path where the attachment was saved (relative to workspace).
 - `size` (integer): Attachment size in bytes.
 
 ## tracker_issue_attachment_preview_get
 
-Downloads a thumbnail for an attachment in a Yandex Tracker issue.
-
-This tool is read-only.
+Downloads a thumbnail for an attachment in a Yandex Tracker issue and saves it to the local workspace.
 
 ### Input
 
 - `issue_id_or_key` (string, required): Issue ID or key (for example, `TEST-1`).
 - `attachment_id` (string, required): Attachment ID (for example, `4159`).
+- `save_path` (string, required): Path to save the attachment preview relative to the current workspace (for example, `attachments/preview.png`).
+- `override` (boolean, optional): Overwrite existing file if `true` (default: `false`).
 
 ### Output
 
