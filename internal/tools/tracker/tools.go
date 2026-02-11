@@ -204,7 +204,7 @@ func (r *Registrator) getAttachment(
 			return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
 		}
 		if stream == nil || stream.Stream == nil {
-			return nil, errors.New("attachment stream is empty")
+			return nil, r.logError(ctx, errors.New("attachment stream is empty"))
 		}
 		bytesWritten, writeErr := r.writeAttachmentStream(fullPath, input.Override, stream.Stream)
 		closeErr := stream.Stream.Close()
@@ -258,7 +258,7 @@ func (r *Registrator) getAttachmentPreview(
 		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
 	}
 	if stream == nil || stream.Stream == nil {
-		return nil, errors.New("attachment stream is empty")
+		return nil, r.logError(ctx, errors.New("attachment stream is empty"))
 	}
 	bytesWritten, writeErr := r.writeAttachmentStream(fullPath, input.Override, stream.Stream)
 	closeErr := stream.Stream.Close()
