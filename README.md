@@ -35,6 +35,8 @@ Exact JSON schemas (including validation rules) are also available via MCP tool 
 - `tracker_queues_list` — Lists Yandex Tracker queues
 - `tracker_issue_comments_list` — Lists comments for a Yandex Tracker issue
 - `tracker_issue_attachments_list` — Lists attachments for a Yandex Tracker issue
+- `tracker_issue_attachment_get` — Downloads a file attached to a Yandex Tracker issue
+- `tracker_issue_attachment_preview_get` — Downloads a thumbnail for a Yandex Tracker issue attachment
 - `tracker_queue_get` — Retrieves a Yandex Tracker queue by its key
 - `tracker_user_current` — Retrieves the current Yandex Tracker user
 - `tracker_users_list` — Lists Yandex Tracker users
@@ -114,9 +116,27 @@ After these steps, the executable will be permanently allowed to run on your sys
   * The server caches the token and refreshes it when the cached token is older than this period.
   * IAM tokens are valid for **no more than 12 hours**; this refresh period should not exceed `12`.
 
-- `YANDEX_API_HTTP_TIMEOUT` (optional, default: `30s`)
-  * HTTP timeout for Yandex API requests.
-  * Accepts Go duration strings (e.g., `30s`, `1m`).
+- `YANDEX_HTTP_TIMEOUT` (optional, default: `30`)
+  * HTTP timeout for Yandex API requests in **seconds**.
+
+- `YANDEX_MCP_ATTACH_EXT` (optional)
+  * Comma-separated list of allowed attachment extensions **without dots**.
+  * Fully replaces the default allowlist.
+  * Default allowlist: txt, json, jsonc, yaml, yml, md, pdf, doc, docx, rtf, odt, xls, xlsx, ods, csv, tsv, ppt, pptx, odp, jpg, jpeg, png, tiff, tif, gif, bmp, webp, zip, 7z, tar, tgz, tar.gz, gz, bz2, xz, rar.
+
+- `YANDEX_MCP_ATTACH_VIEW_EXT` (optional)
+  * Comma-separated list of allowed attachment extensions **without dots** for inline viewing.
+  * Fully replaces the default text allowlist.
+  * Default allowlist: txt, json, jsonc, yaml, yml, md, csv, tsv, rtf.
+
+- `YANDEX_MCP_ATTACH_INLINE_MAX_BYTES` (optional, default: `10485760`)
+  * Maximum size in bytes for attachment content returned inline.
+  * Applies only to `get_content` inline responses; `save_path` uses streaming and is not limited by this setting.
+
+- `YANDEX_MCP_ATTACH_DIR` (optional)
+  * Comma-separated list of **absolute** directories allowed for saving attachments.
+  * Fully replaces the default directory rules. When set, only the provided directories (and their subdirectories) are allowed.
+  * Default rule: `save_path` must be inside the user home directory, must not point to the home root, and must not be within a hidden top-level home subdirectory (for example, `~/.ssh`).
 
 ## Authentication
 

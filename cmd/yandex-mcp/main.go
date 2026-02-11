@@ -104,7 +104,13 @@ func run(serverVersion string) error {
 
 	registrators := []server.IToolsRegistrator{
 		wikitools.NewRegistrator(wikiClient, wikiTools),
-		trackertools.NewRegistrator(trackerClient, trackerTools),
+		trackertools.NewRegistrator(
+			trackerClient,
+			trackerTools,
+			cfg.AttachAllowedExtensions,
+			cfg.AttachViewExtensions,
+			cfg.AttachAllowedDirs,
+		),
 	}
 
 	srv, err := server.New(serverVersion, registrators)

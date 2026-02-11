@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"strings"
 
 	"github.com/n-r-w/yandex-mcp/internal/domain"
@@ -16,10 +15,6 @@ func ToSafeError(ctx context.Context, serviceName domain.Service, err error) (er
 	if err == nil {
 		return nil
 	}
-
-	defer func() {
-		errOut = domain.LogError(ctx, string(serviceName), errOut)
-	}()
 
 	var upstreamErr domain.UpstreamError
 	if errors.As(err, &upstreamErr) {
@@ -38,7 +33,7 @@ func ToSafeError(ctx context.Context, serviceName domain.Service, err error) (er
 		return fmt.Errorf("%s: %s", serviceName, errMsg)
 	}
 
-	slog.ErrorContext(ctx, "unhandled error pattern", "service", serviceName)
+	_ = domain.LogError(ctx, string(serviceName), err)
 
 	return fmt.Errorf("%s: internal error", serviceName)
 }

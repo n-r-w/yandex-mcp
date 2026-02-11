@@ -137,3 +137,101 @@ func TestLoad_DefaultTrackerURL(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "https://api.tracker.yandex.net", cfg.TrackerBaseURL)
 }
+
+func TestLoad_DefaultAttachExtensions(t *testing.T) {
+	t.Setenv("YANDEX_CLOUD_ORG_ID", "test-org")
+
+	cfg, err := Load()
+
+	require.NoError(t, err)
+	assert.Equal(t, defaultAttachExtensions(), cfg.AttachAllowedExtensions)
+	assert.Equal(t, defaultTextAttachExtensions(), cfg.AttachViewExtensions)
+	assert.Nil(t, cfg.AttachAllowedDirs)
+	assert.Equal(t, int64(defaultAttachInlineMaxBytes), cfg.AttachInlineMaxBytes)
+}
+
+func TestLoad_AttachInlineMaxBytesOverride(t *testing.T) {
+	t.Setenv("YANDEX_CLOUD_ORG_ID", "test-org")
+	t.Setenv("YANDEX_MCP_ATTACH_INLINE_MAX_BYTES", "2048")
+
+	cfg, err := Load()
+
+	require.NoError(t, err)
+	assert.Equal(t, int64(2048), cfg.AttachInlineMaxBytes)
+}
+
+func TestLoad_AttachInlineMaxBytesInvalid(t *testing.T) {
+	t.Setenv("YANDEX_CLOUD_ORG_ID", "test-org")
+	t.Setenv("YANDEX_MCP_ATTACH_INLINE_MAX_BYTES", "0")
+
+	cfg, err := Load()
+
+	require.Error(t, err)
+	assert.Nil(t, cfg)
+	assert.Contains(t, err.Error(), "YANDEX_MCP_ATTACH_INLINE_MAX_BYTES")
+}
+
+func TestLoad_AttachExtensionsOverride(t *testing.T) {
+	t.Setenv("YANDEX_CLOUD_ORG_ID", "test-org")
+	t.Setenv("YANDEX_MCP_ATTACH_EXT", "txt,md,tar.gz")
+
+	cfg, err := Load()
+
+	require.NoError(t, err)
+	assert.Equal(t, []string{"txt", "md", "tar.gz"}, cfg.AttachAllowedExtensions)
+}
+
+func TestLoad_AttachViewExtensionsOverride(t *testing.T) {
+	t.Setenv("YANDEX_CLOUD_ORG_ID", "test-org")
+	t.Setenv("YANDEX_MCP_ATTACH_VIEW_EXT", "txt,md,rtf")
+
+	cfg, err := Load()
+
+	require.NoError(t, err)
+	assert.Equal(t, []string{"txt", "md", "rtf"}, cfg.AttachViewExtensions)
+}
+
+func TestLoad_AttachDirsOverride(t *testing.T) {
+	t.Setenv("YANDEX_CLOUD_ORG_ID", "test-org")
+	dirOne := t.TempDir()
+	dirTwo := t.TempDir()
+	t.Setenv("YANDEX_MCP_ATTACH_DIR", dirOne+","+dirTwo)
+
+	cfg, err := Load()
+
+	require.NoError(t, err)
+	assert.Equal(t, []string{dirOne, dirTwo}, cfg.AttachAllowedDirs)
+}
+
+func TestLoad_AttachDirsMustBeAbsolute(t *testing.T) {
+	t.Setenv("YANDEX_CLOUD_ORG_ID", "test-org")
+	t.Setenv("YANDEX_MCP_ATTACH_DIR", "relative")
+
+	cfg, err := Load()
+
+	require.Error(t, err)
+	assert.Nil(t, cfg)
+	assert.Contains(t, err.Error(), "YANDEX_MCP_ATTACH_DIR")
+}
+
+func TestLoad_AttachExtensionsInvalid(t *testing.T) {
+	t.Setenv("YANDEX_CLOUD_ORG_ID", "test-org")
+	t.Setenv("YANDEX_MCP_ATTACH_EXT", "t*xt")
+
+	cfg, err := Load()
+
+	require.Error(t, err)
+	assert.Nil(t, cfg)
+	assert.Contains(t, err.Error(), "YANDEX_MCP_ATTACH_EXT")
+}
+
+func TestLoad_AttachViewExtensionsInvalid(t *testing.T) {
+	t.Setenv("YANDEX_CLOUD_ORG_ID", "test-org")
+	t.Setenv("YANDEX_MCP_ATTACH_VIEW_EXT", "t*xt")
+
+	cfg, err := Load()
+
+	require.Error(t, err)
+	assert.Nil(t, cfg)
+	assert.Contains(t, err.Error(), "YANDEX_MCP_ATTACH_VIEW_EXT")
+}

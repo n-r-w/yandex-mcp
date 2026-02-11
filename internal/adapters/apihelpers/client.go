@@ -18,23 +18,25 @@ type ErrorParseFunc func(ctx context.Context, statusCode int, body []byte, opera
 
 // APIClient provides shared HTTP request methods for Yandex API adapters.
 type APIClient struct {
-	httpClient    *http.Client
-	tokenProvider ITokenProvider
-	orgID         string
-	extraHeaders  map[string]string
-	serviceName   string
-	parseError    ErrorParseFunc
+	httpClient          *http.Client
+	tokenProvider       ITokenProvider
+	orgID               string
+	extraHeaders        map[string]string
+	serviceName         string
+	parseError          ErrorParseFunc
+	rawResponseMaxBytes int64
 }
 
 // APIClientConfig contains configuration for creating an APIClient.
 type APIClientConfig struct {
-	HTTPClient    *http.Client
-	TokenProvider ITokenProvider
-	OrgID         string
-	ExtraHeaders  map[string]string
-	ServiceName   string
-	ParseError    ErrorParseFunc
-	HTTPTimeout   time.Duration
+	HTTPClient          *http.Client
+	TokenProvider       ITokenProvider
+	OrgID               string
+	ExtraHeaders        map[string]string
+	ServiceName         string
+	ParseError          ErrorParseFunc
+	HTTPTimeout         time.Duration
+	RawResponseMaxBytes int64
 }
 
 // NewAPIClient creates a new APIClient with the given configuration.
@@ -50,12 +52,13 @@ func NewAPIClient(cfg APIClientConfig) *APIClient {
 		}
 	}
 	return &APIClient{
-		httpClient:    httpClient,
-		tokenProvider: cfg.TokenProvider,
-		orgID:         cfg.OrgID,
-		extraHeaders:  cfg.ExtraHeaders,
-		serviceName:   cfg.ServiceName,
-		parseError:    cfg.ParseError,
+		httpClient:          httpClient,
+		tokenProvider:       cfg.TokenProvider,
+		orgID:               cfg.OrgID,
+		extraHeaders:        cfg.ExtraHeaders,
+		serviceName:         cfg.ServiceName,
+		parseError:          cfg.ParseError,
+		rawResponseMaxBytes: cfg.RawResponseMaxBytes,
 	}
 }
 
@@ -96,9 +99,131 @@ func (c *APIClient) DoRequest(
 	return resp.Header, c.handleResponse(ctx, resp, result, operation)
 }
 
+// DoRequestRaw performs an HTTP request and returns response headers and body bytes.
+func (c *APIClient) DoRequestRaw(
+	ctx context.Context,
+	method, urlStr string,
+	body any,
+	operation string,
+) (http.Header, []byte, error) {
+	resp, err := c.executeHTTPRequest(ctx, method, urlStr, body, false)
+	if err != nil {
+		return nil, nil, c.ErrorLogWrapper(ctx, err)
+	}
+
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+		if err = resp.Body.Close(); err != nil {
+			slog.WarnContext(ctx, "failed to close response body before retry", "error", err)
+		}
+		resp, err = c.executeHTTPRequest(ctx, method, urlStr, body, true)
+		if err != nil {
+			return nil, nil, c.ErrorLogWrapper(ctx, fmt.Errorf("failed retry after token refresh: %w", err))
+		}
+	}
+
+	defer func() {
+		if err = resp.Body.Close(); err != nil {
+			slog.WarnContext(ctx, "failed to close response body", "error", err)
+		}
+	}()
+
+	bodyBytes, err := readResponseBody(resp.Body, c.rawResponseMaxBytes)
+	if err != nil {
+		return nil, nil, c.ErrorLogWrapper(ctx, fmt.Errorf("read response body: %w", err))
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		httpErr := &HTTPError{
+			StatusCode: resp.StatusCode,
+			Body:       bodyBytes,
+		}
+		if c.parseError != nil {
+			return nil, nil, c.parseError(ctx, httpErr.StatusCode, httpErr.Body, operation)
+		}
+		return nil, nil, c.ErrorLogWrapper(ctx, httpErr)
+	}
+
+	return resp.Header, bodyBytes, nil
+}
+
+// DoRequestStream performs an HTTP request and returns response headers and body stream.
+// Caller is responsible for closing the returned body.
+func (c *APIClient) DoRequestStream(
+	ctx context.Context,
+	method, urlStr string,
+	body any,
+	operation string,
+) (http.Header, io.ReadCloser, error) {
+	resp, err := c.executeHTTPRequest(ctx, method, urlStr, body, false)
+	if err != nil {
+		return nil, nil, c.ErrorLogWrapper(ctx, err)
+	}
+
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+		if err = resp.Body.Close(); err != nil {
+			slog.WarnContext(ctx, "failed to close response body before retry", "error", err)
+		}
+		resp, err = c.executeHTTPRequest(ctx, method, urlStr, body, true)
+		if err != nil {
+			return nil, nil, c.ErrorLogWrapper(ctx, fmt.Errorf("failed retry after token refresh: %w", err))
+		}
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		bodyBytes, readErr := readResponseBody(resp.Body, c.rawResponseMaxBytes)
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			slog.WarnContext(ctx, "failed to close response body", "error", closeErr)
+		}
+		if readErr != nil {
+			return nil, nil, c.ErrorLogWrapper(ctx, fmt.Errorf("read response body: %w", readErr))
+		}
+		httpErr := &HTTPError{
+			StatusCode: resp.StatusCode,
+			Body:       bodyBytes,
+		}
+		if c.parseError != nil {
+			return nil, nil, c.parseError(ctx, httpErr.StatusCode, httpErr.Body, operation)
+		}
+		return nil, nil, c.ErrorLogWrapper(ctx, httpErr)
+	}
+
+	return resp.Header, resp.Body, nil
+}
+
+// readResponseBody reads response body with an optional size limit.
+func readResponseBody(reader io.Reader, maxBytes int64) ([]byte, error) {
+	if maxBytes <= 0 {
+		return io.ReadAll(reader)
+	}
+	limited := &io.LimitedReader{R: reader, N: maxBytes + 1}
+	body, err := io.ReadAll(limited)
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(body)) > maxBytes {
+		return nil, fmt.Errorf("response body exceeds max size of %d bytes", maxBytes)
+	}
+	return body, nil
+}
+
 // DoGET executes a GET request with token injection.
 func (c *APIClient) DoGET(ctx context.Context, urlStr string, result any, operation string) (http.Header, error) {
 	return c.DoRequest(ctx, http.MethodGet, urlStr, nil, result, operation)
+}
+
+// DoGETRaw executes a GET request and returns response headers and body bytes.
+func (c *APIClient) DoGETRaw(ctx context.Context, urlStr string, operation string) (http.Header, []byte, error) {
+	return c.DoRequestRaw(ctx, http.MethodGet, urlStr, nil, operation)
+}
+
+// DoGETStream executes a GET request and returns response headers and body stream.
+// Caller is responsible for closing the returned body.
+func (c *APIClient) DoGETStream(
+	ctx context.Context,
+	urlStr string,
+	operation string,
+) (http.Header, io.ReadCloser, error) {
+	return c.DoRequestStream(ctx, http.MethodGet, urlStr, nil, operation)
 }
 
 // DoPOST executes a POST request with token injection.

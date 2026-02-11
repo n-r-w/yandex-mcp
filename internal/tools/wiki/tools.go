@@ -12,7 +12,7 @@ import (
 // getPageBySlug retrieves a Wiki page by its slug.
 func (r *Registrator) getPageBySlug(ctx context.Context, input getPageBySlugInputDTO) (*pageOutputDTO, error) {
 	if input.Slug == "" {
-		return nil, r.logError(ctx, errors.New("slug is required"))
+		return nil, errors.New("slug is required")
 	}
 
 	opts := domain.WikiGetPageOpts{
@@ -48,11 +48,11 @@ func (r *Registrator) getPageByID(ctx context.Context, input getPageByIDInputDTO
 // listResources lists resources (attachments, grids) for a page.
 func (r *Registrator) listResources(ctx context.Context, input listResourcesInputDTO) (*resourcesListOutputDTO, error) {
 	if input.PageSize < 0 {
-		return nil, r.logError(ctx, errors.New("page_size must be non-negative"))
+		return nil, errors.New("page_size must be non-negative")
 	}
 
 	if input.PageSize > maxPageSize {
-		return nil, r.logError(ctx, fmt.Errorf("page_size must not exceed %d", maxPageSize))
+		return nil, fmt.Errorf("page_size must not exceed %d", maxPageSize)
 	}
 
 	opts := domain.WikiListResourcesOpts{
@@ -75,11 +75,11 @@ func (r *Registrator) listResources(ctx context.Context, input listResourcesInpu
 // listGrids lists dynamic tables (grids) for a page.
 func (r *Registrator) listGrids(ctx context.Context, input listGridsInputDTO) (*gridsListOutputDTO, error) {
 	if input.PageSize < 0 {
-		return nil, r.logError(ctx, errors.New("page_size must be non-negative"))
+		return nil, errors.New("page_size must be non-negative")
 	}
 
 	if input.PageSize > maxPageSize {
-		return nil, r.logError(ctx, fmt.Errorf("page_size must not exceed %d", maxPageSize))
+		return nil, fmt.Errorf("page_size must not exceed %d", maxPageSize)
 	}
 
 	opts := domain.WikiListGridsOpts{
@@ -100,7 +100,7 @@ func (r *Registrator) listGrids(ctx context.Context, input listGridsInputDTO) (*
 // getGrid retrieves a dynamic table by its ID.
 func (r *Registrator) getGrid(ctx context.Context, input getGridInputDTO) (*gridOutputDTO, error) {
 	if input.GridID == "" {
-		return nil, r.logError(ctx, errors.New("grid_id is required"))
+		return nil, errors.New("grid_id is required")
 	}
 
 	opts := domain.WikiGetGridOpts{

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -39,9 +40,10 @@ func NewClient(cfg *config.Config, tokenProvider apihelpers.ITokenProvider) *Cli
 		ExtraHeaders: map[string]string{
 			headerAcceptLanguage: acceptLangEN,
 		},
-		ServiceName: string(domain.ServiceTracker),
-		ParseError:  client.parseError,
-		HTTPTimeout: cfg.HTTPTimeout,
+		ServiceName:         string(domain.ServiceTracker),
+		ParseError:          client.parseError,
+		HTTPTimeout:         cfg.HTTPTimeout,
+		RawResponseMaxBytes: cfg.AttachInlineMaxBytes,
 	})
 
 	return client
@@ -261,6 +263,128 @@ func (c *Client) ListIssueAttachments(ctx context.Context, issueID string) ([]do
 	}
 
 	return result, nil
+}
+
+// GetIssueAttachment downloads an attachment for an issue.
+func (c *Client) GetIssueAttachment(
+	ctx context.Context,
+	issueID string,
+	attachmentID string,
+	fileName string,
+) (*domain.TrackerAttachmentContent, error) {
+	u := fmt.Sprintf(
+		"%s/v3/issues/%s/attachments/%s/%s",
+		c.baseURL,
+		url.PathEscape(issueID),
+		url.PathEscape(attachmentID),
+		url.PathEscape(fileName),
+	)
+
+	headers, body, err := c.apiClient.DoGETRaw(ctx, u, "GetIssueAttachment")
+	if err != nil {
+		return nil, err
+	}
+
+	return &domain.TrackerAttachmentContent{
+		FileName:    fileName,
+		ContentType: headers.Get(apihelpers.HeaderContentType),
+		Data:        body,
+	}, nil
+}
+
+// attachmentStream wraps an io.ReadCloser for domain streaming.
+type attachmentStream struct {
+	reader io.ReadCloser
+}
+
+// Read reads data from the underlying stream.
+func (s *attachmentStream) Read(p []byte) (int, error) {
+	return s.reader.Read(p)
+}
+
+// Close closes the underlying stream.
+func (s *attachmentStream) Close() error {
+	return s.reader.Close()
+}
+
+// Compile-time check that attachmentStream implements domain stream interface.
+var _ domain.IAttachmentStream = (*attachmentStream)(nil)
+
+// GetIssueAttachmentStream streams an attachment for an issue.
+func (c *Client) GetIssueAttachmentStream(
+	ctx context.Context,
+	issueID string,
+	attachmentID string,
+	fileName string,
+) (*domain.TrackerAttachmentStream, error) {
+	u := fmt.Sprintf(
+		"%s/v3/issues/%s/attachments/%s/%s",
+		c.baseURL,
+		url.PathEscape(issueID),
+		url.PathEscape(attachmentID),
+		url.PathEscape(fileName),
+	)
+
+	headers, body, err := c.apiClient.DoGETStream(ctx, u, "GetIssueAttachment")
+	if err != nil {
+		return nil, err
+	}
+
+	return &domain.TrackerAttachmentStream{
+		FileName:    fileName,
+		ContentType: headers.Get(apihelpers.HeaderContentType),
+		Stream:      &attachmentStream{reader: body},
+	}, nil
+}
+
+// GetIssueAttachmentPreview downloads an attachment thumbnail for an issue.
+func (c *Client) GetIssueAttachmentPreview(
+	ctx context.Context,
+	issueID string,
+	attachmentID string,
+) (*domain.TrackerAttachmentContent, error) {
+	u := fmt.Sprintf(
+		"%s/v3/issues/%s/thumbnails/%s",
+		c.baseURL,
+		url.PathEscape(issueID),
+		url.PathEscape(attachmentID),
+	)
+
+	headers, body, err := c.apiClient.DoGETRaw(ctx, u, "GetIssueAttachmentPreview")
+	if err != nil {
+		return nil, err
+	}
+
+	return &domain.TrackerAttachmentContent{
+		FileName:    "",
+		ContentType: headers.Get(apihelpers.HeaderContentType),
+		Data:        body,
+	}, nil
+}
+
+// GetIssueAttachmentPreviewStream streams an attachment thumbnail for an issue.
+func (c *Client) GetIssueAttachmentPreviewStream(
+	ctx context.Context,
+	issueID string,
+	attachmentID string,
+) (*domain.TrackerAttachmentStream, error) {
+	u := fmt.Sprintf(
+		"%s/v3/issues/%s/thumbnails/%s",
+		c.baseURL,
+		url.PathEscape(issueID),
+		url.PathEscape(attachmentID),
+	)
+
+	headers, body, err := c.apiClient.DoGETStream(ctx, u, "GetIssueAttachmentPreview")
+	if err != nil {
+		return nil, err
+	}
+
+	return &domain.TrackerAttachmentStream{
+		FileName:    "",
+		ContentType: headers.Get(apihelpers.HeaderContentType),
+		Stream:      &attachmentStream{reader: body},
+	}, nil
 }
 
 // GetQueue gets a queue by ID or key.

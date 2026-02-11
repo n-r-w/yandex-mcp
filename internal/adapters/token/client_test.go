@@ -71,7 +71,7 @@ func TestProvider_Token_CachesBetweenCalls(t *testing.T) {
 		Return([]byte(makeValidToken("test123")), nil).
 		Times(1)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	tok1, err1 := provider.Token(ctx, false)
 	require.NoError(t, err1)
@@ -103,7 +103,7 @@ func TestProvider_Token_RefreshesAfterPeriodExpires(t *testing.T) {
 			Return([]byte(makeValidToken("v2")), nil),
 	)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	tok1, err1 := provider.Token(ctx, false)
 	require.NoError(t, err1)
@@ -139,7 +139,7 @@ func TestProvider_Token_ConcurrentCallsTriggerSingleExecution(t *testing.T) {
 		}).
 		Times(1)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	const goroutines = 10
 	var wg sync.WaitGroup
 	wg.Add(goroutines)
@@ -185,7 +185,7 @@ Status: unauthorized`
 		Execute(gomock.Any(), "yc", "iam", "create-token").
 		Return([]byte(sensitiveOutput), nil)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	_, err := provider.Token(ctx, false)
 
 	require.Error(t, err)
@@ -221,7 +221,7 @@ func TestProvider_Token_ExtractsTokenWithRegex_CleanOutput(t *testing.T) {
 		Execute(gomock.Any(), "yc", "iam", "create-token").
 		Return([]byte(validToken), nil)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	tok, err := provider.Token(ctx, false)
 
 	require.NoError(t, err)
@@ -248,7 +248,7 @@ Additional log data and metadata here...`
 		Execute(gomock.Any(), "yc", "iam", "create-token").
 		Return([]byte(noisyOutput), nil)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	tok, err := provider.Token(ctx, false)
 
 	require.NoError(t, err)
@@ -272,7 +272,7 @@ func TestProvider_Token_ExtractsTokenWithRegex_WhitespaceAndNewlines(t *testing.
 		Execute(gomock.Any(), "yc", "iam", "create-token").
 		Return([]byte(outputWithWhitespace), nil)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	tok, err := provider.Token(ctx, false)
 
 	require.NoError(t, err)
@@ -292,7 +292,7 @@ func TestProvider_Token_ReturnsErrorWhenNoTokenMatch(t *testing.T) {
 		Execute(gomock.Any(), "yc", "iam", "create-token").
 		Return([]byte("some random output without a valid token format"), nil)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	_, err := provider.Token(ctx, false)
 
 	require.Error(t, err)
@@ -315,7 +315,7 @@ func TestProvider_Token_ReturnsErrorOnInvalidTokenFormat(t *testing.T) {
 		Execute(gomock.Any(), "yc", "iam", "create-token").
 		Return([]byte(invalidToken), nil)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	_, err := provider.Token(ctx, false)
 
 	require.Error(t, err)
@@ -335,7 +335,7 @@ func TestProvider_Token_ReturnsErrorOnEmptyOutput(t *testing.T) {
 		Execute(gomock.Any(), "yc", "iam", "create-token").
 		Return([]byte(""), nil)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	_, err := provider.Token(ctx, false)
 
 	require.Error(t, err)
@@ -355,7 +355,7 @@ func TestProvider_Token_ReturnsErrorOnWhitespaceOnlyOutput(t *testing.T) {
 		Execute(gomock.Any(), "yc", "iam", "create-token").
 		Return([]byte("   \n\t"), nil)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	_, err := provider.Token(ctx, false)
 
 	require.Error(t, err)
@@ -375,7 +375,7 @@ func TestProvider_Token_ContextCancellationPropagates(t *testing.T) {
 		Execute(gomock.Any(), "yc", "iam", "create-token").
 		Return(nil, context.Canceled)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 
 	_, err := provider.Token(ctx, false)
@@ -413,7 +413,7 @@ func TestProvider_Token_ConcurrentCallsDuringRefreshShareResult(t *testing.T) {
 			}),
 	)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	_, _ = provider.Token(ctx, false)
 
@@ -462,7 +462,7 @@ func TestProvider_Token_WaiterReceivesRefreshError(t *testing.T) {
 		}).
 		Times(1)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	// Start leader
 	leaderDone := make(chan error, 1)
@@ -521,7 +521,7 @@ func TestProvider_Token_ForceRefreshBypassesCache(t *testing.T) {
 			Return([]byte(makeValidToken("initial")), nil),
 	)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	tok1, err1 := provider.Token(ctx, false)
 	require.NoError(t, err1)
@@ -560,7 +560,7 @@ func TestProvider_Token_ForceRefreshMultipleTimes(t *testing.T) {
 			Return([]byte(makeValidToken("v3")), nil),
 	)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	tok1, err1 := provider.Token(ctx, true)
 	require.NoError(t, err1)
@@ -600,7 +600,7 @@ func TestProvider_Token_ForceRefreshAfterCacheExpired(t *testing.T) {
 			Return([]byte(makeValidToken("forced")), nil),
 	)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	// Get initial token
 	tok1, err1 := provider.Token(ctx, false)
@@ -637,7 +637,7 @@ func TestProvider_Token_ForceRefreshFalseUsesCache(t *testing.T) {
 		Return([]byte(makeValidToken("cached")), nil).
 		Times(1)
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	// First call fetches token
 	tok1, err1 := provider.Token(ctx, false)

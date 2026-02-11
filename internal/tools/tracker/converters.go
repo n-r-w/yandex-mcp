@@ -246,6 +246,23 @@ func mapAttachmentsToOutput(attachments []domain.TrackerAttachment) *attachments
 	}
 }
 
+func mapAttachmentContentToOutput(
+	content *domain.TrackerAttachmentContent,
+	savedPath string,
+	inlineContent string,
+) *attachmentContentOutputDTO {
+	if content == nil {
+		return nil
+	}
+	return &attachmentContentOutputDTO{
+		FileName:    content.FileName,
+		ContentType: content.ContentType,
+		SavedPath:   savedPath,
+		Content:     inlineContent,
+		Size:        int64(len(content.Data)),
+	}
+}
+
 func mapQueueDetailToOutput(q *domain.TrackerQueueDetail) *queueDetailOutputDTO {
 	if q == nil {
 		return nil

@@ -258,6 +258,66 @@ Returns `AttachmentsListOutput`:
 
 - `size` (string, optional)
 
+## tracker_issue_attachment_get
+
+Downloads a file attached to a Yandex Tracker issue. Either saves it to the local workspace or returns text content.
+
+### Input
+
+- `issue_id_or_key` (string, required): Issue ID or key (for example, `TEST-1`).
+- `attachment_id` (string, required): Attachment ID (for example, `4159`).
+- `file_name` (string, required): Attachment file name (for example, `attachment.txt`).
+- `save_path` (string, optional): Absolute path to save the attachment (for example, `/Users/me/attachments/attachment.txt`).
+- `get_content` (boolean, optional): Return text content in output when `true`.
+- `override` (boolean, optional): Overwrite existing file if `true` (default: `false`).
+
+Requirement:
+
+- Exactly one of `save_path` or `get_content` must be provided.
+
+Notes:
+
+- The extension is validated against an allowlist. By default: txt, json, jsonc, yaml, yml, md, pdf, doc, docx, rtf, odt, xls, xlsx, ods, csv, tsv, ppt, pptx, odp, jpg, jpeg, png, tiff, tif, gif, bmp, webp, zip, 7z, tar, tgz, tar.gz, gz, bz2, xz, rar.
+- The extension is validated using the `save_path` file name.
+- The allowlist can be replaced via `YANDEX_MCP_ATTACH_EXT` (comma-separated, without dots).
+- By default, `save_path` must be inside the user home directory, must not point to the home root, and must not be within a hidden top-level home subdirectory (for example, `~/.ssh`).
+- The directory restriction can be fully replaced via `YANDEX_MCP_ATTACH_DIR` (comma-separated absolute paths). When it is set, only the provided directories (and their subdirectories) are allowed.
+- When `save_path` is used, the attachment is streamed to disk and not fully loaded into memory.
+- When `get_content` is used, the file extension is validated against the text allowlist. By default: txt, json, jsonc, yaml, yml, md, csv, tsv, rtf.
+- The extension for `get_content` is validated using the `file_name` value.
+- The text allowlist can be replaced via `YANDEX_MCP_ATTACH_VIEW_EXT` (comma-separated, without dots).
+- When `get_content` is used, inline content is limited by `YANDEX_MCP_ATTACH_INLINE_MAX_BYTES` (default: 10485760). Larger payloads are rejected.
+- Paths are validated after resolving symlinks; the resolved path must remain within the allowed directory scope.
+
+### Output
+
+Returns `AttachmentContentOutput`:
+
+- `file_name` (string, optional)
+- `content_type` (string, optional)
+- `saved_path` (string, optional): Absolute path where the attachment was saved (cleaned `save_path` value).
+- `content` (string, optional): Attachment text content (raw bytes interpreted as UTF-8) when `get_content` is `true`.
+- `size` (integer): Attachment size in bytes.
+
+## tracker_issue_attachment_preview_get
+
+Downloads a thumbnail for an attachment in a Yandex Tracker issue and saves it to the local workspace.
+
+### Input
+
+- `issue_id_or_key` (string, required): Issue ID or key (for example, `TEST-1`).
+- `attachment_id` (string, required): Attachment ID (for example, `4159`).
+- `save_path` (string, required): Absolute path to save the attachment preview (for example, `/Users/me/attachments/preview.png`).
+- `override` (boolean, optional): Overwrite existing file if `true` (default: `false`).
+
+Notes:
+
+- The same extension and directory rules as `tracker_issue_attachment_get` apply to the preview.
+
+### Output
+
+Returns `AttachmentContentOutput` (same shape as `tracker_issue_attachment_get`).
+
 
 ## tracker_queue_get
 

@@ -2,7 +2,6 @@
 package wiki
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -22,7 +21,7 @@ func TestTools_GetPageBySlug(t *testing.T) {
 		mockAdapter := NewMockIWikiAdapter(ctrl)
 		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
-		_, err := reg.getPageBySlug(context.Background(), getPageBySlugInputDTO{})
+		_, err := reg.getPageBySlug(t.Context(), getPageBySlugInputDTO{})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "slug is required")
 	})
@@ -50,7 +49,7 @@ func TestTools_GetPageBySlug(t *testing.T) {
 			Fields: []string{"content", "attributes"},
 		}
 
-		result, err := reg.getPageBySlug(context.Background(), input)
+		result, err := reg.getPageBySlug(t.Context(), input)
 		require.NoError(t, err)
 		assert.Equal(t, "123", result.ID)
 		assert.Equal(t, "Test Page", result.Title)
@@ -74,7 +73,7 @@ func TestTools_GetPageBySlug(t *testing.T) {
 			GetPageBySlug(gomock.Any(), "missing", domain.WikiGetPageOpts{}).
 			Return(nil, upstreamErr)
 
-		_, err := reg.getPageBySlug(context.Background(), getPageBySlugInputDTO{Slug: "missing"})
+		_, err := reg.getPageBySlug(t.Context(), getPageBySlugInputDTO{Slug: "missing"})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), domain.ServiceWiki)
 		assert.Contains(t, err.Error(), "GetPageBySlug")
@@ -103,7 +102,7 @@ func TestTools_GetPageByID(t *testing.T) {
 			GetPageByID(gomock.Any(), "456", domain.WikiGetPageOpts{Fields: []string{"title"}}).
 			Return(expectedPage, nil)
 
-		result, err := reg.getPageByID(context.Background(), getPageByIDInputDTO{
+		result, err := reg.getPageByID(t.Context(), getPageByIDInputDTO{
 			PageID: "456",
 			Fields: []string{"title"},
 		})
@@ -133,7 +132,7 @@ func TestTools_GetPageByID(t *testing.T) {
 			GetPageByID(gomock.Any(), "789", domain.WikiGetPageOpts{}).
 			Return(expectedPage, nil)
 
-		result, err := reg.getPageByID(context.Background(), getPageByIDInputDTO{PageID: "789"})
+		result, err := reg.getPageByID(t.Context(), getPageByIDInputDTO{PageID: "789"})
 		require.NoError(t, err)
 		require.NotNil(t, result.Attributes)
 		assert.Equal(t, 5, result.Attributes.CommentsCount)
@@ -151,7 +150,7 @@ func TestTools_ListResources(t *testing.T) {
 		mockAdapter := NewMockIWikiAdapter(ctrl)
 		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
-		_, err := reg.listResources(context.Background(), listResourcesInputDTO{
+		_, err := reg.listResources(t.Context(), listResourcesInputDTO{
 			PageID:   "123",
 			PageSize: -1,
 		})
@@ -165,7 +164,7 @@ func TestTools_ListResources(t *testing.T) {
 		mockAdapter := NewMockIWikiAdapter(ctrl)
 		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
-		_, err := reg.listResources(context.Background(), listResourcesInputDTO{
+		_, err := reg.listResources(t.Context(), listResourcesInputDTO{
 			PageID:   "123",
 			PageSize: 51,
 		})
@@ -213,7 +212,7 @@ func TestTools_ListResources(t *testing.T) {
 			Types:          "attachment",
 		}
 
-		result, err := reg.listResources(context.Background(), input)
+		result, err := reg.listResources(t.Context(), input)
 		require.NoError(t, err)
 		assert.Len(t, result.Resources, 1)
 		assert.Equal(t, "next123", result.NextCursor)
@@ -247,7 +246,7 @@ func TestTools_ListResources(t *testing.T) {
 			ListPageResources(gomock.Any(), "100", gomock.Any()).
 			Return(expectedResult, nil)
 
-		result, err := reg.listResources(context.Background(), listResourcesInputDTO{PageID: "100"})
+		result, err := reg.listResources(t.Context(), listResourcesInputDTO{PageID: "100"})
 		require.NoError(t, err)
 		require.Len(t, result.Resources, 1)
 
@@ -290,7 +289,7 @@ func TestTools_ListResources(t *testing.T) {
 			ListPageResources(gomock.Any(), "100", gomock.Any()).
 			Return(expectedResult, nil)
 
-		result, err := reg.listResources(context.Background(), listResourcesInputDTO{PageID: "100"})
+		result, err := reg.listResources(t.Context(), listResourcesInputDTO{PageID: "100"})
 		require.NoError(t, err)
 		require.Len(t, result.Resources, 1)
 
@@ -329,7 +328,7 @@ func TestTools_ListResources(t *testing.T) {
 			ListPageResources(gomock.Any(), "100", gomock.Any()).
 			Return(expectedResult, nil)
 
-		result, err := reg.listResources(context.Background(), listResourcesInputDTO{PageID: "100"})
+		result, err := reg.listResources(t.Context(), listResourcesInputDTO{PageID: "100"})
 		require.NoError(t, err)
 		require.Len(t, result.Resources, 1)
 
@@ -354,7 +353,7 @@ func TestTools_ListGrids(t *testing.T) {
 		mockAdapter := NewMockIWikiAdapter(ctrl)
 		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
-		_, err := reg.listGrids(context.Background(), listGridsInputDTO{
+		_, err := reg.listGrids(t.Context(), listGridsInputDTO{
 			PageID:   "123",
 			PageSize: -1,
 		})
@@ -368,7 +367,7 @@ func TestTools_ListGrids(t *testing.T) {
 		mockAdapter := NewMockIWikiAdapter(ctrl)
 		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
-		_, err := reg.listGrids(context.Background(), listGridsInputDTO{
+		_, err := reg.listGrids(t.Context(), listGridsInputDTO{
 			PageID:   "123",
 			PageSize: 51,
 		})
@@ -397,7 +396,7 @@ func TestTools_ListGrids(t *testing.T) {
 			}).
 			Return(expectedResult, nil)
 
-		result, err := reg.listGrids(context.Background(), listGridsInputDTO{
+		result, err := reg.listGrids(t.Context(), listGridsInputDTO{
 			PageID:   "200",
 			Cursor:   "cur",
 			PageSize: 10,
@@ -418,7 +417,7 @@ func TestTools_GetGrid(t *testing.T) {
 		mockAdapter := NewMockIWikiAdapter(ctrl)
 		reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
-		_, err := reg.getGrid(context.Background(), getGridInputDTO{})
+		_, err := reg.getGrid(t.Context(), getGridInputDTO{})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "grid_id is required")
 	})
@@ -450,7 +449,7 @@ func TestTools_GetGrid(t *testing.T) {
 			}).
 			Return(expectedGrid, nil)
 
-		result, err := reg.getGrid(context.Background(), getGridInputDTO{
+		result, err := reg.getGrid(t.Context(), getGridInputDTO{
 			GridID:   "grid123",
 			Fields:   []string{"rows"},
 			Filter:   "col1 = 'test'",
@@ -485,7 +484,7 @@ func TestTools_GetGrid(t *testing.T) {
 			GetGridByID(gomock.Any(), "gridWithAttrs", domain.WikiGetGridOpts{}).
 			Return(expectedGrid, nil)
 
-		result, err := reg.getGrid(context.Background(), getGridInputDTO{GridID: "gridWithAttrs"})
+		result, err := reg.getGrid(t.Context(), getGridInputDTO{GridID: "gridWithAttrs"})
 		require.NoError(t, err)
 		require.NotNil(t, result.Attributes)
 		assert.Equal(t, "2024-01-01T00:00:00Z", result.Attributes.CreatedAt)
@@ -531,7 +530,7 @@ func TestTools_GetGrid(t *testing.T) {
 			GetGridByID(gomock.Any(), "gridCellTypes", domain.WikiGetGridOpts{}).
 			Return(expectedGrid, nil)
 
-		result, err := reg.getGrid(context.Background(), getGridInputDTO{GridID: "gridCellTypes"})
+		result, err := reg.getGrid(t.Context(), getGridInputDTO{GridID: "gridCellTypes"})
 		require.NoError(t, err)
 		require.Len(t, result.Rows, 2)
 
@@ -591,7 +590,7 @@ func TestTools_ErrorShaping(t *testing.T) {
 			GetPageBySlug(gomock.Any(), "test", domain.WikiGetPageOpts{}).
 			Return(nil, upstreamErr)
 
-		_, err := reg.getPageBySlug(context.Background(), getPageBySlugInputDTO{Slug: "test"})
+		_, err := reg.getPageBySlug(t.Context(), getPageBySlugInputDTO{Slug: "test"})
 		require.Error(t, err)
 		errStr := err.Error()
 		assert.Contains(t, errStr, domain.ServiceWiki)
@@ -613,7 +612,7 @@ func TestTools_ErrorShaping(t *testing.T) {
 			GetPageBySlug(gomock.Any(), "test", domain.WikiGetPageOpts{}).
 			Return(nil, sensitiveErr)
 
-		_, err := reg.getPageBySlug(context.Background(), getPageBySlugInputDTO{Slug: "test"})
+		_, err := reg.getPageBySlug(t.Context(), getPageBySlugInputDTO{Slug: "test"})
 		require.Error(t, err)
 		errStr := err.Error()
 		// Non-upstream errors should return a generic safe message

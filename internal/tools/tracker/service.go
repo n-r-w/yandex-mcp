@@ -1,8 +1,6 @@
 package tracker
 
 import (
-	"context"
-
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/n-r-w/yandex-mcp/internal/domain"
 	"github.com/n-r-w/yandex-mcp/internal/server"
@@ -10,23 +8,35 @@ import (
 
 // Registrator registers tracker tools with an MCP server.
 type Registrator struct {
-	adapter      ITrackerAdapter
-	enabledTools map[domain.TrackerTool]bool
+	adapter           ITrackerAdapter
+	enabledTools      map[domain.TrackerTool]bool
+	allowedExtensions []string
+	allowedViewExts   []string
+	allowedDirs       []string
 }
 
 // Compile-time assertion that Registrator implements server.IToolsRegistrator.
 var _ server.IToolsRegistrator = (*Registrator)(nil)
 
 // NewRegistrator creates a new tracker tools registrator.
-func NewRegistrator(adapter ITrackerAdapter, enabledTools []domain.TrackerTool) *Registrator {
+func NewRegistrator(
+	adapter ITrackerAdapter,
+	enabledTools []domain.TrackerTool,
+	allowedExtensions []string,
+	allowedViewExts []string,
+	allowedDirs []string,
+) *Registrator {
 	toolMap := make(map[domain.TrackerTool]bool, len(enabledTools))
 	for _, t := range enabledTools {
 		toolMap[t] = true
 	}
 
 	return &Registrator{
-		adapter:      adapter,
-		enabledTools: toolMap,
+		adapter:           adapter,
+		enabledTools:      toolMap,
+		allowedExtensions: normalizeAllowedExtensions(allowedExtensions),
+		allowedViewExts:   normalizeAllowedExtensions(allowedViewExts),
+		allowedDirs:       normalizeAllowedDirs(allowedDirs),
 	}
 }
 
@@ -81,6 +91,20 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 		}, server.MakeHandler(r.listAttachments))
 	}
 
+	if r.enabledTools[domain.TrackerToolAttachmentGet] {
+		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+			Name:        domain.TrackerToolAttachmentGet.String(),
+			Description: "Downloads a file attached to a Yandex Tracker issue; requires exactly one of save_path or get_content",
+		}, server.MakeHandler(r.getAttachment))
+	}
+
+	if r.enabledTools[domain.TrackerToolAttachmentPreviewGet] {
+		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+			Name:        domain.TrackerToolAttachmentPreviewGet.String(),
+			Description: "Downloads a thumbnail for a Yandex Tracker issue attachment",
+		}, server.MakeHandler(r.getAttachmentPreview))
+	}
+
 	if r.enabledTools[domain.TrackerToolQueueGet] {
 		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
 			Name:        domain.TrackerToolQueueGet.String(),
@@ -131,8 +155,4 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 	}
 
 	return nil
-}
-
-func (r *Registrator) logError(ctx context.Context, err error) error {
-	return domain.LogError(ctx, string(domain.ServiceTracker), err)
 }

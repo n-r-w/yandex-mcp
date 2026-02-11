@@ -183,6 +183,26 @@ type TrackerAttachmentMetadata struct {
 	Size string
 }
 
+// TrackerAttachmentContent represents downloaded attachment content.
+type TrackerAttachmentContent struct {
+	FileName    string
+	ContentType string
+	Data        []byte
+}
+
+// IAttachmentStream provides streaming access to attachment content.
+type IAttachmentStream interface {
+	Read(p []byte) (int, error)
+	Close() error
+}
+
+// TrackerAttachmentStream represents streamed attachment content.
+type TrackerAttachmentStream struct {
+	FileName    string
+	ContentType string
+	Stream      IAttachmentStream
+}
+
 // TrackerLinkType represents a link type between issues.
 type TrackerLinkType struct {
 	ID      string

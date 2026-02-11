@@ -87,7 +87,7 @@ func (p *Provider) refreshToken(ctx context.Context) (string, error) {
 	// Use singleflight to ensure only one refresh happens at a time
 	result, _, err := p.sf.Do(ctx, "token", p.doRefresh)
 	if err != nil {
-		return "", p.logError(ctx, err)
+		return "", err
 	}
 
 	return result, nil
@@ -115,7 +115,7 @@ func (p *Provider) executeYC(ctx context.Context) (string, error) {
 	if err != nil {
 		// Check context errors before sanitizing (sanitizeError breaks error chain)
 		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-			return "", p.logError(ctx, fmt.Errorf("token fetch canceled or timed out: %w", err))
+			return "", fmt.Errorf("token fetch canceled or timed out: %w", err)
 		}
 
 		return "", p.logError(ctx, fmt.Errorf("%w: %s", errTokenFetchFailed, p.sanitizeError(err).Error()))
