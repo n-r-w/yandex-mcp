@@ -129,6 +129,10 @@ After these steps, the executable will be permanently allowed to run on your sys
   * Fully replaces the default text allowlist.
   * Default allowlist: txt, json, jsonc, yaml, yml, md, csv, tsv, rtf.
 
+- `YANDEX_MCP_ATTACH_INLINE_MAX_BYTES` (optional, default: `10485760`)
+  * Maximum size in bytes for attachment content returned inline.
+  * Applies only to `get_content` inline responses; `save_path` uses streaming and is not limited by this setting.
+
 - `YANDEX_MCP_ATTACH_DIR` (optional)
   * Comma-separated list of **absolute** directories allowed for saving attachments.
   * Fully replaces the default directory rules. When set, only the provided directories (and their subdirectories) are allowed.

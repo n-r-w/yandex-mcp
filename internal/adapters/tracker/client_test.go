@@ -2,6 +2,7 @@ package tracker
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -15,10 +16,13 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
+const testAttachInlineMaxBytes = 10 * 1024 * 1024
+
 func newTestConfig(baseURL, orgID string) *config.Config {
 	return &config.Config{ //nolint:exhaustruct // test helper
-		TrackerBaseURL: baseURL,
-		CloudOrgID:     orgID,
+		TrackerBaseURL:       baseURL,
+		CloudOrgID:           orgID,
+		AttachInlineMaxBytes: testAttachInlineMaxBytes,
 	}
 }
 
@@ -560,6 +564,68 @@ func TestClient_GetIssueAttachment(t *testing.T) {
 	assert.Equal(t, payload, result.Data)
 }
 
+func TestClient_GetIssueAttachmentStream(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
+
+	payload := []byte("streamed payload")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/pdf")
+		_, _ = w.Write(payload)
+	}))
+	t.Cleanup(func() {
+		server.Close()
+	})
+
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
+
+	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
+
+	stream, err := client.GetIssueAttachmentStream(t.Context(), "TEST-1", "4159", "attachment.txt")
+	require.NoError(t, err)
+	require.NotNil(t, stream)
+	require.NotNil(t, stream.Stream)
+	defer func() {
+		_ = stream.Stream.Close()
+	}()
+	data, err := io.ReadAll(stream.Stream)
+	require.NoError(t, err)
+	assert.Equal(t, "attachment.txt", stream.FileName)
+	assert.Equal(t, "application/pdf", stream.ContentType)
+	assert.Equal(t, payload, data)
+}
+
+func TestClient_GetIssueAttachment_EnforcesMaxSize(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
+
+	payload := []byte("too-large")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/pdf")
+		_, _ = w.Write(payload)
+	}))
+	t.Cleanup(func() {
+		server.Close()
+	})
+
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
+
+	cfg := &config.Config{ //nolint:exhaustruct // test uses minimal config
+		TrackerBaseURL:       server.URL,
+		CloudOrgID:           "org",
+		AttachInlineMaxBytes: 4,
+	}
+	client := NewClient(cfg, tokenProvider)
+
+	_, err := client.GetIssueAttachment(t.Context(), "TEST-1", "4159", "attachment.txt")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "response body exceeds max size")
+}
+
 func TestClient_GetIssueAttachmentPreview(t *testing.T) {
 	t.Parallel()
 
@@ -589,6 +655,38 @@ func TestClient_GetIssueAttachmentPreview(t *testing.T) {
 	assert.Contains(t, capturedURL, "/v3/issues/TEST-1/thumbnails/4159")
 	assert.Equal(t, "image/png", result.ContentType)
 	assert.Equal(t, payload, result.Data)
+}
+
+func TestClient_GetIssueAttachmentPreviewStream(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
+
+	payload := []byte{0x1, 0x2, 0x3}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "image/png")
+		_, _ = w.Write(payload)
+	}))
+	t.Cleanup(func() {
+		server.Close()
+	})
+
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
+
+	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
+
+	stream, err := client.GetIssueAttachmentPreviewStream(t.Context(), "TEST-1", "4159")
+	require.NoError(t, err)
+	require.NotNil(t, stream)
+	require.NotNil(t, stream.Stream)
+	defer func() {
+		_ = stream.Stream.Close()
+	}()
+	data, err := io.ReadAll(stream.Stream)
+	require.NoError(t, err)
+	assert.Equal(t, "image/png", stream.ContentType)
+	assert.Equal(t, payload, data)
 }
 
 func TestClient_UpstreamError_NoTokenLeak(t *testing.T) {

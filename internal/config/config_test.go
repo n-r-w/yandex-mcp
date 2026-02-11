@@ -147,6 +147,28 @@ func TestLoad_DefaultAttachExtensions(t *testing.T) {
 	assert.Equal(t, defaultAttachExtensions(), cfg.AttachAllowedExtensions)
 	assert.Equal(t, defaultTextAttachExtensions(), cfg.AttachViewExtensions)
 	assert.Nil(t, cfg.AttachAllowedDirs)
+	assert.Equal(t, int64(defaultAttachInlineMaxBytes), cfg.AttachInlineMaxBytes)
+}
+
+func TestLoad_AttachInlineMaxBytesOverride(t *testing.T) {
+	t.Setenv("YANDEX_CLOUD_ORG_ID", "test-org")
+	t.Setenv("YANDEX_MCP_ATTACH_INLINE_MAX_BYTES", "2048")
+
+	cfg, err := Load()
+
+	require.NoError(t, err)
+	assert.Equal(t, int64(2048), cfg.AttachInlineMaxBytes)
+}
+
+func TestLoad_AttachInlineMaxBytesInvalid(t *testing.T) {
+	t.Setenv("YANDEX_CLOUD_ORG_ID", "test-org")
+	t.Setenv("YANDEX_MCP_ATTACH_INLINE_MAX_BYTES", "0")
+
+	cfg, err := Load()
+
+	require.Error(t, err)
+	assert.Nil(t, cfg)
+	assert.Contains(t, err.Error(), "YANDEX_MCP_ATTACH_INLINE_MAX_BYTES")
 }
 
 func TestLoad_AttachExtensionsOverride(t *testing.T) {

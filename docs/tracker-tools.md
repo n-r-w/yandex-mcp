@@ -282,9 +282,12 @@ Notes:
 - The allowlist can be replaced via `YANDEX_MCP_ATTACH_EXT` (comma-separated, without dots).
 - By default, `save_path` must be inside the user home directory, must not point to the home root, and must not be within a hidden top-level home subdirectory (for example, `~/.ssh`).
 - The directory restriction can be fully replaced via `YANDEX_MCP_ATTACH_DIR` (comma-separated absolute paths). When it is set, only the provided directories (and their subdirectories) are allowed.
+- When `save_path` is used, the attachment is streamed to disk and not fully loaded into memory.
 - When `get_content` is used, the file extension is validated against the text allowlist. By default: txt, json, jsonc, yaml, yml, md, csv, tsv, rtf.
 - The extension for `get_content` is validated using the `file_name` value.
 - The text allowlist can be replaced via `YANDEX_MCP_ATTACH_VIEW_EXT` (comma-separated, without dots).
+- When `get_content` is used, inline content is limited by `YANDEX_MCP_ATTACH_INLINE_MAX_BYTES` (default: 10485760). Larger payloads are rejected.
+- Paths are validated after resolving symlinks; the resolved path must remain within the allowed directory scope.
 
 ### Output
 

@@ -33,13 +33,14 @@ func NewClient(cfg *config.Config, tokenProvider apihelpers.ITokenProvider) *Cli
 	}
 
 	client.apiClient = apihelpers.NewAPIClient(apihelpers.APIClientConfig{
-		HTTPClient:    nil, // uses default
-		TokenProvider: tokenProvider,
-		OrgID:         cfg.CloudOrgID,
-		ExtraHeaders:  nil,
-		ServiceName:   string(domain.ServiceWiki),
-		ParseError:    client.parseError,
-		HTTPTimeout:   cfg.HTTPTimeout,
+		HTTPClient:          nil, // uses default
+		TokenProvider:       tokenProvider,
+		OrgID:               cfg.CloudOrgID,
+		ExtraHeaders:        nil,
+		ServiceName:         string(domain.ServiceWiki),
+		ParseError:          client.parseError,
+		HTTPTimeout:         cfg.HTTPTimeout,
+		RawResponseMaxBytes: cfg.AttachInlineMaxBytes,
 	})
 
 	return client

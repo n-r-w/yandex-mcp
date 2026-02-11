@@ -16,10 +16,13 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
+const testAttachInlineMaxBytes = 10 * 1024 * 1024
+
 func newTestConfig(baseURL, orgID string) *config.Config {
 	return &config.Config{ //nolint:exhaustruct // test helper
-		WikiBaseURL: baseURL,
-		CloudOrgID:  orgID,
+		WikiBaseURL:          baseURL,
+		CloudOrgID:           orgID,
+		AttachInlineMaxBytes: testAttachInlineMaxBytes,
 	}
 }
 
@@ -517,6 +520,7 @@ func TestClient_FullConfig(t *testing.T) {
 		TrackerBaseURL:        "https://api.tracker.yandex.net",
 		CloudOrgID:            "org-123",
 		IAMTokenRefreshPeriod: 10 * time.Hour,
+		AttachInlineMaxBytes:  testAttachInlineMaxBytes,
 	}
 	client := NewClient(cfg, tokenProvider)
 

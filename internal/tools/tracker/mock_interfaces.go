@@ -87,12 +87,7 @@ func (mr *MockITrackerAdapterMockRecorder) GetIssue(ctx, issueID, opts any) *gom
 }
 
 // GetIssueAttachment mocks base method.
-func (m *MockITrackerAdapter) GetIssueAttachment(
-	ctx context.Context,
-	issueID string,
-	attachmentID string,
-	fileName string,
-) (*domain.TrackerAttachmentContent, error) {
+func (m *MockITrackerAdapter) GetIssueAttachment(ctx context.Context, issueID, attachmentID, fileName string) (*domain.TrackerAttachmentContent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetIssueAttachment", ctx, issueID, attachmentID, fileName)
 	ret0, _ := ret[0].(*domain.TrackerAttachmentContent)
@@ -103,23 +98,11 @@ func (m *MockITrackerAdapter) GetIssueAttachment(
 // GetIssueAttachment indicates an expected call of GetIssueAttachment.
 func (mr *MockITrackerAdapterMockRecorder) GetIssueAttachment(ctx, issueID, attachmentID, fileName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(
-		mr.mock,
-		"GetIssueAttachment",
-		reflect.TypeOf((*MockITrackerAdapter)(nil).GetIssueAttachment),
-		ctx,
-		issueID,
-		attachmentID,
-		fileName,
-	)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIssueAttachment", reflect.TypeOf((*MockITrackerAdapter)(nil).GetIssueAttachment), ctx, issueID, attachmentID, fileName)
 }
 
 // GetIssueAttachmentPreview mocks base method.
-func (m *MockITrackerAdapter) GetIssueAttachmentPreview(
-	ctx context.Context,
-	issueID string,
-	attachmentID string,
-) (*domain.TrackerAttachmentContent, error) {
+func (m *MockITrackerAdapter) GetIssueAttachmentPreview(ctx context.Context, issueID, attachmentID string) (*domain.TrackerAttachmentContent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetIssueAttachmentPreview", ctx, issueID, attachmentID)
 	ret0, _ := ret[0].(*domain.TrackerAttachmentContent)
@@ -130,14 +113,37 @@ func (m *MockITrackerAdapter) GetIssueAttachmentPreview(
 // GetIssueAttachmentPreview indicates an expected call of GetIssueAttachmentPreview.
 func (mr *MockITrackerAdapterMockRecorder) GetIssueAttachmentPreview(ctx, issueID, attachmentID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(
-		mr.mock,
-		"GetIssueAttachmentPreview",
-		reflect.TypeOf((*MockITrackerAdapter)(nil).GetIssueAttachmentPreview),
-		ctx,
-		issueID,
-		attachmentID,
-	)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIssueAttachmentPreview", reflect.TypeOf((*MockITrackerAdapter)(nil).GetIssueAttachmentPreview), ctx, issueID, attachmentID)
+}
+
+// GetIssueAttachmentPreviewStream mocks base method.
+func (m *MockITrackerAdapter) GetIssueAttachmentPreviewStream(ctx context.Context, issueID, attachmentID string) (*domain.TrackerAttachmentStream, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetIssueAttachmentPreviewStream", ctx, issueID, attachmentID)
+	ret0, _ := ret[0].(*domain.TrackerAttachmentStream)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetIssueAttachmentPreviewStream indicates an expected call of GetIssueAttachmentPreviewStream.
+func (mr *MockITrackerAdapterMockRecorder) GetIssueAttachmentPreviewStream(ctx, issueID, attachmentID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIssueAttachmentPreviewStream", reflect.TypeOf((*MockITrackerAdapter)(nil).GetIssueAttachmentPreviewStream), ctx, issueID, attachmentID)
+}
+
+// GetIssueAttachmentStream mocks base method.
+func (m *MockITrackerAdapter) GetIssueAttachmentStream(ctx context.Context, issueID, attachmentID, fileName string) (*domain.TrackerAttachmentStream, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetIssueAttachmentStream", ctx, issueID, attachmentID, fileName)
+	ret0, _ := ret[0].(*domain.TrackerAttachmentStream)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetIssueAttachmentStream indicates an expected call of GetIssueAttachmentStream.
+func (mr *MockITrackerAdapterMockRecorder) GetIssueAttachmentStream(ctx, issueID, attachmentID, fileName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIssueAttachmentStream", reflect.TypeOf((*MockITrackerAdapter)(nil).GetIssueAttachmentStream), ctx, issueID, attachmentID, fileName)
 }
 
 // GetIssueChangelog mocks base method.

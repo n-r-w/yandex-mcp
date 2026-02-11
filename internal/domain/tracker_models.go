@@ -190,6 +190,19 @@ type TrackerAttachmentContent struct {
 	Data        []byte
 }
 
+// IAttachmentStream provides streaming access to attachment content.
+type IAttachmentStream interface {
+	Read(p []byte) (int, error)
+	Close() error
+}
+
+// TrackerAttachmentStream represents streamed attachment content.
+type TrackerAttachmentStream struct {
+	FileName    string
+	ContentType string
+	Stream      IAttachmentStream
+}
+
 // TrackerLinkType represents a link type between issues.
 type TrackerLinkType struct {
 	ID      string

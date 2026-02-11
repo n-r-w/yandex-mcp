@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -197,6 +198,30 @@ func (r *Registrator) getAttachment(
 			return nil, err
 		}
 	}
+	if input.SavePath != "" {
+		stream, err := r.adapter.GetIssueAttachmentStream(ctx, input.IssueID, input.AttachmentID, input.FileName)
+		if err != nil {
+			return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+		}
+		if stream == nil || stream.Stream == nil {
+			return nil, errors.New("attachment stream is empty")
+		}
+		bytesWritten, writeErr := r.writeAttachmentStream(fullPath, input.Override, stream.Stream)
+		closeErr := stream.Stream.Close()
+		if writeErr != nil {
+			return nil, r.logError(ctx, writeErr)
+		}
+		if closeErr != nil {
+			return nil, r.logError(ctx, fmt.Errorf("close attachment stream: %w", closeErr))
+		}
+		return &attachmentContentOutputDTO{
+			FileName:    stream.FileName,
+			ContentType: stream.ContentType,
+			SavedPath:   savedPath,
+			Content:     "",
+			Size:        bytesWritten,
+		}, nil
+	}
 
 	content, err := r.adapter.GetIssueAttachment(ctx, input.IssueID, input.AttachmentID, input.FileName)
 	if err != nil {
@@ -207,12 +232,6 @@ func (r *Registrator) getAttachment(
 	if input.GetContent {
 		inlineContent = string(content.Data)
 	}
-	if input.SavePath != "" {
-		if err := r.writeAttachment(fullPath, input.Override, content.Data); err != nil {
-			return nil, r.logError(ctx, err)
-		}
-	}
-
 	return mapAttachmentContentToOutput(content, savedPath, inlineContent), nil
 }
 
@@ -234,17 +253,29 @@ func (r *Registrator) getAttachmentPreview(
 	if err != nil {
 		return nil, err
 	}
-
-	content, err := r.adapter.GetIssueAttachmentPreview(ctx, input.IssueID, input.AttachmentID)
+	stream, err := r.adapter.GetIssueAttachmentPreviewStream(ctx, input.IssueID, input.AttachmentID)
 	if err != nil {
 		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
 	}
-
-	if err := r.writeAttachment(fullPath, input.Override, content.Data); err != nil {
-		return nil, r.logError(ctx, err)
+	if stream == nil || stream.Stream == nil {
+		return nil, errors.New("attachment stream is empty")
+	}
+	bytesWritten, writeErr := r.writeAttachmentStream(fullPath, input.Override, stream.Stream)
+	closeErr := stream.Stream.Close()
+	if writeErr != nil {
+		return nil, r.logError(ctx, writeErr)
+	}
+	if closeErr != nil {
+		return nil, r.logError(ctx, fmt.Errorf("close attachment stream: %w", closeErr))
 	}
 
-	return mapAttachmentContentToOutput(content, savedPath, ""), nil
+	return &attachmentContentOutputDTO{
+		FileName:    stream.FileName,
+		ContentType: stream.ContentType,
+		SavedPath:   savedPath,
+		Content:     "",
+		Size:        bytesWritten,
+	}, nil
 }
 
 // resolveSavePath validates the absolute save path against attachment safety rules.
@@ -403,8 +434,18 @@ func (r *Registrator) validateAttachmentViewExtension(fileName string) error {
 
 // validateAttachmentDirectory enforces the write scope to prevent unintended writes.
 func (r *Registrator) validateAttachmentDirectory(ctx context.Context, cleanPath string) error {
+	resolvedPath, err := resolvePathForContainment(cleanPath)
+	if err != nil {
+		return r.logError(ctx, fmt.Errorf("resolve save_path: %w", err))
+	}
+
 	if len(r.allowedDirs) > 0 {
 		if ok, err := isWithinAllowedDirs(cleanPath, r.allowedDirs); err != nil {
+			return r.logError(ctx, err)
+		} else if !ok {
+			return fmt.Errorf("save_path must be within allowed directories: %s", formatAllowedDirs(r.allowedDirs))
+		}
+		if ok, err := isWithinResolvedAllowedDirs(resolvedPath, r.allowedDirs); err != nil {
 			return r.logError(ctx, err)
 		} else if !ok {
 			return fmt.Errorf("save_path must be within allowed directories: %s", formatAllowedDirs(r.allowedDirs))
@@ -418,21 +459,27 @@ func (r *Registrator) validateAttachmentDirectory(ctx context.Context, cleanPath
 	}
 	homeDir = filepath.Clean(homeDir)
 	allowedPaths := formatHomeAllowedPaths(homeDir)
-	if cleanPath == homeDir {
+	resolvedHomeDir, err := resolvePathForContainment(homeDir)
+	if err != nil {
+		return r.logError(ctx, fmt.Errorf("resolve home directory: %w", err))
+	}
+	if resolvedPath == resolvedHomeDir {
 		return fmt.Errorf("save_path must not be home directory; allowed paths: %s", allowedPaths)
 	}
-	relativePath, err := filepath.Rel(homeDir, cleanPath)
+	if ok, err := isWithinResolvedRoot(resolvedPath, resolvedHomeDir); err != nil {
+		return r.logError(ctx, fmt.Errorf("resolve save_path: %w", err))
+	} else if !ok {
+		return fmt.Errorf("save_path must be within home directory; allowed paths: %s", allowedPaths)
+	}
+	relativePath, err := filepath.Rel(resolvedHomeDir, resolvedPath)
 	if err != nil {
 		return r.logError(ctx, fmt.Errorf("resolve save_path: %w", err))
-	}
-	if relativePath == "." || relativePath == ".." || strings.HasPrefix(relativePath, ".."+string(os.PathSeparator)) {
-		return fmt.Errorf("save_path must be within home directory; allowed paths: %s", allowedPaths)
 	}
 
 	segments := strings.Split(relativePath, string(os.PathSeparator))
 	if len(segments) > 0 {
 		topLevelName := segments[0]
-		topLevelPath := filepath.Join(homeDir, topLevelName)
+		topLevelPath := filepath.Join(resolvedHomeDir, topLevelName)
 		hidden, err := isHiddenTopLevelDir(topLevelName, topLevelPath)
 		if err != nil {
 			return r.logError(ctx, fmt.Errorf("resolve save_path: %w", err))
@@ -471,10 +518,91 @@ func isWithinAllowedDirs(cleanPath string, allowedDirs []string) (bool, error) {
 	return false, nil
 }
 
-// writeAttachment writes attachment bytes to disk.
-func (r *Registrator) writeAttachment(fullPath string, override bool, data []byte) error {
+// isWithinResolvedAllowedDirs verifies containment after resolving symlinks.
+func isWithinResolvedAllowedDirs(resolvedPath string, allowedDirs []string) (bool, error) {
+	for _, dir := range allowedDirs {
+		if dir == "" {
+			continue
+		}
+		if !filepath.IsAbs(dir) {
+			return false, errors.New("allowed directories must be absolute")
+		}
+		resolvedDir, err := resolvePathForContainment(dir)
+		if err != nil {
+			return false, fmt.Errorf("resolve save_path: %w", err)
+		}
+		ok, err := isWithinResolvedRoot(resolvedPath, resolvedDir)
+		if err != nil {
+			return false, err
+		}
+		if ok {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// resolvePathForContainment resolves symlinks for existing parents and rebuilds the full path.
+func resolvePathForContainment(path string) (string, error) {
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
+	}
+	absPath = filepath.Clean(absPath)
+	current := absPath
+	for {
+		_, statErr := os.Lstat(current)
+		if statErr == nil {
+			return buildResolvedPath(current, absPath)
+		}
+		if !os.IsNotExist(statErr) {
+			return "", statErr
+		}
+		parent := filepath.Dir(current)
+		if parent == current {
+			return "", statErr
+		}
+		current = parent
+	}
+}
+
+// buildResolvedPath rebuilds the target path with symlinks resolved for an existing parent.
+func buildResolvedPath(existingPath, absPath string) (string, error) {
+	resolvedCurrent, err := filepath.EvalSymlinks(existingPath)
+	if err != nil {
+		return "", err
+	}
+	rel, err := filepath.Rel(existingPath, absPath)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(resolvedCurrent, rel), nil
+}
+
+// isWithinResolvedRoot checks if resolvedPath is inside resolvedRoot.
+func isWithinResolvedRoot(resolvedPath, resolvedRoot string) (bool, error) {
+	cleanPath := filepath.Clean(resolvedPath)
+	cleanRoot := filepath.Clean(resolvedRoot)
+	if !strings.EqualFold(filepath.VolumeName(cleanPath), filepath.VolumeName(cleanRoot)) {
+		return false, nil
+	}
+	rel, err := filepath.Rel(cleanRoot, cleanPath)
+	if err != nil {
+		return false, err
+	}
+	if rel == "." {
+		return true, nil
+	}
+	if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+		return false, nil
+	}
+	return true, nil
+}
+
+// writeAttachmentStream writes streamed attachment data to disk.
+func (r *Registrator) writeAttachmentStream(fullPath string, override bool, reader io.Reader) (int64, error) {
 	if err := os.MkdirAll(filepath.Dir(fullPath), attachmentDirPerm); err != nil {
-		return fmt.Errorf("create attachment directory: %w", err)
+		return 0, fmt.Errorf("create attachment directory: %w", err)
 	}
 
 	flags := os.O_WRONLY | os.O_CREATE
@@ -487,18 +615,19 @@ func (r *Registrator) writeAttachment(fullPath string, override bool, data []byt
 	//nolint:gosec // save_path is validated and constrained to allowed locations
 	file, err := os.OpenFile(fullPath, flags, attachmentFilePerm)
 	if err != nil {
-		return fmt.Errorf("open save_path: %w", err)
+		return 0, fmt.Errorf("open save_path: %w", err)
 	}
 
-	if _, err := file.Write(data); err != nil {
+	bytesWritten, err := io.Copy(file, reader)
+	if err != nil {
 		_ = file.Close()
-		return fmt.Errorf("write attachment: %w", err)
+		return 0, fmt.Errorf("write attachment: %w", err)
 	}
 	if err := file.Close(); err != nil {
-		return fmt.Errorf("close attachment: %w", err)
+		return 0, fmt.Errorf("close attachment: %w", err)
 	}
 
-	return nil
+	return bytesWritten, nil
 }
 
 // getQueue gets a queue by ID or key.

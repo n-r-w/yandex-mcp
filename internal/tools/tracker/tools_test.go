@@ -2,7 +2,9 @@
 package tracker
 
 import (
+	"bytes"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -796,6 +798,32 @@ func TestTools_GetAttachment(t *testing.T) {
 		assert.Contains(t, errStr, allowedDir)
 	})
 
+	t.Run("validation/save_path_symlink_outside_allowed_dirs", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockITrackerAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
+		allowedDir := t.TempDir()
+		outsideDir := t.TempDir()
+		reg.allowedDirs = []string{allowedDir}
+
+		linkPath := filepath.Join(allowedDir, "link")
+		if err := os.Symlink(outsideDir, linkPath); err != nil {
+			t.Skipf("symlink not supported: %v", err)
+		}
+
+		_, err := reg.getAttachment(t.Context(), getAttachmentInputDTO{
+			IssueID:      "TEST-1",
+			AttachmentID: "4159",
+			FileName:     "attachment.txt",
+			SavePath:     filepath.Join(linkPath, "attachment.txt"),
+		})
+		require.Error(t, err)
+		errStr := err.Error()
+		assert.Contains(t, errStr, "save_path must be within allowed directories")
+		assert.Contains(t, errStr, allowedDir)
+	})
+
 	t.Run("validation/save_path_outside_home", func(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
@@ -848,14 +876,14 @@ func TestTools_GetAttachment(t *testing.T) {
 		savePath := filepath.Join(baseDir, "attachments", "attachment.txt")
 
 		payload := []byte("hello world")
-		expected := &domain.TrackerAttachmentContent{
+		expected := &domain.TrackerAttachmentStream{
 			FileName:    "attachment.txt",
 			ContentType: "text/plain",
-			Data:        payload,
+			Stream:      io.NopCloser(bytes.NewReader(payload)),
 		}
 
 		mockAdapter.EXPECT().
-			GetIssueAttachment(gomock.Any(), "TEST-1", "4159", "attachment.txt").
+			GetIssueAttachmentStream(gomock.Any(), "TEST-1", "4159", "attachment.txt").
 			Return(expected, nil)
 
 		result, err := reg.getAttachment(t.Context(), getAttachmentInputDTO{
@@ -947,7 +975,7 @@ func TestTools_GetAttachment(t *testing.T) {
 		)
 
 		mockAdapter.EXPECT().
-			GetIssueAttachment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			GetIssueAttachmentStream(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(nil, upstreamErr)
 
 		_, err := reg.getAttachment(t.Context(), getAttachmentInputDTO{
@@ -1015,13 +1043,13 @@ func TestTools_GetAttachmentPreview(t *testing.T) {
 		savePath := filepath.Join(baseDir, "attachments", "preview.png")
 
 		payload := []byte{0x1, 0x2, 0x3}
-		expected := &domain.TrackerAttachmentContent{
+		expected := &domain.TrackerAttachmentStream{
 			ContentType: "image/png",
-			Data:        payload,
+			Stream:      io.NopCloser(bytes.NewReader(payload)),
 		}
 
 		mockAdapter.EXPECT().
-			GetIssueAttachmentPreview(gomock.Any(), "TEST-1", "4159").
+			GetIssueAttachmentPreviewStream(gomock.Any(), "TEST-1", "4159").
 			Return(expected, nil)
 
 		result, err := reg.getAttachmentPreview(t.Context(), getAttachmentPreviewInputDTO{
@@ -1057,7 +1085,7 @@ func TestTools_GetAttachmentPreview(t *testing.T) {
 		)
 
 		mockAdapter.EXPECT().
-			GetIssueAttachmentPreview(gomock.Any(), gomock.Any(), gomock.Any()).
+			GetIssueAttachmentPreviewStream(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(nil, upstreamErr)
 
 		_, err := reg.getAttachmentPreview(t.Context(), getAttachmentPreviewInputDTO{

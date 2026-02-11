@@ -28,11 +28,22 @@ type ITrackerAdapter interface {
 		attachmentID string,
 		fileName string,
 	) (*domain.TrackerAttachmentContent, error)
+	GetIssueAttachmentStream(
+		ctx context.Context,
+		issueID string,
+		attachmentID string,
+		fileName string,
+	) (*domain.TrackerAttachmentStream, error)
 	GetIssueAttachmentPreview(
 		ctx context.Context,
 		issueID string,
 		attachmentID string,
 	) (*domain.TrackerAttachmentContent, error)
+	GetIssueAttachmentPreviewStream(
+		ctx context.Context,
+		issueID string,
+		attachmentID string,
+	) (*domain.TrackerAttachmentStream, error)
 	GetQueue(
 		ctx context.Context, queueID string, opts domain.TrackerGetQueueOpts,
 	) (*domain.TrackerQueueDetail, error)

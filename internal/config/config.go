@@ -13,9 +13,10 @@ import (
 )
 
 const (
-	defaultTrackerBaseURL = "https://api.tracker.yandex.net"
-	defaultWikiBaseURL    = "https://api.wiki.yandex.net"
-	defaultRefreshHours   = 10
+	defaultTrackerBaseURL       = "https://api.tracker.yandex.net"
+	defaultWikiBaseURL          = "https://api.wiki.yandex.net"
+	defaultRefreshHours         = 10
+	defaultAttachInlineMaxBytes = 10 * 1024 * 1024
 )
 
 // Config holds static application configuration loaded from environment variables.
@@ -43,18 +44,22 @@ type Config struct {
 
 	// AttachAllowedDirs is the list of absolute directories allowed for saving attachments.
 	AttachAllowedDirs []string
+
+	// AttachInlineMaxBytes is the maximum size of attachment content returned inline.
+	AttachInlineMaxBytes int64
 }
 
 // envConfig is an intermediate struct for parsing environment variables.
 type envConfig struct {
-	WikiBaseURL        string `env:"YANDEX_WIKI_BASE_URL"`
-	TrackerBaseURL     string `env:"YANDEX_TRACKER_BASE_URL"`
-	CloudOrgID         string `env:"YANDEX_CLOUD_ORG_ID,required"`
-	RefreshPeriodHours int    `env:"YANDEX_IAM_TOKEN_REFRESH_PERIOD" envDefault:"10"`
-	HTTPTimeoutSeconds int    `env:"YANDEX_HTTP_TIMEOUT" envDefault:"30"`
-	AttachExtensions   string `env:"YANDEX_MCP_ATTACH_EXT"`
-	AttachViewExts     string `env:"YANDEX_MCP_ATTACH_VIEW_EXT"`
-	AttachDirs         string `env:"YANDEX_MCP_ATTACH_DIR"`
+	WikiBaseURL          string `env:"YANDEX_WIKI_BASE_URL"`
+	TrackerBaseURL       string `env:"YANDEX_TRACKER_BASE_URL"`
+	CloudOrgID           string `env:"YANDEX_CLOUD_ORG_ID,required"`
+	RefreshPeriodHours   int    `env:"YANDEX_IAM_TOKEN_REFRESH_PERIOD" envDefault:"10"`
+	HTTPTimeoutSeconds   int    `env:"YANDEX_HTTP_TIMEOUT" envDefault:"30"`
+	AttachExtensions     string `env:"YANDEX_MCP_ATTACH_EXT"`
+	AttachViewExts       string `env:"YANDEX_MCP_ATTACH_VIEW_EXT"`
+	AttachDirs           string `env:"YANDEX_MCP_ATTACH_DIR"`
+	AttachInlineMaxBytes int64  `env:"YANDEX_MCP_ATTACH_INLINE_MAX_BYTES" envDefault:"10485760"`
 }
 
 // Load parses configuration from environment variables and validates it.
@@ -95,6 +100,7 @@ func Load() (*Config, error) {
 		AttachAllowedExtensions: allowedExtensions,
 		AttachViewExtensions:    viewExtensions,
 		AttachAllowedDirs:       allowedDirs,
+		AttachInlineMaxBytes:    ec.AttachInlineMaxBytes,
 	}
 
 	if err := cfg.validate(); err != nil {
@@ -268,6 +274,9 @@ func (c *Config) validate() error {
 	}
 	if len(c.AttachViewExtensions) == 0 {
 		errs = append(errs, errors.New("YANDEX_MCP_ATTACH_VIEW_EXT resolved to an empty list"))
+	}
+	if c.AttachInlineMaxBytes <= 0 {
+		errs = append(errs, errors.New("YANDEX_MCP_ATTACH_INLINE_MAX_BYTES must be positive"))
 	}
 
 	return errors.Join(errs...)
