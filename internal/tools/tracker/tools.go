@@ -158,6 +158,47 @@ func (r *Registrator) listAttachments(
 	return mapAttachmentsToOutput(attachments), nil
 }
 
+// getAttachment downloads an attachment for an issue.
+func (r *Registrator) getAttachment(
+	ctx context.Context, input getAttachmentInputDTO,
+) (*attachmentContentOutputDTO, error) {
+	if input.IssueID == "" {
+		return nil, r.logError(ctx, errors.New("issue_id_or_key is required"))
+	}
+	if input.AttachmentID == "" {
+		return nil, r.logError(ctx, errors.New("attachment_id is required"))
+	}
+	if input.FileName == "" {
+		return nil, r.logError(ctx, errors.New("file_name is required"))
+	}
+
+	content, err := r.adapter.GetIssueAttachment(ctx, input.IssueID, input.AttachmentID, input.FileName)
+	if err != nil {
+		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+	}
+
+	return mapAttachmentContentToOutput(content), nil
+}
+
+// getAttachmentPreview downloads an attachment thumbnail for an issue.
+func (r *Registrator) getAttachmentPreview(
+	ctx context.Context, input getAttachmentPreviewInputDTO,
+) (*attachmentContentOutputDTO, error) {
+	if input.IssueID == "" {
+		return nil, r.logError(ctx, errors.New("issue_id_or_key is required"))
+	}
+	if input.AttachmentID == "" {
+		return nil, r.logError(ctx, errors.New("attachment_id is required"))
+	}
+
+	content, err := r.adapter.GetIssueAttachmentPreview(ctx, input.IssueID, input.AttachmentID)
+	if err != nil {
+		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+	}
+
+	return mapAttachmentContentToOutput(content), nil
+}
+
 // getQueue gets a queue by ID or key.
 func (r *Registrator) getQueue(ctx context.Context, input getQueueInputDTO) (*queueDetailOutputDTO, error) {
 	if input.QueueID == "" {

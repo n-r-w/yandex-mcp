@@ -263,6 +263,58 @@ func (c *Client) ListIssueAttachments(ctx context.Context, issueID string) ([]do
 	return result, nil
 }
 
+// GetIssueAttachment downloads an attachment for an issue.
+func (c *Client) GetIssueAttachment(
+	ctx context.Context,
+	issueID string,
+	attachmentID string,
+	fileName string,
+) (*domain.TrackerAttachmentContent, error) {
+	u := fmt.Sprintf(
+		"%s/v3/issues/%s/attachments/%s/%s",
+		c.baseURL,
+		url.PathEscape(issueID),
+		url.PathEscape(attachmentID),
+		url.PathEscape(fileName),
+	)
+
+	headers, body, err := c.apiClient.DoGETRaw(ctx, u, "GetIssueAttachment")
+	if err != nil {
+		return nil, err
+	}
+
+	return &domain.TrackerAttachmentContent{
+		FileName:    fileName,
+		ContentType: headers.Get(apihelpers.HeaderContentType),
+		Data:        body,
+	}, nil
+}
+
+// GetIssueAttachmentPreview downloads an attachment thumbnail for an issue.
+func (c *Client) GetIssueAttachmentPreview(
+	ctx context.Context,
+	issueID string,
+	attachmentID string,
+) (*domain.TrackerAttachmentContent, error) {
+	u := fmt.Sprintf(
+		"%s/v3/issues/%s/thumbnails/%s",
+		c.baseURL,
+		url.PathEscape(issueID),
+		url.PathEscape(attachmentID),
+	)
+
+	headers, body, err := c.apiClient.DoGETRaw(ctx, u, "GetIssueAttachmentPreview")
+	if err != nil {
+		return nil, err
+	}
+
+	return &domain.TrackerAttachmentContent{
+		FileName:    "",
+		ContentType: headers.Get(apihelpers.HeaderContentType),
+		Data:        body,
+	}, nil
+}
+
 // GetQueue gets a queue by ID or key.
 func (c *Client) GetQueue(
 	ctx context.Context, queueID string, opts domain.TrackerGetQueueOpts,

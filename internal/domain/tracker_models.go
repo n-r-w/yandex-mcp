@@ -183,6 +183,13 @@ type TrackerAttachmentMetadata struct {
 	Size string
 }
 
+// TrackerAttachmentContent represents downloaded attachment content.
+type TrackerAttachmentContent struct {
+	FileName    string
+	ContentType string
+	Data        []byte
+}
+
 // TrackerLinkType represents a link type between issues.
 type TrackerLinkType struct {
 	ID      string

@@ -22,6 +22,17 @@ type ITrackerAdapter interface {
 		opts domain.TrackerListCommentsOpts,
 	) (*domain.TrackerCommentsPage, error)
 	ListIssueAttachments(ctx context.Context, issueID string) ([]domain.TrackerAttachment, error)
+	GetIssueAttachment(
+		ctx context.Context,
+		issueID string,
+		attachmentID string,
+		fileName string,
+	) (*domain.TrackerAttachmentContent, error)
+	GetIssueAttachmentPreview(
+		ctx context.Context,
+		issueID string,
+		attachmentID string,
+	) (*domain.TrackerAttachmentContent, error)
 	GetQueue(
 		ctx context.Context, queueID string, opts domain.TrackerGetQueueOpts,
 	) (*domain.TrackerQueueDetail, error)

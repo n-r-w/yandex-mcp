@@ -12,6 +12,8 @@ const (
 	TrackerToolQueuesList
 	TrackerToolCommentsList
 	TrackerToolAttachmentsList
+	TrackerToolAttachmentGet
+	TrackerToolAttachmentPreviewGet
 	TrackerToolQueueGet
 	TrackerToolUserCurrent
 	TrackerToolUsersList
@@ -25,20 +27,22 @@ const (
 // String returns the MCP tool name for the TrackerTool.
 func (t TrackerTool) String() string {
 	names := map[TrackerTool]string{
-		TrackerToolIssueGet:            "tracker_issue_get",
-		TrackerToolIssueSearch:         "tracker_issue_search",
-		TrackerToolIssueCount:          "tracker_issue_count",
-		TrackerToolTransitionsList:     "tracker_issue_transitions_list",
-		TrackerToolQueuesList:          "tracker_queues_list",
-		TrackerToolCommentsList:        "tracker_issue_comments_list",
-		TrackerToolAttachmentsList:     "tracker_issue_attachments_list",
-		TrackerToolQueueGet:            "tracker_queue_get",
-		TrackerToolUserCurrent:         "tracker_user_current",
-		TrackerToolUsersList:           "tracker_users_list",
-		TrackerToolUserGet:             "tracker_user_get",
-		TrackerToolLinksList:           "tracker_issue_links_list",
-		TrackerToolChangelog:           "tracker_issue_changelog",
-		TrackerToolProjectCommentsList: "tracker_project_comments_list",
+		TrackerToolIssueGet:             "tracker_issue_get",
+		TrackerToolIssueSearch:          "tracker_issue_search",
+		TrackerToolIssueCount:           "tracker_issue_count",
+		TrackerToolTransitionsList:      "tracker_issue_transitions_list",
+		TrackerToolQueuesList:           "tracker_queues_list",
+		TrackerToolCommentsList:         "tracker_issue_comments_list",
+		TrackerToolAttachmentsList:      "tracker_issue_attachments_list",
+		TrackerToolAttachmentGet:        "tracker_issue_attachment_get",
+		TrackerToolAttachmentPreviewGet: "tracker_issue_attachment_preview_get",
+		TrackerToolQueueGet:             "tracker_queue_get",
+		TrackerToolUserCurrent:          "tracker_user_current",
+		TrackerToolUsersList:            "tracker_users_list",
+		TrackerToolUserGet:              "tracker_user_get",
+		TrackerToolLinksList:            "tracker_issue_links_list",
+		TrackerToolChangelog:            "tracker_issue_changelog",
+		TrackerToolProjectCommentsList:  "tracker_project_comments_list",
 	}
 	return names[t]
 }
@@ -53,6 +57,8 @@ func TrackerAllTools() []TrackerTool {
 		TrackerToolQueuesList,
 		TrackerToolCommentsList,
 		TrackerToolAttachmentsList,
+		TrackerToolAttachmentGet,
+		TrackerToolAttachmentPreviewGet,
 		TrackerToolQueueGet,
 		TrackerToolUserCurrent,
 		TrackerToolUsersList,

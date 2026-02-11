@@ -3,6 +3,7 @@ package tracker
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"testing"
 
@@ -637,6 +638,192 @@ func TestTools_ListAttachments(t *testing.T) {
 		errStr := err.Error()
 		assert.Contains(t, errStr, domain.ServiceTracker)
 		assert.Contains(t, errStr, "HTTP 403")
+		assert.NotContains(t, errStr, "secrets")
+	})
+}
+
+func TestTools_GetAttachment(t *testing.T) {
+	t.Parallel()
+
+	t.Run("validation/issue_id_empty", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockITrackerAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools())
+
+		_, err := reg.getAttachment(context.Background(), getAttachmentInputDTO{})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "issue_id_or_key is required")
+	})
+
+	t.Run("validation/attachment_id_empty", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockITrackerAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools())
+
+		_, err := reg.getAttachment(context.Background(), getAttachmentInputDTO{
+			IssueID: "TEST-1",
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "attachment_id is required")
+	})
+
+	t.Run("validation/file_name_empty", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockITrackerAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools())
+
+		_, err := reg.getAttachment(context.Background(), getAttachmentInputDTO{
+			IssueID:      "TEST-1",
+			AttachmentID: "4159",
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "file_name is required")
+	})
+
+	t.Run("adapter/call_and_returns_content", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockITrackerAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools())
+
+		payload := []byte("hello world")
+		expected := &domain.TrackerAttachmentContent{
+			FileName:    "attachment.txt",
+			ContentType: "text/plain",
+			Data:        payload,
+		}
+
+		mockAdapter.EXPECT().
+			GetIssueAttachment(gomock.Any(), "TEST-1", "4159", "attachment.txt").
+			Return(expected, nil)
+
+		result, err := reg.getAttachment(context.Background(), getAttachmentInputDTO{
+			IssueID:      "TEST-1",
+			AttachmentID: "4159",
+			FileName:     "attachment.txt",
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "attachment.txt", result.FileName)
+		assert.Equal(t, "text/plain", result.ContentType)
+		assert.Equal(t, base64.StdEncoding.EncodeToString(payload), result.ContentBase64)
+		assert.Equal(t, int64(len(payload)), result.Size)
+	})
+
+	t.Run("error/upstream_error_shaped", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockITrackerAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools())
+
+		upstreamErr := domain.NewUpstreamError(
+			domain.ServiceTracker,
+			"GetIssueAttachment",
+			403,
+			"forbidden",
+			"Access denied",
+			"body with secrets",
+		)
+
+		mockAdapter.EXPECT().
+			GetIssueAttachment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(nil, upstreamErr)
+
+		_, err := reg.getAttachment(context.Background(), getAttachmentInputDTO{
+			IssueID:      "TEST-1",
+			AttachmentID: "4159",
+			FileName:     "attachment.txt",
+		})
+		require.Error(t, err)
+		errStr := err.Error()
+		assert.Contains(t, errStr, domain.ServiceTracker)
+		assert.Contains(t, errStr, "HTTP 403")
+		assert.NotContains(t, errStr, "secrets")
+	})
+}
+
+func TestTools_GetAttachmentPreview(t *testing.T) {
+	t.Parallel()
+
+	t.Run("validation/issue_id_empty", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockITrackerAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools())
+
+		_, err := reg.getAttachmentPreview(context.Background(), getAttachmentPreviewInputDTO{})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "issue_id_or_key is required")
+	})
+
+	t.Run("validation/attachment_id_empty", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockITrackerAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools())
+
+		_, err := reg.getAttachmentPreview(context.Background(), getAttachmentPreviewInputDTO{
+			IssueID: "TEST-1",
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "attachment_id is required")
+	})
+
+	t.Run("adapter/call_and_returns_preview", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockITrackerAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools())
+
+		payload := []byte{0x1, 0x2, 0x3}
+		expected := &domain.TrackerAttachmentContent{
+			ContentType: "image/png",
+			Data:        payload,
+		}
+
+		mockAdapter.EXPECT().
+			GetIssueAttachmentPreview(gomock.Any(), "TEST-1", "4159").
+			Return(expected, nil)
+
+		result, err := reg.getAttachmentPreview(context.Background(), getAttachmentPreviewInputDTO{
+			IssueID:      "TEST-1",
+			AttachmentID: "4159",
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "image/png", result.ContentType)
+		assert.Equal(t, base64.StdEncoding.EncodeToString(payload), result.ContentBase64)
+		assert.Equal(t, int64(len(payload)), result.Size)
+	})
+
+	t.Run("error/upstream_error_shaped", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockITrackerAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools())
+
+		upstreamErr := domain.NewUpstreamError(
+			domain.ServiceTracker,
+			"GetIssueAttachmentPreview",
+			404,
+			"not_found",
+			"Attachment not found",
+			"body with secrets",
+		)
+
+		mockAdapter.EXPECT().
+			GetIssueAttachmentPreview(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(nil, upstreamErr)
+
+		_, err := reg.getAttachmentPreview(context.Background(), getAttachmentPreviewInputDTO{
+			IssueID:      "TEST-1",
+			AttachmentID: "4159",
+		})
+		require.Error(t, err)
+		errStr := err.Error()
+		assert.Contains(t, errStr, domain.ServiceTracker)
+		assert.Contains(t, errStr, "HTTP 404")
 		assert.NotContains(t, errStr, "secrets")
 	})
 }

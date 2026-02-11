@@ -86,6 +86,60 @@ func (mr *MockITrackerAdapterMockRecorder) GetIssue(ctx, issueID, opts any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIssue", reflect.TypeOf((*MockITrackerAdapter)(nil).GetIssue), ctx, issueID, opts)
 }
 
+// GetIssueAttachment mocks base method.
+func (m *MockITrackerAdapter) GetIssueAttachment(
+	ctx context.Context,
+	issueID string,
+	attachmentID string,
+	fileName string,
+) (*domain.TrackerAttachmentContent, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetIssueAttachment", ctx, issueID, attachmentID, fileName)
+	ret0, _ := ret[0].(*domain.TrackerAttachmentContent)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetIssueAttachment indicates an expected call of GetIssueAttachment.
+func (mr *MockITrackerAdapterMockRecorder) GetIssueAttachment(ctx, issueID, attachmentID, fileName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(
+		mr.mock,
+		"GetIssueAttachment",
+		reflect.TypeOf((*MockITrackerAdapter)(nil).GetIssueAttachment),
+		ctx,
+		issueID,
+		attachmentID,
+		fileName,
+	)
+}
+
+// GetIssueAttachmentPreview mocks base method.
+func (m *MockITrackerAdapter) GetIssueAttachmentPreview(
+	ctx context.Context,
+	issueID string,
+	attachmentID string,
+) (*domain.TrackerAttachmentContent, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetIssueAttachmentPreview", ctx, issueID, attachmentID)
+	ret0, _ := ret[0].(*domain.TrackerAttachmentContent)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetIssueAttachmentPreview indicates an expected call of GetIssueAttachmentPreview.
+func (mr *MockITrackerAdapterMockRecorder) GetIssueAttachmentPreview(ctx, issueID, attachmentID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(
+		mr.mock,
+		"GetIssueAttachmentPreview",
+		reflect.TypeOf((*MockITrackerAdapter)(nil).GetIssueAttachmentPreview),
+		ctx,
+		issueID,
+		attachmentID,
+	)
+}
+
 // GetIssueChangelog mocks base method.
 func (m *MockITrackerAdapter) GetIssueChangelog(ctx context.Context, issueID string, opts domain.TrackerGetChangelogOpts) ([]domain.TrackerChangelogEntry, error) {
 	m.ctrl.T.Helper()

@@ -35,6 +35,8 @@ Exact JSON schemas (including validation rules) are also available via MCP tool 
 - `tracker_queues_list` — Lists Yandex Tracker queues
 - `tracker_issue_comments_list` — Lists comments for a Yandex Tracker issue
 - `tracker_issue_attachments_list` — Lists attachments for a Yandex Tracker issue
+- `tracker_issue_attachment_get` — Downloads a file attached to a Yandex Tracker issue
+- `tracker_issue_attachment_preview_get` — Downloads a thumbnail for a Yandex Tracker issue attachment
 - `tracker_queue_get` — Retrieves a Yandex Tracker queue by its key
 - `tracker_user_current` — Retrieves the current Yandex Tracker user
 - `tracker_users_list` — Lists Yandex Tracker users

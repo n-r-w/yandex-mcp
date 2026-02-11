@@ -81,6 +81,20 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 		}, server.MakeHandler(r.listAttachments))
 	}
 
+	if r.enabledTools[domain.TrackerToolAttachmentGet] {
+		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+			Name:        domain.TrackerToolAttachmentGet.String(),
+			Description: "Downloads a file attached to a Yandex Tracker issue",
+		}, server.MakeHandler(r.getAttachment))
+	}
+
+	if r.enabledTools[domain.TrackerToolAttachmentPreviewGet] {
+		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+			Name:        domain.TrackerToolAttachmentPreviewGet.String(),
+			Description: "Downloads a thumbnail for a Yandex Tracker issue attachment",
+		}, server.MakeHandler(r.getAttachmentPreview))
+	}
+
 	if r.enabledTools[domain.TrackerToolQueueGet] {
 		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
 			Name:        domain.TrackerToolQueueGet.String(),

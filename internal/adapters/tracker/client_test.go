@@ -529,6 +529,69 @@ func TestClient_ListIssueComments_WithPagination(t *testing.T) {
 	assert.Contains(t, result.NextLink, "id=123")
 }
 
+func TestClient_GetIssueAttachment(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
+
+	var capturedURL string
+	var capturedMethod string
+	payload := []byte("attachment payload")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedURL = r.URL.String()
+		capturedMethod = r.Method
+		w.Header().Set("Content-Type", "application/pdf")
+		_, _ = w.Write(payload)
+	}))
+	t.Cleanup(func() {
+		server.Close()
+	})
+
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
+
+	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
+
+	result, err := client.GetIssueAttachment(context.Background(), "TEST-1", "4159", "attachment.txt")
+	require.NoError(t, err)
+	assert.Equal(t, http.MethodGet, capturedMethod)
+	assert.Contains(t, capturedURL, "/v3/issues/TEST-1/attachments/4159/attachment.txt")
+	assert.Equal(t, "attachment.txt", result.FileName)
+	assert.Equal(t, "application/pdf", result.ContentType)
+	assert.Equal(t, payload, result.Data)
+}
+
+func TestClient_GetIssueAttachmentPreview(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
+
+	var capturedURL string
+	var capturedMethod string
+	payload := []byte{0x1, 0x2, 0x3}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedURL = r.URL.String()
+		capturedMethod = r.Method
+		w.Header().Set("Content-Type", "image/png")
+		_, _ = w.Write(payload)
+	}))
+	t.Cleanup(func() {
+		server.Close()
+	})
+
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
+
+	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
+
+	result, err := client.GetIssueAttachmentPreview(context.Background(), "TEST-1", "4159")
+	require.NoError(t, err)
+	assert.Equal(t, http.MethodGet, capturedMethod)
+	assert.Contains(t, capturedURL, "/v3/issues/TEST-1/thumbnails/4159")
+	assert.Equal(t, "image/png", result.ContentType)
+	assert.Equal(t, payload, result.Data)
+}
+
 func TestClient_UpstreamError_NoTokenLeak(t *testing.T) {
 	t.Parallel()
 

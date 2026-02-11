@@ -104,6 +104,19 @@ type listAttachmentsInputDTO struct {
 	IssueID string `json:"issue_id_or_key" jsonschema:"Issue ID or key (e.g., TEST-1),required"`
 }
 
+// getAttachmentInputDTO is the input for tracker_issue_attachment_get tool.
+type getAttachmentInputDTO struct {
+	IssueID      string `json:"issue_id_or_key" jsonschema:"Issue ID or key (e.g., TEST-1),required"`
+	AttachmentID string `json:"attachment_id" jsonschema:"Attachment ID as string. Example: '4159',required"`
+	FileName     string `json:"file_name" jsonschema:"Attachment file name including extension. Example: 'attachment.txt',required"`
+}
+
+// getAttachmentPreviewInputDTO is the input for tracker_issue_attachment_preview_get tool.
+type getAttachmentPreviewInputDTO struct {
+	IssueID      string `json:"issue_id_or_key" jsonschema:"Issue ID or key (e.g., TEST-1),required"`
+	AttachmentID string `json:"attachment_id" jsonschema:"Attachment ID as string. Example: '4159',required"`
+}
+
 // getQueueInputDTO is the input for tracker_queue_get tool.
 type getQueueInputDTO struct {
 	QueueID string `json:"queue_id_or_key" jsonschema:"Queue ID or key (e.g., MYQUEUE),required"`
@@ -297,6 +310,14 @@ type attachmentMetadataOutputDTO struct {
 // attachmentsListOutputDTO is the output for tracker_issue_attachments_list tool.
 type attachmentsListOutputDTO struct {
 	Attachments []attachmentOutputDTO `json:"attachments"`
+}
+
+// attachmentContentOutputDTO represents downloaded attachment content.
+type attachmentContentOutputDTO struct {
+	FileName      string `json:"file_name,omitempty"`
+	ContentType   string `json:"content_type,omitempty"`
+	ContentBase64 string `json:"content_base64"`
+	Size          int64  `json:"size"`
 }
 
 // queueDetailOutputDTO represents a detailed queue response.

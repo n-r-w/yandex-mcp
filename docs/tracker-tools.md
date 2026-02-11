@@ -258,6 +258,42 @@ Returns `AttachmentsListOutput`:
 
 - `size` (string, optional)
 
+## tracker_issue_attachment_get
+
+Downloads a file attached to a Yandex Tracker issue.
+
+This tool is read-only.
+
+### Input
+
+- `issue_id_or_key` (string, required): Issue ID or key (for example, `TEST-1`).
+- `attachment_id` (string, required): Attachment ID (for example, `4159`).
+- `file_name` (string, required): Attachment file name (for example, `attachment.txt`).
+
+### Output
+
+Returns `AttachmentContentOutput`:
+
+- `file_name` (string, optional)
+- `content_type` (string, optional)
+- `content_base64` (string): Base64-encoded attachment content.
+- `size` (integer): Attachment size in bytes.
+
+## tracker_issue_attachment_preview_get
+
+Downloads a thumbnail for an attachment in a Yandex Tracker issue.
+
+This tool is read-only.
+
+### Input
+
+- `issue_id_or_key` (string, required): Issue ID or key (for example, `TEST-1`).
+- `attachment_id` (string, required): Attachment ID (for example, `4159`).
+
+### Output
+
+Returns `AttachmentContentOutput` (same shape as `tracker_issue_attachment_get`).
+
 
 ## tracker_queue_get
 

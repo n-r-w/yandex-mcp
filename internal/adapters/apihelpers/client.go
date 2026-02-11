@@ -96,9 +96,61 @@ func (c *APIClient) DoRequest(
 	return resp.Header, c.handleResponse(ctx, resp, result, operation)
 }
 
+// DoRequestRaw performs an HTTP request and returns response headers and body bytes.
+func (c *APIClient) DoRequestRaw(
+	ctx context.Context,
+	method, urlStr string,
+	body any,
+	operation string,
+) (http.Header, []byte, error) {
+	resp, err := c.executeHTTPRequest(ctx, method, urlStr, body, false)
+	if err != nil {
+		return nil, nil, c.ErrorLogWrapper(ctx, err)
+	}
+
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+		if err = resp.Body.Close(); err != nil {
+			slog.WarnContext(ctx, "failed to close response body before retry", "error", err)
+		}
+		resp, err = c.executeHTTPRequest(ctx, method, urlStr, body, true)
+		if err != nil {
+			return nil, nil, c.ErrorLogWrapper(ctx, fmt.Errorf("failed retry after token refresh: %w", err))
+		}
+	}
+
+	defer func() {
+		if err = resp.Body.Close(); err != nil {
+			slog.WarnContext(ctx, "failed to close response body", "error", err)
+		}
+	}()
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, nil, c.ErrorLogWrapper(ctx, fmt.Errorf("read response body: %w", err))
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		httpErr := &HTTPError{
+			StatusCode: resp.StatusCode,
+			Body:       bodyBytes,
+		}
+		if c.parseError != nil {
+			return nil, nil, c.parseError(ctx, httpErr.StatusCode, httpErr.Body, operation)
+		}
+		return nil, nil, c.ErrorLogWrapper(ctx, httpErr)
+	}
+
+	return resp.Header, bodyBytes, nil
+}
+
 // DoGET executes a GET request with token injection.
 func (c *APIClient) DoGET(ctx context.Context, urlStr string, result any, operation string) (http.Header, error) {
 	return c.DoRequest(ctx, http.MethodGet, urlStr, nil, result, operation)
+}
+
+// DoGETRaw executes a GET request and returns response headers and body bytes.
+func (c *APIClient) DoGETRaw(ctx context.Context, urlStr string, operation string) (http.Header, []byte, error) {
+	return c.DoRequestRaw(ctx, http.MethodGet, urlStr, nil, operation)
 }
 
 // DoPOST executes a POST request with token injection.

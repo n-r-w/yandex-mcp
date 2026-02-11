@@ -1,6 +1,8 @@
 package tracker
 
 import (
+	"encoding/base64"
+
 	"github.com/n-r-w/yandex-mcp/internal/domain"
 )
 
@@ -243,6 +245,18 @@ func mapAttachmentsToOutput(attachments []domain.TrackerAttachment) *attachments
 	}
 	return &attachmentsListOutputDTO{
 		Attachments: result,
+	}
+}
+
+func mapAttachmentContentToOutput(content *domain.TrackerAttachmentContent) *attachmentContentOutputDTO {
+	if content == nil {
+		return nil
+	}
+	return &attachmentContentOutputDTO{
+		FileName:      content.FileName,
+		ContentType:   content.ContentType,
+		ContentBase64: base64.StdEncoding.EncodeToString(content.Data),
+		Size:          int64(len(content.Data)),
 	}
 }
 
