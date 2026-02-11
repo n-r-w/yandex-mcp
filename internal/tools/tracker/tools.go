@@ -506,6 +506,9 @@ func isWithinAllowedDirs(cleanPath string, allowedDirs []string) (bool, error) {
 		if !filepath.IsAbs(dir) {
 			return false, errors.New("allowed directories must be absolute")
 		}
+		if !strings.EqualFold(filepath.VolumeName(cleanPath), filepath.VolumeName(dir)) {
+			continue
+		}
 		relativePath, err := filepath.Rel(dir, cleanPath)
 		if err != nil {
 			return false, fmt.Errorf("resolve save_path: %w", err)
