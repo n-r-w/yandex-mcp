@@ -390,8 +390,16 @@ func (r *Registrator) validateAttachmentDirectory(ctx context.Context, cleanPath
 	}
 
 	segments := strings.Split(relativePath, string(os.PathSeparator))
-	if len(segments) > 0 && strings.HasPrefix(segments[0], ".") {
-		return fmt.Errorf("save_path must not be within hidden top-level home directory; allowed paths: %s", allowedPaths)
+	if len(segments) > 0 {
+		topLevelName := segments[0]
+		topLevelPath := filepath.Join(homeDir, topLevelName)
+		hidden, err := isHiddenTopLevelDir(topLevelName, topLevelPath)
+		if err != nil {
+			return r.logError(ctx, fmt.Errorf("resolve save_path: %w", err))
+		}
+		if hidden {
+			return fmt.Errorf("save_path must not be within hidden top-level home directory; allowed paths: %s", allowedPaths)
+		}
 	}
 
 	return nil
