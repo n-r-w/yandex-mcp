@@ -171,12 +171,14 @@ func TestLoad_AttachViewExtensionsOverride(t *testing.T) {
 
 func TestLoad_AttachDirsOverride(t *testing.T) {
 	t.Setenv("YANDEX_CLOUD_ORG_ID", "test-org")
-	t.Setenv("YANDEX_MCP_ATTACH_DIR", "/tmp,/var/tmp")
+	dirOne := t.TempDir()
+	dirTwo := t.TempDir()
+	t.Setenv("YANDEX_MCP_ATTACH_DIR", dirOne+","+dirTwo)
 
 	cfg, err := Load()
 
 	require.NoError(t, err)
-	assert.Equal(t, []string{"/tmp", "/var/tmp"}, cfg.AttachAllowedDirs)
+	assert.Equal(t, []string{dirOne, dirTwo}, cfg.AttachAllowedDirs)
 }
 
 func TestLoad_AttachDirsMustBeAbsolute(t *testing.T) {
