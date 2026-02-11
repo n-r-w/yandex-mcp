@@ -244,10 +244,10 @@ func (r *Registrator) getAttachmentPreview(
 func (r *Registrator) resolveSavePath(ctx context.Context, savePath string) (string, string, error) {
 	cleanPath := filepath.Clean(savePath)
 	if !filepath.IsAbs(cleanPath) {
-		return "", "", errors.New("save_path must be absolute")
+		return "", "", fmt.Errorf("save_path must be absolute; allowed paths: %s", r.allowedPathsSummary())
 	}
 	if cleanPath == "." || cleanPath == string(os.PathSeparator) {
-		return "", "", errors.New("save_path must point to a file")
+		return "", "", fmt.Errorf("save_path must point to a file; allowed paths: %s", r.allowedPathsSummary())
 	}
 	if err := r.validateAttachmentExtension(cleanPath); err != nil {
 		return "", "", err
@@ -290,10 +290,67 @@ func normalizeAllowedDirs(allowedDirs []string) []string {
 	return normalized
 }
 
+func formatAllowedExtensions(allowedExtensions []string) string {
+	if len(allowedExtensions) == 0 {
+		return emptyAllowlistLabel
+	}
+	normalized := make([]string, 0, len(allowedExtensions))
+	for _, ext := range allowedExtensions {
+		trimmed := strings.TrimSpace(ext)
+		trimmed = strings.TrimPrefix(trimmed, ".")
+		if trimmed == "" {
+			continue
+		}
+		normalized = append(normalized, trimmed)
+	}
+	if len(normalized) == 0 {
+		return emptyAllowlistLabel
+	}
+	return strings.Join(normalized, ", ")
+}
+
+func formatAllowedDirs(allowedDirs []string) string {
+	if len(allowedDirs) == 0 {
+		return emptyAllowlistLabel
+	}
+	normalized := make([]string, 0, len(allowedDirs))
+	for _, dir := range allowedDirs {
+		trimmed := strings.TrimSpace(dir)
+		if trimmed == "" {
+			continue
+		}
+		normalized = append(normalized, trimmed)
+	}
+	if len(normalized) == 0 {
+		return emptyAllowlistLabel
+	}
+	return strings.Join(normalized, ", ")
+}
+
+func formatHomeAllowedPaths(homeDir string) string {
+	if homeDir == "" {
+		return "within the home directory (excluding home root and hidden top-level directories)"
+	}
+	return fmt.Sprintf("within %s (excluding %s and hidden top-level directories)", homeDir, homeDir)
+}
+
+func (r *Registrator) allowedPathsSummary() string {
+	if len(r.allowedDirs) > 0 {
+		return formatAllowedDirs(r.allowedDirs)
+	}
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return formatHomeAllowedPaths("")
+	}
+	homeDir = filepath.Clean(homeDir)
+	return formatHomeAllowedPaths(homeDir)
+}
+
 // validateAttachmentExtension blocks unsupported file types to reduce risk.
 func (r *Registrator) validateAttachmentExtension(cleanPath string) error {
+	allowedExtensions := formatAllowedExtensions(r.allowedExtensions)
 	if len(r.allowedExtensions) == 0 {
-		return errors.New("save_path extensions list is empty")
+		return fmt.Errorf("save_path extensions list is empty; allowed extensions: %s", allowedExtensions)
 	}
 	baseName := strings.ToLower(filepath.Base(cleanPath))
 	for _, ext := range r.allowedExtensions {
@@ -301,7 +358,7 @@ func (r *Registrator) validateAttachmentExtension(cleanPath string) error {
 			return nil
 		}
 	}
-	return errors.New("save_path extension is not allowed")
+	return fmt.Errorf("save_path extension is not allowed; allowed extensions: %s", allowedExtensions)
 }
 
 // validateAttachmentDirectory enforces the write scope to prevent unintended writes.
@@ -310,7 +367,7 @@ func (r *Registrator) validateAttachmentDirectory(ctx context.Context, cleanPath
 		if ok, err := isWithinAllowedDirs(cleanPath, r.allowedDirs); err != nil {
 			return r.logError(ctx, err)
 		} else if !ok {
-			return errors.New("save_path must be within allowed directories")
+			return fmt.Errorf("save_path must be within allowed directories: %s", formatAllowedDirs(r.allowedDirs))
 		}
 		return nil
 	}
@@ -320,20 +377,21 @@ func (r *Registrator) validateAttachmentDirectory(ctx context.Context, cleanPath
 		return r.logError(ctx, fmt.Errorf("resolve home directory: %w", err))
 	}
 	homeDir = filepath.Clean(homeDir)
+	allowedPaths := formatHomeAllowedPaths(homeDir)
 	if cleanPath == homeDir {
-		return errors.New("save_path must not be home directory")
+		return fmt.Errorf("save_path must not be home directory; allowed paths: %s", allowedPaths)
 	}
 	relativePath, err := filepath.Rel(homeDir, cleanPath)
 	if err != nil {
 		return r.logError(ctx, fmt.Errorf("resolve save_path: %w", err))
 	}
 	if relativePath == "." || relativePath == ".." || strings.HasPrefix(relativePath, ".."+string(os.PathSeparator)) {
-		return errors.New("save_path must be within home directory")
+		return fmt.Errorf("save_path must be within home directory; allowed paths: %s", allowedPaths)
 	}
 
 	segments := strings.Split(relativePath, string(os.PathSeparator))
 	if len(segments) > 0 && strings.HasPrefix(segments[0], ".") {
-		return errors.New("save_path must not be within hidden top-level home directory")
+		return fmt.Errorf("save_path must not be within hidden top-level home directory; allowed paths: %s", allowedPaths)
 	}
 
 	return nil

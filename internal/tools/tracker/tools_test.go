@@ -718,6 +718,7 @@ func TestTools_GetAttachment(t *testing.T) {
 		})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "save_path must be absolute")
+		assert.Contains(t, err.Error(), "allowed paths")
 	})
 
 	t.Run("validation/save_path_extension_not_allowed", func(t *testing.T) {
@@ -736,6 +737,29 @@ func TestTools_GetAttachment(t *testing.T) {
 		})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "save_path extension is not allowed")
+		assert.Contains(t, err.Error(), "allowed extensions")
+		assert.Contains(t, err.Error(), "txt")
+	})
+
+	t.Run("validation/save_path_outside_allowed_dirs", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockITrackerAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachDirs)
+		allowedDir := t.TempDir()
+		outsideDir := t.TempDir()
+		reg.allowedDirs = []string{allowedDir}
+
+		_, err := reg.getAttachment(context.Background(), getAttachmentInputDTO{
+			IssueID:      "TEST-1",
+			AttachmentID: "4159",
+			FileName:     "attachment.txt",
+			SavePath:     filepath.Join(outsideDir, "attachment.txt"),
+		})
+		require.Error(t, err)
+		errStr := err.Error()
+		assert.Contains(t, errStr, "save_path must be within allowed directories")
+		assert.Contains(t, errStr, allowedDir)
 	})
 
 	t.Run("validation/save_path_outside_home", func(t *testing.T) {
@@ -755,6 +779,8 @@ func TestTools_GetAttachment(t *testing.T) {
 		})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "save_path must be within home directory")
+		assert.Contains(t, err.Error(), "allowed paths")
+		assert.Contains(t, err.Error(), homeDir)
 	})
 
 	t.Run("validation/save_path_hidden_home_top_level", func(t *testing.T) {
@@ -774,6 +800,8 @@ func TestTools_GetAttachment(t *testing.T) {
 		})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "save_path must not be within hidden top-level home directory")
+		assert.Contains(t, err.Error(), "allowed paths")
+		assert.Contains(t, err.Error(), homeDir)
 	})
 
 	t.Run("adapter/call_and_returns_content", func(t *testing.T) {
