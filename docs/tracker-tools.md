@@ -295,7 +295,7 @@ Returns `AttachmentContentOutput`:
 
 - `file_name` (string, optional)
 - `content_type` (string, optional)
-- `saved_path` (string, optional): Path where the attachment was saved (relative to workspace).
+- `saved_path` (string, optional): Absolute path where the attachment was saved (cleaned `save_path` value).
 - `content` (string, optional): Attachment text content (raw bytes interpreted as UTF-8) when `get_content` is `true`.
 - `size` (integer): Attachment size in bytes.
 
