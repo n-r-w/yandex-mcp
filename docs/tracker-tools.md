@@ -267,8 +267,16 @@ Downloads a file attached to a Yandex Tracker issue and saves it to the local wo
 - `issue_id_or_key` (string, required): Issue ID or key (for example, `TEST-1`).
 - `attachment_id` (string, required): Attachment ID (for example, `4159`).
 - `file_name` (string, required): Attachment file name (for example, `attachment.txt`).
-- `save_path` (string, required): Path to save the attachment relative to the current workspace (for example, `attachments/attachment.txt`).
+- `save_path` (string, required): Absolute path to save the attachment (for example, `/Users/me/attachments/attachment.txt`).
 - `override` (boolean, optional): Overwrite existing file if `true` (default: `false`).
+
+Notes:
+
+- The extension is validated against an allowlist. By default: txt, json, jsonc, yaml, yml, md, pdf, doc, docx, rtf, odt, xls, xlsx, ods, csv, tsv, ppt, pptx, odp, jpg, jpeg, png, tiff, tif, gif, bmp, webp, zip, 7z, tar, tgz, tar.gz, gz, bz2, xz, rar.
+- The extension is validated using the `save_path` file name.
+- The allowlist can be replaced via `YANDEX_MCP_ATTACH_EXT` (comma-separated, without dots).
+- By default, `save_path` must be inside the user home directory, must not point to the home root, and must not be within a hidden top-level home subdirectory (for example, `~/.ssh`).
+- The directory restriction can be fully replaced via `YANDEX_MCP_ATTACH_DIR` (comma-separated absolute paths). When it is set, only the provided directories (and their subdirectories) are allowed.
 
 ### Output
 
@@ -287,8 +295,12 @@ Downloads a thumbnail for an attachment in a Yandex Tracker issue and saves it t
 
 - `issue_id_or_key` (string, required): Issue ID or key (for example, `TEST-1`).
 - `attachment_id` (string, required): Attachment ID (for example, `4159`).
-- `save_path` (string, required): Path to save the attachment preview relative to the current workspace (for example, `attachments/preview.png`).
+- `save_path` (string, required): Absolute path to save the attachment preview (for example, `/Users/me/attachments/preview.png`).
 - `override` (boolean, optional): Overwrite existing file if `true` (default: `false`).
+
+Notes:
+
+- The same extension and directory rules as `tracker_issue_attachment_get` apply to the preview.
 
 ### Output
 

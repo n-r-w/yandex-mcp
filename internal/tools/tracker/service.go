@@ -8,25 +8,32 @@ import (
 
 // Registrator registers tracker tools with an MCP server.
 type Registrator struct {
-	adapter      ITrackerAdapter
-	enabledTools map[domain.TrackerTool]bool
-	baseDir      string
+	adapter           ITrackerAdapter
+	enabledTools      map[domain.TrackerTool]bool
+	allowedExtensions []string
+	allowedDirs       []string
 }
 
 // Compile-time assertion that Registrator implements server.IToolsRegistrator.
 var _ server.IToolsRegistrator = (*Registrator)(nil)
 
 // NewRegistrator creates a new tracker tools registrator.
-func NewRegistrator(adapter ITrackerAdapter, enabledTools []domain.TrackerTool) *Registrator {
+func NewRegistrator(
+	adapter ITrackerAdapter,
+	enabledTools []domain.TrackerTool,
+	allowedExtensions []string,
+	allowedDirs []string,
+) *Registrator {
 	toolMap := make(map[domain.TrackerTool]bool, len(enabledTools))
 	for _, t := range enabledTools {
 		toolMap[t] = true
 	}
 
 	return &Registrator{
-		adapter:      adapter,
-		enabledTools: toolMap,
-		baseDir:      "",
+		adapter:           adapter,
+		enabledTools:      toolMap,
+		allowedExtensions: normalizeAllowedExtensions(allowedExtensions),
+		allowedDirs:       normalizeAllowedDirs(allowedDirs),
 	}
 }
 

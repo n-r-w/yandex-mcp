@@ -54,6 +54,9 @@ THIS IS A NEW PROJECT, NOT IN PRODUCTION YET. NO DATA IN DATABASE YET. FEEL FREE
 2. `YANDEX_TRACKER_BASE_URL`: Base URL for Yandex Tracker API (default https://api.tracker.yandex.net)
 3. `YANDEX_CLOUD_ORG_ID`: Yandex Cloud Organization ID
 4. `YANDEX_IAM_TOKEN_REFRESH_PERIOD`: Token refresh period in hours (default 10)
+5. `YANDEX_HTTP_TIMEOUT`: HTTP timeout for Yandex API requests in seconds (default 30)
+6. `YANDEX_MCP_ATTACH_EXT`: Comma-separated list of allowed attachment extensions without dots (e.g. "jpg,png,txt"). Optional, if not set, default to predefined list of common extensions. 
+7. `YANDEX_MCP_ATTACH_DIR`: Directory path for saving attachments (must be absolute path, e.g. "/home/user/attachments"). Optional, if not set, default to rules that allow saving attachments in user home directory except hidden top-level subdirectories (e.g. "~/.ssh").
 
 ## Folder structure
 ```

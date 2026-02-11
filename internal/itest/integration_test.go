@@ -15,6 +15,11 @@ import (
 	wikitools "github.com/n-r-w/yandex-mcp/internal/tools/wiki"
 )
 
+var (
+	defaultAttachExtensions = []string{"txt"}
+	defaultAttachDirs       []string
+)
+
 func listToolNames(t *testing.T, srv *server.Server) []string {
 	t.Helper()
 
@@ -55,7 +60,12 @@ func TestServerIntegration_ReadOnlyToolsRegistered(t *testing.T) {
 
 	registrators := []server.IToolsRegistrator{
 		wikitools.NewRegistrator(wikiMock, domain.WikiAllTools()),
-		trackertools.NewRegistrator(trackerMock, domain.TrackerAllTools()),
+		trackertools.NewRegistrator(
+			trackerMock,
+			domain.TrackerAllTools(),
+			defaultAttachExtensions,
+			defaultAttachDirs,
+		),
 	}
 
 	srv, err := server.New("v1.0.0", registrators)
@@ -86,7 +96,12 @@ func TestServerIntegration_AllowlistGating_ReducedList(t *testing.T) {
 
 	registrators := []server.IToolsRegistrator{
 		wikitools.NewRegistrator(wikiMock, wikiTools),
-		trackertools.NewRegistrator(trackerMock, trackerTools),
+		trackertools.NewRegistrator(
+			trackerMock,
+			trackerTools,
+			defaultAttachExtensions,
+			defaultAttachDirs,
+		),
 	}
 
 	srv, err := server.New("v1.0.0", registrators)
@@ -112,7 +127,12 @@ func TestServerIntegration_EmptyAllowlist_NoToolsRegistered(t *testing.T) {
 
 	registrators := []server.IToolsRegistrator{
 		wikitools.NewRegistrator(wikiMock, nil),
-		trackertools.NewRegistrator(trackerMock, nil),
+		trackertools.NewRegistrator(
+			trackerMock,
+			nil,
+			defaultAttachExtensions,
+			defaultAttachDirs,
+		),
 	}
 
 	srv, err := server.New("v1.0.0", registrators)

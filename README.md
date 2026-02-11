@@ -116,9 +116,18 @@ After these steps, the executable will be permanently allowed to run on your sys
   * The server caches the token and refreshes it when the cached token is older than this period.
   * IAM tokens are valid for **no more than 12 hours**; this refresh period should not exceed `12`.
 
-- `YANDEX_API_HTTP_TIMEOUT` (optional, default: `30s`)
-  * HTTP timeout for Yandex API requests.
-  * Accepts Go duration strings (e.g., `30s`, `1m`).
+- `YANDEX_HTTP_TIMEOUT` (optional, default: `30`)
+  * HTTP timeout for Yandex API requests in **seconds**.
+
+- `YANDEX_MCP_ATTACH_EXT` (optional)
+  * Comma-separated list of allowed attachment extensions **without dots**.
+  * Fully replaces the default allowlist.
+  * Default allowlist: txt, json, jsonc, yaml, yml, md, pdf, doc, docx, rtf, odt, xls, xlsx, ods, csv, tsv, ppt, pptx, odp, jpg, jpeg, png, tiff, tif, gif, bmp, webp, zip, 7z, tar, tgz, tar.gz, gz, bz2, xz, rar.
+
+- `YANDEX_MCP_ATTACH_DIR` (optional)
+  * Comma-separated list of **absolute** directories allowed for saving attachments.
+  * Fully replaces the default directory rules. When set, only the provided directories (and their subdirectories) are allowed.
+  * Default rule: `save_path` must be inside the user home directory, must not point to the home root, and must not be within a hidden top-level home subdirectory (for example, `~/.ssh`).
 
 ## Authentication
 

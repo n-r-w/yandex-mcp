@@ -178,7 +178,7 @@ func (r *Registrator) getAttachment(
 		return nil, errors.New("save_path is required")
 	}
 
-	fullPath, savedPath, err := r.resolveSavePath(input.SavePath)
+	fullPath, savedPath, err := r.resolveSavePath(ctx, input.SavePath)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +186,7 @@ func (r *Registrator) getAttachment(
 		if _, err := os.Stat(fullPath); err == nil {
 			return nil, errors.New("save_path already exists")
 		} else if !os.IsNotExist(err) {
-			return nil, fmt.Errorf("check save_path: %w", err)
+			return nil, r.logError(ctx, fmt.Errorf("check save_path: %w", err))
 		}
 	}
 
@@ -196,7 +196,7 @@ func (r *Registrator) getAttachment(
 	}
 
 	if err := r.writeAttachment(fullPath, input.Override, content.Data); err != nil {
-		return nil, err
+		return nil, r.logError(ctx, err)
 	}
 
 	return mapAttachmentContentToOutput(content, savedPath), nil
@@ -216,7 +216,7 @@ func (r *Registrator) getAttachmentPreview(
 		return nil, errors.New("save_path is required")
 	}
 
-	fullPath, savedPath, err := r.resolveSavePath(input.SavePath)
+	fullPath, savedPath, err := r.resolveSavePath(ctx, input.SavePath)
 	if err != nil {
 		return nil, err
 	}
@@ -224,7 +224,7 @@ func (r *Registrator) getAttachmentPreview(
 		if _, err := os.Stat(fullPath); err == nil {
 			return nil, errors.New("save_path already exists")
 		} else if !os.IsNotExist(err) {
-			return nil, fmt.Errorf("check save_path: %w", err)
+			return nil, r.logError(ctx, fmt.Errorf("check save_path: %w", err))
 		}
 	}
 
@@ -234,44 +234,135 @@ func (r *Registrator) getAttachmentPreview(
 	}
 
 	if err := r.writeAttachment(fullPath, input.Override, content.Data); err != nil {
-		return nil, err
+		return nil, r.logError(ctx, err)
 	}
 
 	return mapAttachmentContentToOutput(content, savedPath), nil
 }
 
-// resolveSavePath validates and resolves a workspace-relative save path.
-func (r *Registrator) resolveSavePath(savePath string) (string, string, error) {
+// resolveSavePath validates the absolute save path against attachment safety rules.
+func (r *Registrator) resolveSavePath(ctx context.Context, savePath string) (string, string, error) {
 	cleanPath := filepath.Clean(savePath)
-	if filepath.IsAbs(cleanPath) {
-		return "", "", errors.New("save_path must be relative to workspace")
+	if !filepath.IsAbs(cleanPath) {
+		return "", "", errors.New("save_path must be absolute")
 	}
-	if cleanPath == "." {
+	if cleanPath == "." || cleanPath == string(os.PathSeparator) {
 		return "", "", errors.New("save_path must point to a file")
 	}
-	if cleanPath == ".." || strings.HasPrefix(cleanPath, ".."+string(os.PathSeparator)) {
-		return "", "", errors.New("save_path must be within workspace")
-	}
-
-	baseDir, err := r.workspaceRoot()
-	if err != nil {
+	if err := r.validateAttachmentExtension(cleanPath); err != nil {
 		return "", "", err
 	}
-	baseDir, err = filepath.Abs(baseDir)
-	if err != nil {
-		return "", "", fmt.Errorf("resolve workspace root: %w", err)
+	if err := r.validateAttachmentDirectory(ctx, cleanPath); err != nil {
+		return "", "", err
 	}
 
-	fullPath := filepath.Clean(filepath.Join(baseDir, cleanPath))
-	relativePath, err := filepath.Rel(baseDir, fullPath)
+	return cleanPath, cleanPath, nil
+}
+
+// normalizeAllowedExtensions keeps extension rules consistent for safety checks.
+func normalizeAllowedExtensions(allowedExtensions []string) []string {
+	normalized := make([]string, 0, len(allowedExtensions))
+	for _, ext := range allowedExtensions {
+		trimmed := strings.TrimSpace(ext)
+		if trimmed == "" {
+			continue
+		}
+		trimmed = strings.ToLower(trimmed)
+		trimmed = strings.TrimPrefix(trimmed, ".")
+		if trimmed == "" {
+			continue
+		}
+		normalized = append(normalized, "."+trimmed)
+	}
+	return normalized
+}
+
+// normalizeAllowedDirs keeps allowlists comparable for path containment checks.
+func normalizeAllowedDirs(allowedDirs []string) []string {
+	normalized := make([]string, 0, len(allowedDirs))
+	for _, dir := range allowedDirs {
+		trimmed := strings.TrimSpace(dir)
+		if trimmed == "" {
+			continue
+		}
+		normalized = append(normalized, filepath.Clean(trimmed))
+	}
+	return normalized
+}
+
+// validateAttachmentExtension blocks unsupported file types to reduce risk.
+func (r *Registrator) validateAttachmentExtension(cleanPath string) error {
+	if len(r.allowedExtensions) == 0 {
+		return errors.New("save_path extensions list is empty")
+	}
+	baseName := strings.ToLower(filepath.Base(cleanPath))
+	for _, ext := range r.allowedExtensions {
+		if strings.HasSuffix(baseName, ext) {
+			return nil
+		}
+	}
+	return errors.New("save_path extension is not allowed")
+}
+
+// validateAttachmentDirectory enforces the write scope to prevent unintended writes.
+func (r *Registrator) validateAttachmentDirectory(ctx context.Context, cleanPath string) error {
+	if len(r.allowedDirs) > 0 {
+		if ok, err := isWithinAllowedDirs(cleanPath, r.allowedDirs); err != nil {
+			return r.logError(ctx, err)
+		} else if !ok {
+			return errors.New("save_path must be within allowed directories")
+		}
+		return nil
+	}
+
+	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return "", "", fmt.Errorf("resolve save_path: %w", err)
+		return r.logError(ctx, fmt.Errorf("resolve home directory: %w", err))
+	}
+	homeDir = filepath.Clean(homeDir)
+	if cleanPath == homeDir {
+		return errors.New("save_path must not be home directory")
+	}
+	relativePath, err := filepath.Rel(homeDir, cleanPath)
+	if err != nil {
+		return r.logError(ctx, fmt.Errorf("resolve save_path: %w", err))
 	}
 	if relativePath == "." || relativePath == ".." || strings.HasPrefix(relativePath, ".."+string(os.PathSeparator)) {
-		return "", "", errors.New("save_path must be within workspace")
+		return errors.New("save_path must be within home directory")
 	}
 
-	return fullPath, relativePath, nil
+	segments := strings.Split(relativePath, string(os.PathSeparator))
+	if len(segments) > 0 && strings.HasPrefix(segments[0], ".") {
+		return errors.New("save_path must not be within hidden top-level home directory")
+	}
+
+	return nil
+}
+
+// logError ensures system errors are recorded with tracker context.
+func (r *Registrator) logError(ctx context.Context, err error) error {
+	return domain.LogError(ctx, string(domain.ServiceTracker), err)
+}
+
+// isWithinAllowedDirs prevents writes outside the explicit allowlist.
+func isWithinAllowedDirs(cleanPath string, allowedDirs []string) (bool, error) {
+	for _, dir := range allowedDirs {
+		if dir == "" {
+			continue
+		}
+		if !filepath.IsAbs(dir) {
+			return false, errors.New("allowed directories must be absolute")
+		}
+		relativePath, err := filepath.Rel(dir, cleanPath)
+		if err != nil {
+			return false, fmt.Errorf("resolve save_path: %w", err)
+		}
+		if relativePath == "." || relativePath == ".." || strings.HasPrefix(relativePath, ".."+string(os.PathSeparator)) {
+			continue
+		}
+		return true, nil
+	}
+	return false, nil
 }
 
 // writeAttachment writes attachment bytes to disk.
@@ -287,7 +378,7 @@ func (r *Registrator) writeAttachment(fullPath string, override bool, data []byt
 		flags |= os.O_EXCL
 	}
 
-	//nolint:gosec // save_path is validated and constrained to workspace
+	//nolint:gosec // save_path is validated and constrained to allowed locations
 	file, err := os.OpenFile(fullPath, flags, attachmentFilePerm)
 	if err != nil {
 		return fmt.Errorf("open save_path: %w", err)
@@ -302,20 +393,6 @@ func (r *Registrator) writeAttachment(fullPath string, override bool, data []byt
 	}
 
 	return nil
-}
-
-// workspaceRoot returns the base directory for workspace-relative paths.
-func (r *Registrator) workspaceRoot() (string, error) {
-	if r.baseDir != "" {
-		return r.baseDir, nil
-	}
-
-	baseDir, err := os.Getwd()
-	if err != nil {
-		return "", fmt.Errorf("get workspace root: %w", err)
-	}
-
-	return baseDir, nil
 }
 
 // getQueue gets a queue by ID or key.

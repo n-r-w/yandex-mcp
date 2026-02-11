@@ -137,3 +137,55 @@ func TestLoad_DefaultTrackerURL(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "https://api.tracker.yandex.net", cfg.TrackerBaseURL)
 }
+
+func TestLoad_DefaultAttachExtensions(t *testing.T) {
+	t.Setenv("YANDEX_CLOUD_ORG_ID", "test-org")
+
+	cfg, err := Load()
+
+	require.NoError(t, err)
+	assert.Equal(t, defaultAttachExtensions(), cfg.AttachAllowedExtensions)
+	assert.Nil(t, cfg.AttachAllowedDirs)
+}
+
+func TestLoad_AttachExtensionsOverride(t *testing.T) {
+	t.Setenv("YANDEX_CLOUD_ORG_ID", "test-org")
+	t.Setenv("YANDEX_MCP_ATTACH_EXT", "txt,md,tar.gz")
+
+	cfg, err := Load()
+
+	require.NoError(t, err)
+	assert.Equal(t, []string{"txt", "md", "tar.gz"}, cfg.AttachAllowedExtensions)
+}
+
+func TestLoad_AttachDirsOverride(t *testing.T) {
+	t.Setenv("YANDEX_CLOUD_ORG_ID", "test-org")
+	t.Setenv("YANDEX_MCP_ATTACH_DIR", "/tmp,/var/tmp")
+
+	cfg, err := Load()
+
+	require.NoError(t, err)
+	assert.Equal(t, []string{"/tmp", "/var/tmp"}, cfg.AttachAllowedDirs)
+}
+
+func TestLoad_AttachDirsMustBeAbsolute(t *testing.T) {
+	t.Setenv("YANDEX_CLOUD_ORG_ID", "test-org")
+	t.Setenv("YANDEX_MCP_ATTACH_DIR", "relative")
+
+	cfg, err := Load()
+
+	require.Error(t, err)
+	assert.Nil(t, cfg)
+	assert.Contains(t, err.Error(), "YANDEX_MCP_ATTACH_DIR")
+}
+
+func TestLoad_AttachExtensionsInvalid(t *testing.T) {
+	t.Setenv("YANDEX_CLOUD_ORG_ID", "test-org")
+	t.Setenv("YANDEX_MCP_ATTACH_EXT", "t*xt")
+
+	cfg, err := Load()
+
+	require.Error(t, err)
+	assert.Nil(t, cfg)
+	assert.Contains(t, err.Error(), "YANDEX_MCP_ATTACH_EXT")
+}
