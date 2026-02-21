@@ -58,6 +58,19 @@ Pre-compiled binaries are available for multiple platforms:
 
 Download the latest release from [GitHub Releases](https://github.com/n-r-w/yandex-mcp/releases).
 
+### Homebrew
+
+```bash
+brew install n-r-w/homebrew-tap/yandex-mcp
+```
+
+You can also tap first and install by formula name:
+
+```bash
+brew tap n-r-w/tap
+brew install yandex-mcp
+```
+
 ### Build from Source
 
 ```bash

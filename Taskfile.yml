@@ -3,8 +3,8 @@ version: "3"
 # go-task Taskfile
 # https://taskfile.dev
 
-dotenv:
-  - .env
+dotenv: [".env"]
+silent: true
 
 tasks:
   default:
@@ -16,6 +16,7 @@ tasks:
     desc: "Run code linters"
     cmds:
       - golangci-lint run --config ./.golangci.yml
+      - ifaceguard --config ifaceguard.cfg
 
   test:
     desc: "Run unit tests"

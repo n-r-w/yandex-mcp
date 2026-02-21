@@ -297,6 +297,8 @@ type attachmentStream struct {
 	reader io.ReadCloser
 }
 
+var _ io.ReadCloser = (*attachmentStream)(nil)
+
 // Read reads data from the underlying stream.
 func (s *attachmentStream) Read(p []byte) (int, error) {
 	return s.reader.Read(p)
