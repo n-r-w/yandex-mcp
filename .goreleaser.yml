@@ -39,6 +39,16 @@ checksum:
   name_template: "SHA256SUMS"
   algorithm: sha256
 
+brews:
+  - name: yandex-mcp
+    directory: Formula
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+    repository:
+      owner: n-r-w
+      name: homebrew-tap
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+
 snapshot:
   version_template: "{{ incpatch .Version }}-next"
 
