@@ -16,10 +16,6 @@ tasks:
     desc: "Run code linters"
     cmds:
       - golangci-lint run --config ./.golangci.yml
-      - |
-        if ! command -v ifaceguard >/dev/null 2>&1; then
-          brew install n-r-w/homebrew-tap/ifaceguard
-        fi
       - ifaceguard --config ifaceguard.cfg
 
   test:
