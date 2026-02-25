@@ -1,5 +1,5 @@
-// Package token provides IAM token acquisition using the yc CLI.
-package token
+// Package ytoken provides IAM token acquisition using the yc CLI.
+package ytoken
 
 import (
 	"context"

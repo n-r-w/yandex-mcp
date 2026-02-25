@@ -10,9 +10,9 @@ import (
 	"syscall"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"github.com/n-r-w/yandex-mcp/internal/adapters/token"
 	"github.com/n-r-w/yandex-mcp/internal/adapters/tracker"
 	"github.com/n-r-w/yandex-mcp/internal/adapters/wiki"
+	"github.com/n-r-w/yandex-mcp/internal/adapters/ytoken"
 	"github.com/n-r-w/yandex-mcp/internal/config"
 	"github.com/n-r-w/yandex-mcp/internal/domain"
 	"github.com/n-r-w/yandex-mcp/internal/server"
@@ -94,7 +94,7 @@ func run(serverVersion string) error {
 		slog.String("tracker_base_url", cfg.TrackerBaseURL),
 	)
 
-	tokenProvider := token.NewProvider(cfg)
+	tokenProvider := ytoken.NewProvider(cfg)
 
 	wikiClient := wiki.NewClient(cfg, tokenProvider)
 	trackerClient := tracker.NewClient(cfg, tokenProvider)

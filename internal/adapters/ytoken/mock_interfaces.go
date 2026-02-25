@@ -7,7 +7,7 @@
 //
 
 // Package token is a generated GoMock package.
-package token
+package ytoken
 
 import (
 	context "context"

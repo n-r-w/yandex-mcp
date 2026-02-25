@@ -6,3 +6,10 @@ const (
 	attachmentFilePerm  = 0o600
 	emptyAllowlistLabel = "(none)"
 )
+
+func emptyObjectInputSchema() map[string]any {
+	return map[string]any{
+		"type":       "object",
+		"properties": map[string]any{},
+	}
+}

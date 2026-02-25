@@ -1,4 +1,4 @@
-package token
+package ytoken
 
 // tokenRegexPattern matches Yandex IAM tokens in yc CLI output.
 // Format: t1.[base64-like-chars][optional-padding].[86-base64-like-chars][optional-padding].
