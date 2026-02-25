@@ -305,7 +305,8 @@ func parseBaseURL(baseURL string) (*url.URL, error) {
 		return nil, errors.New("base URL scheme must be http or https")
 	}
 
-	if strings.TrimSpace(parsedURL.Path) != "" && parsedURL.Path != "/" {
+	path := strings.TrimSpace(parsedURL.Path)
+	if path != "" && strings.Trim(path, "/") != "" {
 		return nil, errors.New("base URL must not include path")
 	}
 

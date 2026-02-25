@@ -44,6 +44,7 @@ func TestParseBaseURL_Validation(t *testing.T) {
 	}{
 		{name: "valid https", baseURL: "https://api.example.test", wantErr: false},
 		{name: "valid http", baseURL: "http://api.example.test", wantErr: false},
+		{name: "valid https with extra trailing slashes", baseURL: "https://api.example.test///", wantErr: false},
 		{name: "empty", baseURL: "", wantErr: true},
 		{name: "relative", baseURL: "/v1", wantErr: true},
 		{name: "missing host", baseURL: "https:///v1", wantErr: true},
@@ -64,6 +65,7 @@ func TestParseBaseURL_Validation(t *testing.T) {
 
 			require.NoError(t, err)
 			require.NotNil(t, parsedURL)
+			assert.Empty(t, parsedURL.Path)
 		})
 	}
 
