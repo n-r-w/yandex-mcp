@@ -19,7 +19,6 @@ import (
 // Client implements IWikiClient for Yandex Wiki API.
 type Client struct {
 	apiClient *apihelpers.APIClient
-	baseURL   string
 }
 
 // Compile-time check that Client implements the tools interface.
@@ -29,12 +28,12 @@ var _ wikitools.IWikiAdapter = (*Client)(nil)
 func NewClient(cfg *config.Config, tokenProvider apihelpers.ITokenProvider) *Client {
 	client := &Client{
 		apiClient: nil, // set below
-		baseURL:   strings.TrimSuffix(cfg.WikiBaseURL, "/"),
 	}
 
 	client.apiClient = apihelpers.NewAPIClient(apihelpers.APIClientConfig{
 		HTTPClient:          nil, // uses default
 		TokenProvider:       tokenProvider,
+		BaseURL:             strings.TrimSuffix(cfg.WikiBaseURL, "/"),
 		OrgID:               cfg.CloudOrgID,
 		ExtraHeaders:        nil,
 		ServiceName:         string(domain.ServiceWiki),
@@ -50,9 +49,9 @@ func NewClient(cfg *config.Config, tokenProvider apihelpers.ITokenProvider) *Cli
 func (c *Client) GetPageBySlug(
 	ctx context.Context, slug string, opts domain.WikiGetPageOpts,
 ) (*domain.WikiPage, error) {
-	u, err := url.Parse(c.baseURL + "/v1/pages")
+	u, err := url.Parse("/v1/pages")
 	if err != nil {
-		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse endpoint path: %w", err))
 	}
 
 	q := u.Query()
@@ -77,9 +76,9 @@ func (c *Client) GetPageBySlug(
 
 // GetPageByID retrieves a page by its ID.
 func (c *Client) GetPageByID(ctx context.Context, id string, opts domain.WikiGetPageOpts) (*domain.WikiPage, error) {
-	u, err := url.Parse(fmt.Sprintf("%s/v1/pages/%s", c.baseURL, id))
+	u, err := url.Parse("/v1/pages/" + url.PathEscape(id))
 	if err != nil {
-		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse endpoint path: %w", err))
 	}
 
 	q := u.Query()
@@ -107,9 +106,9 @@ func (c *Client) ListPageResources(
 	pageID string,
 	opts domain.WikiListResourcesOpts,
 ) (*domain.WikiResourcesPage, error) {
-	u, err := url.Parse(fmt.Sprintf("%s/v1/pages/%s/resources", c.baseURL, pageID))
+	u, err := url.Parse("/v1/pages/" + url.PathEscape(pageID) + "/resources")
 	if err != nil {
-		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse endpoint path: %w", err))
 	}
 
 	q := u.Query()
@@ -156,9 +155,9 @@ func (c *Client) ListPageGrids(
 	pageID string,
 	opts domain.WikiListGridsOpts,
 ) (*domain.WikiGridsPage, error) {
-	u, err := url.Parse(fmt.Sprintf("%s/v1/pages/%s/grids", c.baseURL, pageID))
+	u, err := url.Parse("/v1/pages/" + url.PathEscape(pageID) + "/grids")
 	if err != nil {
-		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse endpoint path: %w", err))
 	}
 
 	q := u.Query()
@@ -199,9 +198,9 @@ func (c *Client) GetGridByID(
 	gridID string,
 	opts domain.WikiGetGridOpts,
 ) (*domain.WikiGrid, error) {
-	u, err := url.Parse(fmt.Sprintf("%s/v1/grids/%s", c.baseURL, gridID))
+	u, err := url.Parse("/v1/grids/" + url.PathEscape(gridID))
 	if err != nil {
-		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse endpoint path: %w", err))
 	}
 
 	q := u.Query()

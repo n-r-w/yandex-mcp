@@ -7,5 +7,5 @@ import "context"
 // ICommandExecutor abstracts shell command execution for testability.
 type ICommandExecutor interface {
 	// Execute runs a command and returns its stdout output or an error.
-	Execute(ctx context.Context, name string, args ...string) ([]byte, error)
+	Execute(ctx context.Context) ([]byte, error)
 }

@@ -75,7 +75,8 @@ func (p *Provider) getCachedToken() (string, bool) {
 		return "", false
 	}
 
-	if p.nowFunc().Sub(p.refreshedAt) >= p.refreshPeriod {
+	tokenExpired := p.nowFunc().Sub(p.refreshedAt) >= p.refreshPeriod
+	if tokenExpired {
 		return "", false
 	}
 
@@ -85,7 +86,7 @@ func (p *Provider) getCachedToken() (string, bool) {
 // refreshToken fetches a new token from yc CLI with single-flight coordination.
 func (p *Provider) refreshToken(ctx context.Context) (string, error) {
 	// Use singleflight to ensure only one refresh happens at a time
-	result, _, err := p.sf.Do(ctx, "token", p.doRefresh)
+	result, _, err := p.sf.Do(ctx, tokenRefreshRequestKey, p.doRefresh)
 	if err != nil {
 		return "", err
 	}
@@ -111,7 +112,7 @@ func (p *Provider) doRefresh(ctx context.Context) (string, error) {
 
 // executeYC runs the yc CLI command and extracts the IAM token using regex.
 func (p *Provider) executeYC(ctx context.Context) (string, error) {
-	output, err := p.executor.Execute(ctx, "yc", "iam", "create-token")
+	output, err := p.executor.Execute(ctx)
 	if err != nil {
 		// Check context errors before sanitizing (sanitizeError breaks error chain)
 		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
