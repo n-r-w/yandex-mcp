@@ -116,6 +116,7 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
 			Name:        domain.TrackerToolUserCurrent.String(),
 			Description: "Gets the current authenticated Yandex Tracker user",
+			InputSchema: emptyObjectInputSchema(),
 		}, server.MakeHandler(r.getCurrentUser))
 	}
 

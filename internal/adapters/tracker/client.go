@@ -20,7 +20,6 @@ import (
 // Client implements HTTP client for Yandex Tracker API.
 type Client struct {
 	apiClient *apihelpers.APIClient
-	baseURL   string
 }
 
 // Compile-time check that Client implements the tools interface.
@@ -30,12 +29,12 @@ var _ trackertools.ITrackerAdapter = (*Client)(nil)
 func NewClient(cfg *config.Config, tokenProvider apihelpers.ITokenProvider) *Client {
 	client := &Client{
 		apiClient: nil, // set below
-		baseURL:   strings.TrimSuffix(cfg.TrackerBaseURL, "/"),
 	}
 
 	client.apiClient = apihelpers.NewAPIClient(apihelpers.APIClientConfig{
 		HTTPClient:    nil, // uses default
 		TokenProvider: tokenProvider,
+		BaseURL:       strings.TrimSuffix(cfg.TrackerBaseURL, "/"),
 		OrgID:         cfg.CloudOrgID,
 		ExtraHeaders: map[string]string{
 			headerAcceptLanguage: acceptLangEN,
@@ -55,9 +54,9 @@ func (c *Client) GetIssue(
 	issueID string,
 	opts domain.TrackerGetIssueOpts,
 ) (*domain.TrackerIssue, error) {
-	u, err := url.Parse(fmt.Sprintf("%s/v3/issues/%s", c.baseURL, url.PathEscape(issueID)))
+	u, err := url.Parse("/v3/issues/" + url.PathEscape(issueID))
 	if err != nil {
-		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse endpoint path: %w", err))
 	}
 
 	if opts.Expand != "" {
@@ -79,9 +78,9 @@ func (c *Client) SearchIssues(
 	ctx context.Context,
 	opts domain.TrackerSearchIssuesOpts,
 ) (*domain.TrackerIssuesPage, error) {
-	u, err := url.Parse(c.baseURL + "/v3/issues/_search")
+	u, err := url.Parse("/v3/issues/_search")
 	if err != nil {
-		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse endpoint path: %w", err))
 	}
 
 	q := u.Query()
@@ -137,9 +136,9 @@ func (c *Client) SearchIssues(
 
 // CountIssues counts issues matching the filter or query.
 func (c *Client) CountIssues(ctx context.Context, opts domain.TrackerCountIssuesOpts) (int, error) {
-	u, err := url.Parse(c.baseURL + "/v3/issues/_count")
+	u, err := url.Parse("/v3/issues/_count")
 	if err != nil {
-		return 0, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
+		return 0, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse endpoint path: %w", err))
 	}
 
 	reqBody := countRequestDTO{
@@ -160,9 +159,9 @@ func (c *Client) ListIssueTransitions(
 	ctx context.Context,
 	issueID string,
 ) ([]domain.TrackerTransition, error) {
-	u, err := url.Parse(fmt.Sprintf("%s/v3/issues/%s/transitions", c.baseURL, url.PathEscape(issueID)))
+	u, err := url.Parse(fmt.Sprintf("/v3/issues/%s/transitions", url.PathEscape(issueID)))
 	if err != nil {
-		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse endpoint path: %w", err))
 	}
 
 	var transitions []transitionDTO
@@ -181,9 +180,9 @@ func (c *Client) ListQueues(
 	ctx context.Context,
 	opts domain.TrackerListQueuesOpts,
 ) (*domain.TrackerQueuesPage, error) {
-	u, err := url.Parse(c.baseURL + "/v3/queues/")
+	u, err := url.Parse("/v3/queues/")
 	if err != nil {
-		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse endpoint path: %w", err))
 	}
 
 	q := u.Query()
@@ -218,9 +217,9 @@ func (c *Client) ListIssueComments(
 	issueID string,
 	opts domain.TrackerListCommentsOpts,
 ) (*domain.TrackerCommentsPage, error) {
-	u, err := url.Parse(fmt.Sprintf("%s/v3/issues/%s/comments", c.baseURL, url.PathEscape(issueID)))
+	u, err := url.Parse(fmt.Sprintf("/v3/issues/%s/comments", url.PathEscape(issueID)))
 	if err != nil {
-		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse endpoint path: %w", err))
 	}
 
 	q := u.Query()
@@ -250,7 +249,7 @@ func (c *Client) ListIssueComments(
 
 // ListIssueAttachments lists attachments for an issue.
 func (c *Client) ListIssueAttachments(ctx context.Context, issueID string) ([]domain.TrackerAttachment, error) {
-	u := fmt.Sprintf("%s/v3/issues/%s/attachments", c.baseURL, url.PathEscape(issueID))
+	u := fmt.Sprintf("/v3/issues/%s/attachments", url.PathEscape(issueID))
 
 	var attachments []attachmentDTO
 	if _, err := c.apiClient.DoGET(ctx, u, &attachments, "ListIssueAttachments"); err != nil {
@@ -273,8 +272,7 @@ func (c *Client) GetIssueAttachment(
 	fileName string,
 ) (*domain.TrackerAttachmentContent, error) {
 	u := fmt.Sprintf(
-		"%s/v3/issues/%s/attachments/%s/%s",
-		c.baseURL,
+		"/v3/issues/%s/attachments/%s/%s",
 		url.PathEscape(issueID),
 		url.PathEscape(attachmentID),
 		url.PathEscape(fileName),
@@ -320,8 +318,7 @@ func (c *Client) GetIssueAttachmentStream(
 	fileName string,
 ) (*domain.TrackerAttachmentStream, error) {
 	u := fmt.Sprintf(
-		"%s/v3/issues/%s/attachments/%s/%s",
-		c.baseURL,
+		"/v3/issues/%s/attachments/%s/%s",
 		url.PathEscape(issueID),
 		url.PathEscape(attachmentID),
 		url.PathEscape(fileName),
@@ -346,8 +343,7 @@ func (c *Client) GetIssueAttachmentPreview(
 	attachmentID string,
 ) (*domain.TrackerAttachmentContent, error) {
 	u := fmt.Sprintf(
-		"%s/v3/issues/%s/thumbnails/%s",
-		c.baseURL,
+		"/v3/issues/%s/thumbnails/%s",
 		url.PathEscape(issueID),
 		url.PathEscape(attachmentID),
 	)
@@ -371,8 +367,7 @@ func (c *Client) GetIssueAttachmentPreviewStream(
 	attachmentID string,
 ) (*domain.TrackerAttachmentStream, error) {
 	u := fmt.Sprintf(
-		"%s/v3/issues/%s/thumbnails/%s",
-		c.baseURL,
+		"/v3/issues/%s/thumbnails/%s",
 		url.PathEscape(issueID),
 		url.PathEscape(attachmentID),
 	)
@@ -393,9 +388,9 @@ func (c *Client) GetIssueAttachmentPreviewStream(
 func (c *Client) GetQueue(
 	ctx context.Context, queueID string, opts domain.TrackerGetQueueOpts,
 ) (*domain.TrackerQueueDetail, error) {
-	u, err := url.Parse(fmt.Sprintf("%s/v3/queues/%s", c.baseURL, url.PathEscape(queueID)))
+	u, err := url.Parse("/v3/queues/" + url.PathEscape(queueID))
 	if err != nil {
-		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse endpoint path: %w", err))
 	}
 
 	if opts.Expand != "" {
@@ -415,7 +410,7 @@ func (c *Client) GetQueue(
 
 // GetCurrentUser gets the current authenticated user.
 func (c *Client) GetCurrentUser(ctx context.Context) (*domain.TrackerUserDetail, error) {
-	u := c.baseURL + "/v3/myself"
+	u := "/v3/myself"
 
 	var user userDetailDTO
 	if _, err := c.apiClient.DoGET(ctx, u, &user, "GetCurrentUser"); err != nil {
@@ -428,9 +423,9 @@ func (c *Client) GetCurrentUser(ctx context.Context) (*domain.TrackerUserDetail,
 
 // ListUsers lists users with optional pagination.
 func (c *Client) ListUsers(ctx context.Context, opts domain.TrackerListUsersOpts) (*domain.TrackerUsersPage, error) {
-	u, err := url.Parse(c.baseURL + "/v3/users")
+	u, err := url.Parse("/v3/users")
 	if err != nil {
-		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse endpoint path: %w", err))
 	}
 
 	q := u.Query()
@@ -462,7 +457,7 @@ func (c *Client) ListUsers(ctx context.Context, opts domain.TrackerListUsersOpts
 
 // GetUser gets a user by ID or login.
 func (c *Client) GetUser(ctx context.Context, userID string) (*domain.TrackerUserDetail, error) {
-	u := fmt.Sprintf("%s/v3/users/%s", c.baseURL, url.PathEscape(userID))
+	u := "/v3/users/" + url.PathEscape(userID)
 
 	var user userDetailDTO
 	if _, err := c.apiClient.DoGET(ctx, u, &user, "GetUser"); err != nil {
@@ -475,9 +470,9 @@ func (c *Client) GetUser(ctx context.Context, userID string) (*domain.TrackerUse
 
 // ListIssueLinks lists all links for an issue.
 func (c *Client) ListIssueLinks(ctx context.Context, issueID string) ([]domain.TrackerLink, error) {
-	u, err := url.Parse(fmt.Sprintf("%s/v3/issues/%s/links", c.baseURL, url.PathEscape(issueID)))
+	u, err := url.Parse(fmt.Sprintf("/v3/issues/%s/links", url.PathEscape(issueID)))
 	if err != nil {
-		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse endpoint path: %w", err))
 	}
 
 	var links []linkDTO
@@ -496,9 +491,9 @@ func (c *Client) ListIssueLinks(ctx context.Context, issueID string) ([]domain.T
 func (c *Client) GetIssueChangelog(
 	ctx context.Context, issueID string, opts domain.TrackerGetChangelogOpts,
 ) ([]domain.TrackerChangelogEntry, error) {
-	u, err := url.Parse(fmt.Sprintf("%s/v3/issues/%s/changelog", c.baseURL, url.PathEscape(issueID)))
+	u, err := url.Parse(fmt.Sprintf("/v3/issues/%s/changelog", url.PathEscape(issueID)))
 	if err != nil {
-		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse endpoint path: %w", err))
 	}
 
 	if opts.PerPage > 0 {
@@ -523,9 +518,9 @@ func (c *Client) GetIssueChangelog(
 func (c *Client) ListProjectComments(
 	ctx context.Context, projectID string, opts domain.TrackerListProjectCommentsOpts,
 ) ([]domain.TrackerProjectComment, error) {
-	u, err := url.Parse(fmt.Sprintf("%s/v3/entities/project/%s/comments", c.baseURL, url.PathEscape(projectID)))
+	u, err := url.Parse(fmt.Sprintf("/v3/entities/project/%s/comments", url.PathEscape(projectID)))
 	if err != nil {
-		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse base URL: %w", err))
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse endpoint path: %w", err))
 	}
 
 	if opts.Expand != "" {

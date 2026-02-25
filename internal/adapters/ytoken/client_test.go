@@ -1,4 +1,4 @@
-package token
+package ytoken
 
 import (
 	"context"
@@ -67,7 +67,7 @@ func TestProvider_Token_CachesBetweenCalls(t *testing.T) {
 	provider.setExecutor(mockExec)
 
 	mockExec.EXPECT().
-		Execute(gomock.Any(), "yc", "iam", "create-token").
+		Execute(gomock.Any()).
 		Return([]byte(makeValidToken("test123")), nil).
 		Times(1)
 
@@ -96,10 +96,10 @@ func TestProvider_Token_RefreshesAfterPeriodExpires(t *testing.T) {
 
 	gomock.InOrder(
 		mockExec.EXPECT().
-			Execute(gomock.Any(), "yc", "iam", "create-token").
+			Execute(gomock.Any()).
 			Return([]byte(makeValidToken("v1")), nil),
 		mockExec.EXPECT().
-			Execute(gomock.Any(), "yc", "iam", "create-token").
+			Execute(gomock.Any()).
 			Return([]byte(makeValidToken("v2")), nil),
 	)
 
@@ -130,8 +130,8 @@ func TestProvider_Token_ConcurrentCallsTriggerSingleExecution(t *testing.T) {
 	execProceed := make(chan struct{})
 
 	mockExec.EXPECT().
-		Execute(gomock.Any(), "yc", "iam", "create-token").
-		DoAndReturn(func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		Execute(gomock.Any()).
+		DoAndReturn(func(_ context.Context) ([]byte, error) {
 			execCount.Add(1)
 			close(execStarted)
 			<-execProceed
@@ -182,7 +182,7 @@ func TestProvider_Token_ErrorDoesNotLeakOutputWhenTokenNotFound(t *testing.T) {
 Status: unauthorized`
 
 	mockExec.EXPECT().
-		Execute(gomock.Any(), "yc", "iam", "create-token").
+		Execute(gomock.Any()).
 		Return([]byte(sensitiveOutput), nil)
 
 	ctx := t.Context()
@@ -218,7 +218,7 @@ func TestProvider_Token_ExtractsTokenWithRegex_CleanOutput(t *testing.T) {
 
 	validToken := makeValidToken("clean")
 	mockExec.EXPECT().
-		Execute(gomock.Any(), "yc", "iam", "create-token").
+		Execute(gomock.Any()).
 		Return([]byte(validToken), nil)
 
 	ctx := t.Context()
@@ -245,7 +245,7 @@ func TestProvider_Token_ExtractsTokenWithRegex_NoisyOutput(t *testing.T) {
 Additional log data and metadata here...`
 
 	mockExec.EXPECT().
-		Execute(gomock.Any(), "yc", "iam", "create-token").
+		Execute(gomock.Any()).
 		Return([]byte(noisyOutput), nil)
 
 	ctx := t.Context()
@@ -269,7 +269,7 @@ func TestProvider_Token_ExtractsTokenWithRegex_WhitespaceAndNewlines(t *testing.
 	outputWithWhitespace := "\n\n  " + validToken + "  \n\t\n"
 
 	mockExec.EXPECT().
-		Execute(gomock.Any(), "yc", "iam", "create-token").
+		Execute(gomock.Any()).
 		Return([]byte(outputWithWhitespace), nil)
 
 	ctx := t.Context()
@@ -289,7 +289,7 @@ func TestProvider_Token_ReturnsErrorWhenNoTokenMatch(t *testing.T) {
 	provider.setExecutor(mockExec)
 
 	mockExec.EXPECT().
-		Execute(gomock.Any(), "yc", "iam", "create-token").
+		Execute(gomock.Any()).
 		Return([]byte("some random output without a valid token format"), nil)
 
 	ctx := t.Context()
@@ -312,7 +312,7 @@ func TestProvider_Token_ReturnsErrorOnInvalidTokenFormat(t *testing.T) {
 	// Token-like but invalid format (too short suffix)
 	invalidToken := "t1.prefix.short"
 	mockExec.EXPECT().
-		Execute(gomock.Any(), "yc", "iam", "create-token").
+		Execute(gomock.Any()).
 		Return([]byte(invalidToken), nil)
 
 	ctx := t.Context()
@@ -332,7 +332,7 @@ func TestProvider_Token_ReturnsErrorOnEmptyOutput(t *testing.T) {
 	provider.setExecutor(mockExec)
 
 	mockExec.EXPECT().
-		Execute(gomock.Any(), "yc", "iam", "create-token").
+		Execute(gomock.Any()).
 		Return([]byte(""), nil)
 
 	ctx := t.Context()
@@ -352,7 +352,7 @@ func TestProvider_Token_ReturnsErrorOnWhitespaceOnlyOutput(t *testing.T) {
 	provider.setExecutor(mockExec)
 
 	mockExec.EXPECT().
-		Execute(gomock.Any(), "yc", "iam", "create-token").
+		Execute(gomock.Any()).
 		Return([]byte("   \n\t"), nil)
 
 	ctx := t.Context()
@@ -372,7 +372,7 @@ func TestProvider_Token_ContextCancellationPropagates(t *testing.T) {
 	provider.setExecutor(mockExec)
 
 	mockExec.EXPECT().
-		Execute(gomock.Any(), "yc", "iam", "create-token").
+		Execute(gomock.Any()).
 		Return(nil, context.Canceled)
 
 	ctx, cancel := context.WithCancel(t.Context())
@@ -401,11 +401,11 @@ func TestProvider_Token_ConcurrentCallsDuringRefreshShareResult(t *testing.T) {
 
 	gomock.InOrder(
 		mockExec.EXPECT().
-			Execute(gomock.Any(), "yc", "iam", "create-token").
+			Execute(gomock.Any()).
 			Return([]byte(makeValidToken("initial")), nil),
 		mockExec.EXPECT().
-			Execute(gomock.Any(), "yc", "iam", "create-token").
-			DoAndReturn(func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+			Execute(gomock.Any()).
+			DoAndReturn(func(_ context.Context) ([]byte, error) {
 				refreshCount.Add(1)
 				close(refreshStarted)
 				<-refreshProceed
@@ -454,8 +454,8 @@ func TestProvider_Token_WaiterReceivesRefreshError(t *testing.T) {
 	refreshProceed := make(chan struct{})
 
 	mockExec.EXPECT().
-		Execute(gomock.Any(), "yc", "iam", "create-token").
-		DoAndReturn(func(_ context.Context, _ string, _ ...string) ([]byte, error) {
+		Execute(gomock.Any()).
+		DoAndReturn(func(_ context.Context) ([]byte, error) {
 			close(refreshStarted)
 			<-refreshProceed
 			return nil, errTokenFetchFailed
@@ -517,7 +517,7 @@ func TestProvider_Token_ForceRefreshBypassesCache(t *testing.T) {
 	// First call gets initial token
 	gomock.InOrder(
 		mockExec.EXPECT().
-			Execute(gomock.Any(), "yc", "iam", "create-token").
+			Execute(gomock.Any()).
 			Return([]byte(makeValidToken("initial")), nil),
 	)
 
@@ -530,7 +530,7 @@ func TestProvider_Token_ForceRefreshBypassesCache(t *testing.T) {
 	// Second call with forceRefresh=true should bypass cache and fetch new token
 	// even though the cached token is still valid
 	mockExec.EXPECT().
-		Execute(gomock.Any(), "yc", "iam", "create-token").
+		Execute(gomock.Any()).
 		Return([]byte(makeValidToken("forced")), nil)
 
 	tok2, err2 := provider.Token(ctx, true)
@@ -550,13 +550,13 @@ func TestProvider_Token_ForceRefreshMultipleTimes(t *testing.T) {
 	// Each forceRefresh=true call should trigger a new token fetch
 	gomock.InOrder(
 		mockExec.EXPECT().
-			Execute(gomock.Any(), "yc", "iam", "create-token").
+			Execute(gomock.Any()).
 			Return([]byte(makeValidToken("v1")), nil),
 		mockExec.EXPECT().
-			Execute(gomock.Any(), "yc", "iam", "create-token").
+			Execute(gomock.Any()).
 			Return([]byte(makeValidToken("v2")), nil),
 		mockExec.EXPECT().
-			Execute(gomock.Any(), "yc", "iam", "create-token").
+			Execute(gomock.Any()).
 			Return([]byte(makeValidToken("v3")), nil),
 	)
 
@@ -590,13 +590,13 @@ func TestProvider_Token_ForceRefreshAfterCacheExpired(t *testing.T) {
 	// Initial token fetch
 	gomock.InOrder(
 		mockExec.EXPECT().
-			Execute(gomock.Any(), "yc", "iam", "create-token").
+			Execute(gomock.Any()).
 			Return([]byte(makeValidToken("initial")), nil),
 		mockExec.EXPECT().
-			Execute(gomock.Any(), "yc", "iam", "create-token").
+			Execute(gomock.Any()).
 			Return([]byte(makeValidToken("expired")), nil),
 		mockExec.EXPECT().
-			Execute(gomock.Any(), "yc", "iam", "create-token").
+			Execute(gomock.Any()).
 			Return([]byte(makeValidToken("forced")), nil),
 	)
 
@@ -633,7 +633,7 @@ func TestProvider_Token_ForceRefreshFalseUsesCache(t *testing.T) {
 
 	// Only expect one token fetch, even with multiple calls
 	mockExec.EXPECT().
-		Execute(gomock.Any(), "yc", "iam", "create-token").
+		Execute(gomock.Any()).
 		Return([]byte(makeValidToken("cached")), nil).
 		Times(1)
 

@@ -1,4 +1,4 @@
-package token
+package ytoken
 
 import (
 	"context"
@@ -17,8 +17,8 @@ func newCommandExecutor() *commandExecutor {
 }
 
 // Execute runs a command and returns its stdout output.
-func (e *commandExecutor) Execute(ctx context.Context, name string, args ...string) ([]byte, error) {
-	cmd := exec.CommandContext(ctx, name, args...)
+func (e *commandExecutor) Execute(ctx context.Context) ([]byte, error) {
+	cmd := exec.CommandContext(ctx, ycCommandName, ycCommandArgIAM, ycCommandArgCreateToken)
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("command execution failed: %w", err)

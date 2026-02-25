@@ -11,6 +11,7 @@ package apihelpers
 
 import (
 	context "context"
+	http "net/http"
 	reflect "reflect"
 
 	gomock "go.uber.org/mock/gomock"
@@ -53,4 +54,43 @@ func (m *MockITokenProvider) Token(ctx context.Context, forceRefresh bool) (stri
 func (mr *MockITokenProviderMockRecorder) Token(ctx, forceRefresh any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Token", reflect.TypeOf((*MockITokenProvider)(nil).Token), ctx, forceRefresh)
+}
+
+// MockIHTTPDoer is a mock of IHTTPDoer interface.
+type MockIHTTPDoer struct {
+	ctrl     *gomock.Controller
+	recorder *MockIHTTPDoerMockRecorder
+	isgomock struct{}
+}
+
+// MockIHTTPDoerMockRecorder is the mock recorder for MockIHTTPDoer.
+type MockIHTTPDoerMockRecorder struct {
+	mock *MockIHTTPDoer
+}
+
+// NewMockIHTTPDoer creates a new mock instance.
+func NewMockIHTTPDoer(ctrl *gomock.Controller) *MockIHTTPDoer {
+	mock := &MockIHTTPDoer{ctrl: ctrl}
+	mock.recorder = &MockIHTTPDoerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockIHTTPDoer) EXPECT() *MockIHTTPDoerMockRecorder {
+	return m.recorder
+}
+
+// Do mocks base method.
+func (m *MockIHTTPDoer) Do(req *http.Request) (*http.Response, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Do", req)
+	ret0, _ := ret[0].(*http.Response)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Do indicates an expected call of Do.
+func (mr *MockIHTTPDoerMockRecorder) Do(req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Do", reflect.TypeOf((*MockIHTTPDoer)(nil).Do), req)
 }
