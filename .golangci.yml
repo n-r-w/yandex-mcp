@@ -130,6 +130,7 @@ linters:
           - whitespace
           - gocyclo
           - cyclop
+          - prealloc
         path: _test\.go
       - linters:
           - gochecknoglobals
