@@ -10,6 +10,8 @@ const (
 	TrackerToolIssueCount
 	TrackerToolTransitionsList
 	TrackerToolQueuesList
+	TrackerToolBoardsList
+	TrackerToolBoardSprintsList
 	TrackerToolCommentsList
 	TrackerToolAttachmentsList
 	TrackerToolAttachmentGet
@@ -32,6 +34,8 @@ func (t TrackerTool) String() string {
 		TrackerToolIssueCount:           "tracker_issue_count",
 		TrackerToolTransitionsList:      "tracker_issue_transitions_list",
 		TrackerToolQueuesList:           "tracker_queues_list",
+		TrackerToolBoardsList:           "tracker_boards_list",
+		TrackerToolBoardSprintsList:     "tracker_board_sprints_list",
 		TrackerToolCommentsList:         "tracker_issue_comments_list",
 		TrackerToolAttachmentsList:      "tracker_issue_attachments_list",
 		TrackerToolAttachmentGet:        "tracker_issue_attachment_get",
@@ -55,6 +59,8 @@ func TrackerAllTools() []TrackerTool {
 		TrackerToolIssueCount,
 		TrackerToolTransitionsList,
 		TrackerToolQueuesList,
+		TrackerToolBoardsList,
+		TrackerToolBoardSprintsList,
 		TrackerToolCommentsList,
 		TrackerToolAttachmentsList,
 		TrackerToolAttachmentGet,

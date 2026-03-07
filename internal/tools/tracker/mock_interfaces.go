@@ -191,6 +191,36 @@ func (mr *MockITrackerAdapterMockRecorder) GetUser(ctx, userID any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUser", reflect.TypeOf((*MockITrackerAdapter)(nil).GetUser), ctx, userID)
 }
 
+// ListBoardSprints mocks base method.
+func (m *MockITrackerAdapter) ListBoardSprints(ctx context.Context, boardID string) ([]domain.TrackerSprint, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListBoardSprints", ctx, boardID)
+	ret0, _ := ret[0].([]domain.TrackerSprint)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListBoardSprints indicates an expected call of ListBoardSprints.
+func (mr *MockITrackerAdapterMockRecorder) ListBoardSprints(ctx, boardID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBoardSprints", reflect.TypeOf((*MockITrackerAdapter)(nil).ListBoardSprints), ctx, boardID)
+}
+
+// ListBoards mocks base method.
+func (m *MockITrackerAdapter) ListBoards(ctx context.Context) ([]domain.TrackerBoard, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListBoards", ctx)
+	ret0, _ := ret[0].([]domain.TrackerBoard)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListBoards indicates an expected call of ListBoards.
+func (mr *MockITrackerAdapterMockRecorder) ListBoards(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBoards", reflect.TypeOf((*MockITrackerAdapter)(nil).ListBoards), ctx)
+}
+
 // ListIssueAttachments mocks base method.
 func (m *MockITrackerAdapter) ListIssueAttachments(ctx context.Context, issueID string) ([]domain.TrackerAttachment, error) {
 	m.ctrl.T.Helper()

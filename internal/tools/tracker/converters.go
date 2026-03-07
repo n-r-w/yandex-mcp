@@ -88,6 +88,66 @@ func mapQueueToOutput(q *domain.TrackerQueue) *queueOutputDTO {
 	}
 }
 
+func mapBoardToOutput(b *domain.TrackerBoard) *boardOutputDTO {
+	if b == nil {
+		return nil
+	}
+
+	columns := make([]boardColumnOutputDTO, len(b.Columns))
+	for i, col := range b.Columns {
+		columns[i] = boardColumnOutputDTO{
+			Self:    col.Self,
+			ID:      col.ID,
+			Display: col.Display,
+		}
+	}
+
+	return &boardOutputDTO{
+		Self:      b.Self,
+		ID:        b.ID,
+		Version:   b.Version,
+		Name:      b.Name,
+		CreatedAt: b.CreatedAt,
+		UpdatedAt: b.UpdatedAt,
+		CreatedBy: mapUserToOutput(b.CreatedBy),
+		Columns:   columns,
+	}
+}
+
+func mapSprintToOutput(s *domain.TrackerSprint) *sprintOutputDTO {
+	if s == nil {
+		return nil
+	}
+
+	return &sprintOutputDTO{
+		Self:          s.Self,
+		ID:            s.ID,
+		Version:       s.Version,
+		Name:          s.Name,
+		Board:         mapBoardRefToOutput(s.Board),
+		Status:        s.Status,
+		Archived:      s.Archived,
+		CreatedBy:     mapUserToOutput(s.CreatedBy),
+		CreatedAt:     s.CreatedAt,
+		StartDate:     s.StartDate,
+		EndDate:       s.EndDate,
+		StartDateTime: s.StartDateTime,
+		EndDateTime:   s.EndDateTime,
+	}
+}
+
+func mapBoardRefToOutput(b *domain.TrackerBoardRef) *boardRefOutputDTO {
+	if b == nil {
+		return nil
+	}
+
+	return &boardRefOutputDTO{
+		Self:    b.Self,
+		ID:      b.ID,
+		Display: b.Display,
+	}
+}
+
 func mapUserToOutput(u *domain.TrackerUser) *userOutputDTO {
 	if u == nil {
 		return nil
@@ -189,6 +249,30 @@ func mapQueuesResultToOutput(r *domain.TrackerQueuesPage) *queuesListOutputDTO {
 		TotalCount: r.TotalCount,
 		TotalPages: r.TotalPages,
 	}
+}
+
+func mapBoardsToOutput(boards []domain.TrackerBoard) *boardsListOutputDTO {
+	result := make([]boardOutputDTO, len(boards))
+	for i, board := range boards {
+		out := mapBoardToOutput(&board)
+		if out != nil {
+			result[i] = *out
+		}
+	}
+
+	return &boardsListOutputDTO{Boards: result}
+}
+
+func mapSprintsToOutput(sprints []domain.TrackerSprint) *boardSprintsListOutputDTO {
+	result := make([]sprintOutputDTO, len(sprints))
+	for i, sprint := range sprints {
+		out := mapSprintToOutput(&sprint)
+		if out != nil {
+			result[i] = *out
+		}
+	}
+
+	return &boardSprintsListOutputDTO{Sprints: result}
 }
 
 func mapCommentsResultToOutput(r *domain.TrackerCommentsPage) *commentsListOutputDTO {

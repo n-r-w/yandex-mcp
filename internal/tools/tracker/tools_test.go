@@ -342,6 +342,87 @@ func TestTools_ListQueues(t *testing.T) {
 	})
 }
 
+func TestTools_ListBoards(t *testing.T) {
+	t.Parallel()
+
+	t.Run("calls adapter and maps output", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockITrackerAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
+
+		expectedBoards := []domain.TrackerBoard{
+			{
+				ID:      "1",
+				Name:    "Main Board",
+				Version: 2,
+				Columns: []domain.TrackerBoardColumn{
+					{ID: "1", Display: "Open"},
+				},
+			},
+		}
+
+		mockAdapter.EXPECT().
+			ListBoards(gomock.Any()).
+			Return(expectedBoards, nil)
+
+		result, err := reg.listBoards(t.Context(), listBoardsInputDTO{})
+		require.NoError(t, err)
+		require.Len(t, result.Boards, 1)
+		assert.Equal(t, "1", result.Boards[0].ID)
+		assert.Equal(t, "Main Board", result.Boards[0].Name)
+		require.Len(t, result.Boards[0].Columns, 1)
+		assert.Equal(t, "Open", result.Boards[0].Columns[0].Display)
+	})
+}
+
+func TestTools_ListBoardSprints(t *testing.T) {
+	t.Parallel()
+
+	t.Run("returns error when board_id is not positive", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockITrackerAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
+
+		_, err := reg.listBoardSprints(t.Context(), listBoardSprintsInputDTO{BoardID: 0})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "board_id must be a positive integer")
+	})
+
+	t.Run("calls adapter and maps output", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		mockAdapter := NewMockITrackerAdapter(ctrl)
+		reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
+
+		expectedSprints := []domain.TrackerSprint{
+			{
+				ID:       "19",
+				Name:     "Sprint 19",
+				Status:   "in_progress",
+				Archived: false,
+				Board: &domain.TrackerBoardRef{
+					ID:      "1",
+					Display: "Main Board",
+				},
+			},
+		}
+
+		mockAdapter.EXPECT().
+			ListBoardSprints(gomock.Any(), "1").
+			Return(expectedSprints, nil)
+
+		result, err := reg.listBoardSprints(t.Context(), listBoardSprintsInputDTO{BoardID: 1})
+		require.NoError(t, err)
+		require.Len(t, result.Sprints, 1)
+		assert.Equal(t, "19", result.Sprints[0].ID)
+		assert.Equal(t, "Sprint 19", result.Sprints[0].Name)
+		require.NotNil(t, result.Sprints[0].Board)
+		assert.Equal(t, "1", result.Sprints[0].Board.ID)
+	})
+}
+
 func TestTools_ListComments(t *testing.T) {
 	t.Parallel()
 

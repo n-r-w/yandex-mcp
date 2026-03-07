@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/n-r-w/yandex-mcp/internal/domain"
@@ -122,6 +123,33 @@ func (r *Registrator) listQueues(ctx context.Context, input listQueuesInputDTO) 
 	}
 
 	return mapQueuesResultToOutput(result), nil
+}
+
+// listBoards lists all Tracker boards.
+func (r *Registrator) listBoards(ctx context.Context, _ listBoardsInputDTO) (*boardsListOutputDTO, error) {
+	boards, err := r.adapter.ListBoards(ctx)
+	if err != nil {
+		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+	}
+
+	return mapBoardsToOutput(boards), nil
+}
+
+// listBoardSprints lists sprints for a Tracker board.
+func (r *Registrator) listBoardSprints(
+	ctx context.Context,
+	input listBoardSprintsInputDTO,
+) (*boardSprintsListOutputDTO, error) {
+	if input.BoardID <= 0 {
+		return nil, errors.New("board_id must be a positive integer")
+	}
+
+	sprints, err := r.adapter.ListBoardSprints(ctx, strconv.Itoa(input.BoardID))
+	if err != nil {
+		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+	}
+
+	return mapSprintsToOutput(sprints), nil
 }
 
 // listComments lists comments for a Tracker issue.

@@ -1,6 +1,10 @@
 package tracker
 
-import "github.com/n-r-w/yandex-mcp/internal/domain"
+import (
+	"strconv"
+
+	"github.com/n-r-w/yandex-mcp/internal/domain"
+)
 
 func issueToTrackerIssue(dto issueDTO) domain.TrackerIssue {
 	return domain.TrackerIssue{
@@ -77,6 +81,58 @@ func queueToTrackerQueue(dto *queueDTO) *domain.TrackerQueue {
 		AssignAuto:     dto.AssignAuto,
 		AllowExternals: dto.AllowExternals,
 		DenyVoting:     dto.DenyVoting,
+	}
+}
+
+func boardToTrackerBoard(dto boardDTO) domain.TrackerBoard {
+	columns := make([]domain.TrackerBoardColumn, len(dto.Columns))
+	for i, col := range dto.Columns {
+		columns[i] = domain.TrackerBoardColumn{
+			Self:    col.Self,
+			ID:      col.ID.String(),
+			Display: col.Display,
+		}
+	}
+
+	return domain.TrackerBoard{
+		Self:      dto.Self,
+		ID:        strconv.Itoa(dto.ID),
+		Version:   dto.Version,
+		Name:      dto.Name,
+		CreatedAt: dto.CreatedAt,
+		UpdatedAt: dto.UpdatedAt,
+		CreatedBy: userToTrackerUser(dto.CreatedBy),
+		Columns:   columns,
+	}
+}
+
+func sprintToTrackerSprint(dto sprintDTO) domain.TrackerSprint {
+	return domain.TrackerSprint{
+		Self:          dto.Self,
+		ID:            dto.ID.String(),
+		Version:       dto.Version,
+		Name:          dto.Name,
+		Board:         boardRefToTrackerBoardRef(dto.Board),
+		Status:        dto.Status,
+		Archived:      dto.Archived,
+		CreatedBy:     userToTrackerUser(dto.CreatedBy),
+		CreatedAt:     dto.CreatedAt,
+		StartDate:     dto.StartDate,
+		EndDate:       dto.EndDate,
+		StartDateTime: dto.StartDateTime,
+		EndDateTime:   dto.EndDateTime,
+	}
+}
+
+func boardRefToTrackerBoardRef(dto *boardRefDTO) *domain.TrackerBoardRef {
+	if dto == nil {
+		return nil
+	}
+
+	return &domain.TrackerBoardRef{
+		Self:    dto.Self,
+		ID:      dto.ID.String(),
+		Display: dto.Display,
 	}
 }
 

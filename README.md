@@ -33,16 +33,18 @@ Exact JSON schemas (including validation rules) are also available via MCP tool 
 - `tracker_issue_count` — Counts Yandex Tracker issues matching filter or query
 - `tracker_issue_transitions_list` — Lists available status transitions for a Yandex Tracker issue
 - `tracker_queues_list` — Lists Yandex Tracker queues
+- `tracker_boards_list` — Lists Yandex Tracker boards
+- `tracker_board_sprints_list` — Lists sprints for a Yandex Tracker board
 - `tracker_issue_comments_list` — Lists comments for a Yandex Tracker issue
 - `tracker_issue_attachments_list` — Lists attachments for a Yandex Tracker issue
 - `tracker_issue_attachment_get` — Downloads a file attached to a Yandex Tracker issue
 - `tracker_issue_attachment_preview_get` — Downloads a thumbnail for a Yandex Tracker issue attachment
-- `tracker_queue_get` — Retrieves a Yandex Tracker queue by its key
-- `tracker_user_current` — Retrieves the current Yandex Tracker user
+- `tracker_queue_get` — Gets a Yandex Tracker queue by ID or key
+- `tracker_user_current` — Gets the current authenticated Yandex Tracker user
 - `tracker_users_list` — Lists Yandex Tracker users
-- `tracker_user_get` — Retrieves a Yandex Tracker user by ID
-- `tracker_issue_links_list` — Lists links for a Yandex Tracker issue
-- `tracker_issue_changelog` — Retrieves the changelog for a Yandex Tracker issue
+- `tracker_user_get` — Gets a Yandex Tracker user by ID or login
+- `tracker_issue_links_list` — Lists all links for a Yandex Tracker issue
+- `tracker_issue_changelog` — Gets the changelog for a Yandex Tracker issue
 - `tracker_project_comments_list` — Lists comments for a Yandex Tracker project entity
 
 ## Installation
