@@ -61,6 +61,49 @@ type TrackerQueue struct {
 	DenyVoting     bool
 }
 
+// TrackerBoard represents a board in Yandex Tracker.
+type TrackerBoard struct {
+	Self      string
+	ID        string
+	Version   int
+	Name      string
+	CreatedAt string
+	UpdatedAt string
+	CreatedBy *TrackerUser
+	Columns   []TrackerBoardColumn
+}
+
+// TrackerBoardColumn represents a board column in Yandex Tracker.
+type TrackerBoardColumn struct {
+	Self    string
+	ID      string
+	Display string
+}
+
+// TrackerSprint represents a sprint in Yandex Tracker.
+type TrackerSprint struct {
+	Self          string
+	ID            string
+	Version       int
+	Name          string
+	Board         *TrackerBoardRef
+	Status        string
+	Archived      bool
+	CreatedBy     *TrackerUser
+	CreatedAt     string
+	StartDate     string
+	EndDate       string
+	StartDateTime string
+	EndDateTime   string
+}
+
+// TrackerBoardRef represents a board reference in sprint response.
+type TrackerBoardRef struct {
+	Self    string
+	ID      string
+	Display string
+}
+
 // TrackerQueueDetail represents a detailed queue in Yandex Tracker.
 // Extends TrackerQueue with additional fields available when getting queue details.
 type TrackerQueueDetail struct {

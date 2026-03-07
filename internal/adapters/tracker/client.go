@@ -211,6 +211,46 @@ func (c *Client) ListQueues(
 	return &result, nil
 }
 
+// ListBoards lists all boards.
+func (c *Client) ListBoards(ctx context.Context) ([]domain.TrackerBoard, error) {
+	u, err := url.Parse("/v3/boards")
+	if err != nil {
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse endpoint path: %w", err))
+	}
+
+	var boards []boardDTO
+	if _, err := c.apiClient.DoGET(ctx, u.String(), &boards, "ListBoards"); err != nil {
+		return nil, err
+	}
+
+	result := make([]domain.TrackerBoard, len(boards))
+	for i, board := range boards {
+		result[i] = boardToTrackerBoard(board)
+	}
+
+	return result, nil
+}
+
+// ListBoardSprints lists board sprints.
+func (c *Client) ListBoardSprints(ctx context.Context, boardID string) ([]domain.TrackerSprint, error) {
+	u, err := url.Parse(fmt.Sprintf("/v3/boards/%s/sprints", url.PathEscape(boardID)))
+	if err != nil {
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse endpoint path: %w", err))
+	}
+
+	var sprints []sprintDTO
+	if _, err := c.apiClient.DoGET(ctx, u.String(), &sprints, "ListBoardSprints"); err != nil {
+		return nil, err
+	}
+
+	result := make([]domain.TrackerSprint, len(sprints))
+	for i, sprint := range sprints {
+		result[i] = sprintToTrackerSprint(sprint)
+	}
+
+	return result, nil
+}
+
 // ListIssueComments lists comments for an issue.
 func (c *Client) ListIssueComments(
 	ctx context.Context,

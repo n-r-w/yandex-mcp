@@ -69,6 +69,49 @@ type queueDTO struct {
 	DenyVoting     bool                `json:"denyVoting,omitempty"`
 }
 
+// boardDTO represents a Tracker board.
+type boardDTO struct {
+	Self      string        `json:"self"`
+	ID        int           `json:"id"`
+	Version   int           `json:"version"`
+	Name      string        `json:"name"`
+	CreatedAt string        `json:"createdAt,omitempty"`
+	UpdatedAt string        `json:"updatedAt,omitempty"`
+	CreatedBy *userDTO      `json:"createdBy,omitempty"`
+	Columns   []boardColDTO `json:"columns,omitempty"`
+}
+
+// boardColDTO represents a Tracker board column.
+type boardColDTO struct {
+	Self    string              `json:"self"`
+	ID      apihelpers.StringID `json:"id"`
+	Display string              `json:"display"`
+}
+
+// boardRefDTO represents a board reference in sprint response.
+type boardRefDTO struct {
+	Self    string              `json:"self"`
+	ID      apihelpers.StringID `json:"id"`
+	Display string              `json:"display"`
+}
+
+// sprintDTO represents a Tracker sprint.
+type sprintDTO struct {
+	Self          string              `json:"self"`
+	ID            apihelpers.StringID `json:"id"`
+	Version       int                 `json:"version"`
+	Name          string              `json:"name"`
+	Board         *boardRefDTO        `json:"board,omitempty"`
+	Status        string              `json:"status,omitempty"`
+	Archived      bool                `json:"archived,omitempty"`
+	CreatedBy     *userDTO            `json:"createdBy,omitempty"`
+	CreatedAt     string              `json:"createdAt,omitempty"`
+	StartDate     string              `json:"startDate,omitempty"`
+	EndDate       string              `json:"endDate,omitempty"`
+	StartDateTime string              `json:"startDateTime,omitempty"`
+	EndDateTime   string              `json:"endDateTime,omitempty"`
+}
+
 // UnmarshalJSON implements custom JSON unmarshaling for Queue to handle numeric and string IDs.
 func (q *queueDTO) UnmarshalJSON(data []byte) error {
 	type QueueAlias queueDTO

@@ -91,6 +91,16 @@ type listQueuesInputDTO struct {
 	Page    int    `json:"page,omitempty" jsonschema:"Page number for pagination (1-based, default: 1). Use with per_page to navigate through large result sets."`
 }
 
+// listBoardsInputDTO is the input for tracker_boards_list tool.
+type listBoardsInputDTO struct {
+	// No input required
+}
+
+// listBoardSprintsInputDTO is the input for tracker_board_sprints_list tool.
+type listBoardSprintsInputDTO struct {
+	BoardID int `json:"board_id" jsonschema:"Board ID as integer. Example: 1,required"`
+}
+
 // listCommentsInputDTO is the input for tracker_issue_comments_list tool.
 type listCommentsInputDTO struct {
 	IssueID string `json:"issue_id_or_key" jsonschema:"Issue ID or key (e.g., TEST-1),required"`
@@ -224,6 +234,49 @@ type queueOutputDTO struct {
 	DenyVoting     bool           `json:"deny_voting,omitempty"`
 }
 
+// boardColumnOutputDTO represents a board column.
+type boardColumnOutputDTO struct {
+	Self    string `json:"self"`
+	ID      string `json:"id"`
+	Display string `json:"display"`
+}
+
+// boardOutputDTO represents a Tracker board.
+type boardOutputDTO struct {
+	Self      string                 `json:"self"`
+	ID        string                 `json:"id"`
+	Version   int                    `json:"version"`
+	Name      string                 `json:"name"`
+	CreatedAt string                 `json:"created_at,omitempty"`
+	UpdatedAt string                 `json:"updated_at,omitempty"`
+	CreatedBy *userOutputDTO         `json:"created_by,omitempty"`
+	Columns   []boardColumnOutputDTO `json:"columns,omitempty"`
+}
+
+// boardRefOutputDTO represents a board reference in sprint output.
+type boardRefOutputDTO struct {
+	Self    string `json:"self"`
+	ID      string `json:"id"`
+	Display string `json:"display"`
+}
+
+// sprintOutputDTO represents a Tracker sprint.
+type sprintOutputDTO struct {
+	Self          string             `json:"self"`
+	ID            string             `json:"id"`
+	Version       int                `json:"version"`
+	Name          string             `json:"name"`
+	Board         *boardRefOutputDTO `json:"board,omitempty"`
+	Status        string             `json:"status,omitempty"`
+	Archived      bool               `json:"archived,omitempty"`
+	CreatedBy     *userOutputDTO     `json:"created_by,omitempty"`
+	CreatedAt     string             `json:"created_at,omitempty"`
+	StartDate     string             `json:"start_date,omitempty"`
+	EndDate       string             `json:"end_date,omitempty"`
+	StartDateTime string             `json:"start_date_time,omitempty"`
+	EndDateTime   string             `json:"end_date_time,omitempty"`
+}
+
 // userOutputDTO represents a Tracker user.
 type userOutputDTO struct {
 	Self        string `json:"self"`
@@ -286,6 +339,16 @@ type queuesListOutputDTO struct {
 	Queues     []queueOutputDTO `json:"queues"`
 	TotalCount int              `json:"total_count"`
 	TotalPages int              `json:"total_pages"`
+}
+
+// boardsListOutputDTO is the output for tracker_boards_list tool.
+type boardsListOutputDTO struct {
+	Boards []boardOutputDTO `json:"boards"`
+}
+
+// boardSprintsListOutputDTO is the output for tracker_board_sprints_list tool.
+type boardSprintsListOutputDTO struct {
+	Sprints []sprintOutputDTO `json:"sprints"`
 }
 
 // commentsListOutputDTO is the output for tracker_issue_comments_list tool.

@@ -16,6 +16,8 @@ type ITrackerAdapter interface {
 	CountIssues(ctx context.Context, opts domain.TrackerCountIssuesOpts) (int, error)
 	ListIssueTransitions(ctx context.Context, issueID string) ([]domain.TrackerTransition, error)
 	ListQueues(ctx context.Context, opts domain.TrackerListQueuesOpts) (*domain.TrackerQueuesPage, error)
+	ListBoards(ctx context.Context) ([]domain.TrackerBoard, error)
+	ListBoardSprints(ctx context.Context, boardID string) ([]domain.TrackerSprint, error)
 	ListIssueComments(
 		ctx context.Context,
 		issueID string,

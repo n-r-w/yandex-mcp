@@ -77,6 +77,21 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 		}, server.MakeHandler(r.listQueues))
 	}
 
+	if r.enabledTools[domain.TrackerToolBoardsList] {
+		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+			Name:        domain.TrackerToolBoardsList.String(),
+			Description: "Lists Yandex Tracker boards",
+			InputSchema: emptyObjectInputSchema(),
+		}, server.MakeHandler(r.listBoards))
+	}
+
+	if r.enabledTools[domain.TrackerToolBoardSprintsList] {
+		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+			Name:        domain.TrackerToolBoardSprintsList.String(),
+			Description: "Lists sprints for a Yandex Tracker board",
+		}, server.MakeHandler(r.listBoardSprints))
+	}
+
 	if r.enabledTools[domain.TrackerToolCommentsList] {
 		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
 			Name:        domain.TrackerToolCommentsList.String(),
