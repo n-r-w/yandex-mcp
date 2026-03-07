@@ -71,14 +71,14 @@ type queueDTO struct {
 
 // boardDTO represents a Tracker board.
 type boardDTO struct {
-	Self      string        `json:"self"`
-	ID        int           `json:"id"`
-	Version   int           `json:"version"`
-	Name      string        `json:"name"`
-	CreatedAt string        `json:"createdAt,omitempty"`
-	UpdatedAt string        `json:"updatedAt,omitempty"`
-	CreatedBy *userDTO      `json:"createdBy,omitempty"`
-	Columns   []boardColDTO `json:"columns,omitempty"`
+	Self      string              `json:"self"`
+	ID        apihelpers.StringID `json:"id"`
+	Version   int                 `json:"version"`
+	Name      string              `json:"name"`
+	CreatedAt string              `json:"createdAt,omitempty"`
+	UpdatedAt string              `json:"updatedAt,omitempty"`
+	CreatedBy *userDTO            `json:"createdBy,omitempty"`
+	Columns   []boardColDTO       `json:"columns,omitempty"`
 }
 
 // boardColDTO represents a Tracker board column.
