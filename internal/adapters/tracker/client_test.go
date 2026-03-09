@@ -8,12 +8,13 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/n-r-w/yandex-mcp/internal/adapters/apihelpers"
-	"github.com/n-r-w/yandex-mcp/internal/config"
-	"github.com/n-r-w/yandex-mcp/internal/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
+
+	"github.com/n-r-w/yandex-mcp/internal/adapters/apihelpers"
+	"github.com/n-r-w/yandex-mcp/internal/config"
+	"github.com/n-r-w/yandex-mcp/internal/domain"
 )
 
 const testAttachInlineMaxBytes = 10 * 1024 * 1024
@@ -486,6 +487,40 @@ func TestClient_ListQueues_WithPagination(t *testing.T) {
 	assert.Equal(t, 3, result.TotalPages)
 }
 
+// TestClient_GetQueue_WithExpand verifies the queue endpoint keeps expand query handling intact.
+func TestClient_GetQueue_WithExpand(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
+
+	var capturedURL string
+	var capturedMethod string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedURL = r.URL.String()
+		capturedMethod = r.Method
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id": 7, "key": "OPS", "name": "Operations", "description": "Ops queue"}`))
+	}))
+	t.Cleanup(func() {
+		server.Close()
+	})
+
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
+
+	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
+
+	result, err := client.GetQueue(t.Context(), "OPS", domain.TrackerGetQueueOpts{Expand: "team"})
+	require.NoError(t, err)
+
+	assert.Equal(t, http.MethodGet, capturedMethod)
+	assert.Contains(t, capturedURL, "/v3/queues/OPS")
+	assert.Contains(t, capturedURL, "expand=team")
+	assert.Equal(t, "OPS", result.Key)
+	assert.Equal(t, "Operations", result.Name)
+	assert.Equal(t, "Ops queue", result.Description)
+}
+
 func TestClient_ListBoards(t *testing.T) {
 	t.Parallel()
 
@@ -572,6 +607,51 @@ func TestClient_ListBoardSprints(t *testing.T) {
 	require.NotNil(t, result[0].Board)
 	assert.Equal(t, "1", result[0].Board.ID)
 	assert.Equal(t, "in_progress", result[0].Status)
+}
+
+// TestClient_ListIssueLinks verifies the links endpoint still maps the response payload correctly.
+func TestClient_ListIssueLinks(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
+
+	var capturedURL string
+	var capturedMethod string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedURL = r.URL.String()
+		capturedMethod = r.Method
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`[
+			{
+				"id": 12,
+				"self": "https://api.tracker.yandex.net/v3/issues/TEST-1/links/12",
+				"direction": "outward",
+				"type": {"id": 2, "inward": "is blocked by", "outward": "blocks"},
+				"object": {"id": 99, "key": "TEST-99", "display": "Blocked issue"}
+			}
+		]`))
+	}))
+	t.Cleanup(func() {
+		server.Close()
+	})
+
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
+
+	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
+
+	result, err := client.ListIssueLinks(t.Context(), "TEST-1")
+	require.NoError(t, err)
+
+	assert.Equal(t, http.MethodGet, capturedMethod)
+	assert.Equal(t, "/v3/issues/TEST-1/links", capturedURL)
+	require.Len(t, result, 1)
+	assert.Equal(t, "12", result[0].ID)
+	assert.Equal(t, "outward", result[0].Direction)
+	require.NotNil(t, result[0].Type)
+	assert.Equal(t, "blocks", result[0].Type.Outward)
+	require.NotNil(t, result[0].Object)
+	assert.Equal(t, "TEST-99", result[0].Object.Key)
 }
 
 func TestClient_ListIssueComments_WithPagination(t *testing.T) {

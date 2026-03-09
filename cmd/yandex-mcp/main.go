@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+
 	"github.com/n-r-w/yandex-mcp/internal/adapters/tracker"
 	"github.com/n-r-w/yandex-mcp/internal/adapters/wiki"
 	"github.com/n-r-w/yandex-mcp/internal/adapters/ytoken"

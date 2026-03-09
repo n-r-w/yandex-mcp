@@ -4,8 +4,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/n-r-w/yandex-mcp/internal/domain"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/n-r-w/yandex-mcp/internal/domain"
 )
 
 func TestToSafeError(t *testing.T) {

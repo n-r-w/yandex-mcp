@@ -56,19 +56,11 @@ func (c *Client) GetPageBySlug(
 
 	q := u.Query()
 	q.Set("slug", slug)
-	if len(opts.Fields) > 0 {
-		q.Set("fields", strings.Join(opts.Fields, ","))
-	}
-	if opts.RevisionID != "" {
-		q.Set("revision_id", opts.RevisionID)
-	}
-	if opts.RaiseOnRedirect {
-		q.Set("raise_on_redirect", "true")
-	}
+	applyGetPageOptsQuery(q, opts)
 	u.RawQuery = q.Encode()
 
 	var page pageDTO
-	if _, err := c.apiClient.DoGET(ctx, u.String(), &page, "GetPageBySlug"); err != nil {
+	if _, err = c.apiClient.DoGET(ctx, u.String(), &page, "GetPageBySlug"); err != nil {
 		return nil, err
 	}
 	return pageToWikiPage(&page), nil
@@ -82,22 +74,27 @@ func (c *Client) GetPageByID(ctx context.Context, id string, opts domain.WikiGet
 	}
 
 	q := u.Query()
-	if len(opts.Fields) > 0 {
-		q.Set("fields", strings.Join(opts.Fields, ","))
-	}
-	if opts.RevisionID != "" {
-		q.Set("revision_id", opts.RevisionID)
-	}
-	if opts.RaiseOnRedirect {
-		q.Set("raise_on_redirect", "true")
-	}
+	applyGetPageOptsQuery(q, opts)
 	u.RawQuery = q.Encode()
 
 	var page pageDTO
-	if _, err := c.apiClient.DoGET(ctx, u.String(), &page, "GetPageByID"); err != nil {
+	if _, err = c.apiClient.DoGET(ctx, u.String(), &page, "GetPageByID"); err != nil {
 		return nil, err
 	}
 	return pageToWikiPage(&page), nil
+}
+
+// applyGetPageOptsQuery writes shared page lookup options into URL query values.
+func applyGetPageOptsQuery(query url.Values, opts domain.WikiGetPageOpts) {
+	if len(opts.Fields) > 0 {
+		query.Set("fields", strings.Join(opts.Fields, ","))
+	}
+	if opts.RevisionID != "" {
+		query.Set("revision_id", opts.RevisionID)
+	}
+	if opts.RaiseOnRedirect {
+		query.Set("raise_on_redirect", "true")
+	}
 }
 
 // ListPageResources lists resources (attachments, grids) for a page.
@@ -137,7 +134,7 @@ func (c *Client) ListPageResources(
 	u.RawQuery = q.Encode()
 
 	var resp resourcesResponseDTO
-	if _, err := c.apiClient.DoGET(ctx, u.String(), &resp, "ListPageResources"); err != nil {
+	if _, err = c.apiClient.DoGET(ctx, u.String(), &resp, "ListPageResources"); err != nil {
 		return nil, err
 	}
 
@@ -180,7 +177,7 @@ func (c *Client) ListPageGrids(
 	u.RawQuery = q.Encode()
 
 	var resp gridsResponseDTO
-	if _, err := c.apiClient.DoGET(ctx, u.String(), &resp, "ListPageGrids"); err != nil {
+	if _, err = c.apiClient.DoGET(ctx, u.String(), &resp, "ListPageGrids"); err != nil {
 		return nil, err
 	}
 
@@ -225,7 +222,7 @@ func (c *Client) GetGridByID(
 	u.RawQuery = q.Encode()
 
 	var grid gridDTO
-	if _, err := c.apiClient.DoGET(ctx, u.String(), &grid, "GetGridByID"); err != nil {
+	if _, err = c.apiClient.DoGET(ctx, u.String(), &grid, "GetGridByID"); err != nil {
 		return nil, err
 	}
 	return gridToWikiGrid(&grid), nil
@@ -237,7 +234,7 @@ func (c *Client) parseError(ctx context.Context, statusCode int, body []byte, op
 	var code, message string
 
 	// Attempt to parse structured error
-	if err := json.Unmarshal(body, &errResp); err == nil {
+	if unmarshalErr := json.Unmarshal(body, &errResp); unmarshalErr == nil {
 		code = errResp.ErrorCode
 		message = errResp.DebugMessage
 	}

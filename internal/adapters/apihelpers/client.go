@@ -174,7 +174,7 @@ func (c *APIClient) DoGET(ctx context.Context, endpointPath string, result any, 
 }
 
 // DoGETRaw executes a GET request and returns response headers and body bytes.
-func (c *APIClient) DoGETRaw(ctx context.Context, endpointPath string, operation string) (http.Header, []byte, error) {
+func (c *APIClient) DoGETRaw(ctx context.Context, endpointPath, operation string) (http.Header, []byte, error) {
 	return c.DoRequestRaw(ctx, http.MethodGet, endpointPath, nil, operation)
 }
 
@@ -211,7 +211,7 @@ func (c *APIClient) DoPATCH(
 }
 
 // DoDELETE executes a DELETE request with token injection.
-func (c *APIClient) DoDELETE(ctx context.Context, endpointPath string, operation string) (http.Header, error) {
+func (c *APIClient) DoDELETE(ctx context.Context, endpointPath, operation string) (http.Header, error) {
 	return c.DoRequest(ctx, http.MethodDelete, endpointPath, nil, nil, operation)
 }
 
@@ -227,8 +227,8 @@ func (c *APIClient) handleResponse(ctx context.Context, resp *http.Response, res
 	}
 
 	if result != nil && len(bodyBytes) > 0 {
-		if err := json.Unmarshal(bodyBytes, result); err != nil {
-			return c.ErrorLogWrapper(ctx, fmt.Errorf("decode response: %w", err))
+		if unmarshalErr := json.Unmarshal(bodyBytes, result); unmarshalErr != nil {
+			return c.ErrorLogWrapper(ctx, fmt.Errorf("decode response: %w", unmarshalErr))
 		}
 	}
 

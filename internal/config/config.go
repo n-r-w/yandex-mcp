@@ -103,8 +103,8 @@ func Load() (*Config, error) {
 		AttachInlineMaxBytes:    ec.AttachInlineMaxBytes,
 	}
 
-	if err := cfg.validate(); err != nil {
-		return nil, fmt.Errorf("validate config: %w", err)
+	if validateErr := cfg.validate(); validateErr != nil {
+		return nil, fmt.Errorf("validate config: %w", validateErr)
 	}
 
 	return cfg, nil

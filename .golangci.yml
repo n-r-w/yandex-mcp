@@ -3,48 +3,17 @@ run:
   issues-exit-code: 1
   tests: true
 
-version: 2
+version: "2"
 
 output:
-  format: colored-line-number
-  print-issued-lines: true
-  print-linter-name: true
-
-linters-settings:
-  govet:
-    check-shadowing: true
-  gocyclo:
-    min-complexity: 15
-  dupl:
-    threshold: 100
-  goconst:
-    min-len: 2
-    min-occurrences: 2
-  misspell:
-    locale: US
-  lll:
-    line-length: 120
-  goimports:
-    local-prefixes: github.com/n-r-w/yandex-mcp
-  nolintlint:
-    require-explanation: true
-    require-specific: true
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - experimental
-      - opinionated
-      - performance
-      - style
-    disabled-checks:
-      - dupImport
-      - ifElseChain
-      - octalLiteral
-      - whyNoLint
-      - wrapperFunc
+  formats:
+    text:
+      path: stdout
+      print-issued-lines: true
+      print-linter-name: true
 
 linters:
-  disable-all: true
+  default: none
   enable:
     - godot
     - copyloopvar
@@ -111,6 +80,41 @@ linters:
     - whitespace
     - paralleltest
 
+  settings:
+    govet:
+      enable:
+        - shadow
+      disable:
+        - fieldalignment
+      settings:
+        shadow:
+          strict: true
+    gocyclo:
+      min-complexity: 15
+    dupl:
+      threshold: 100
+    goconst:
+      min-len: 2
+      min-occurrences: 2
+    misspell:
+      locale: US
+    lll:
+      line-length: 120
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+      disabled-checks:
+        - dupImport
+        - octalLiteral
+        - hugeParam
+
   exclusions:
     generated: lax
     rules:
@@ -137,18 +141,21 @@ linters:
         path: ^cmd/yandex-mcp/main\.go$
         text: "^(version|commit|date|builtBy) is a global variable"
 
-  exclude-use-default: false
+issues:
   max-issues-per-linter: 0
   max-same-issues: 0
   new: false
 
 severity:
-  default-severity: error
-  case-sensitive: false
+  default: error
 
 formatters:
   enable:
     - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/n-r-w/yandex-mcp
   exclusions:
     generated: lax
     paths:

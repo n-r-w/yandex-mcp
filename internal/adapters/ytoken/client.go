@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/n-r-w/singleflight/v2"
+
 	"github.com/n-r-w/yandex-mcp/internal/adapters/apihelpers"
 	"github.com/n-r-w/yandex-mcp/internal/config"
 )

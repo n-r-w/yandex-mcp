@@ -203,8 +203,8 @@ func mapSearchResultToOutput(r *domain.TrackerIssuesPage) *searchIssuesOutputDTO
 	}
 
 	issues := make([]issueOutputDTO, len(r.Issues))
-	for i, issue := range r.Issues {
-		out := mapIssueToOutput(&issue)
+	for i := range r.Issues {
+		out := mapIssueToOutput(&r.Issues[i])
 		if out != nil {
 			issues[i] = *out
 		}
@@ -265,8 +265,8 @@ func mapBoardsToOutput(boards []domain.TrackerBoard) *boardsListOutputDTO {
 
 func mapSprintsToOutput(sprints []domain.TrackerSprint) *boardSprintsListOutputDTO {
 	result := make([]sprintOutputDTO, len(sprints))
-	for i, sprint := range sprints {
-		out := mapSprintToOutput(&sprint)
+	for i := range sprints {
+		out := mapSprintToOutput(&sprints[i])
 		if out != nil {
 			result[i] = *out
 		}
@@ -281,8 +281,8 @@ func mapCommentsResultToOutput(r *domain.TrackerCommentsPage) *commentsListOutpu
 	}
 
 	comments := make([]commentOutputDTO, len(r.Comments))
-	for i, c := range r.Comments {
-		out := mapCommentToOutput(&c)
+	for i := range r.Comments {
+		out := mapCommentToOutput(&r.Comments[i])
 		if out != nil {
 			comments[i] = *out
 		}
@@ -395,8 +395,8 @@ func mapUsersPageToOutput(p *domain.TrackerUsersPage) *usersListOutputDTO {
 		return nil
 	}
 	users := make([]userDetailOutputDTO, len(p.Users))
-	for i, u := range p.Users {
-		out := mapUserDetailToOutput(&u)
+	for i := range p.Users {
+		out := mapUserDetailToOutput(&p.Users[i])
 		if out != nil {
 			users[i] = *out
 		}

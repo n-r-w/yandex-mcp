@@ -186,8 +186,8 @@ func searchIssuesResultToTrackerIssuesPage(
 	nextLink string,
 ) domain.TrackerIssuesPage {
 	trackerIssues := make([]domain.TrackerIssue, len(issues))
-	for i, issue := range issues {
-		trackerIssues[i] = issueToTrackerIssue(issue)
+	for i := range issues {
+		trackerIssues[i] = issueToTrackerIssue(issues[i])
 	}
 	return domain.TrackerIssuesPage{
 		Issues:      trackerIssues,
@@ -220,8 +220,8 @@ func listCommentsResultToTrackerCommentsPage(
 	nextLink string,
 ) domain.TrackerCommentsPage {
 	trackerComments := make([]domain.TrackerComment, len(comments))
-	for i, comment := range comments {
-		trackerComments[i] = commentToTrackerComment(comment)
+	for i := range comments {
+		trackerComments[i] = commentToTrackerComment(comments[i])
 	}
 	return domain.TrackerCommentsPage{
 		Comments: trackerComments,

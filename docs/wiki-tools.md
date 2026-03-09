@@ -9,6 +9,7 @@ Input/output schemas are derived from the MCP handler layer DTOs in `internal/to
 
 - Types are described using JSON-compatible terms (string, number/integer, boolean, array, object).
 - “Required” means the tool validates the parameter as required (and/or marks it required in the schema).
+- Tool handlers trim boundary-managed identifier and option strings once before validation and downstream use.
 - Timestamp fields are strings as returned by the upstream Yandex Wiki API.
 
 ## wiki_page_get

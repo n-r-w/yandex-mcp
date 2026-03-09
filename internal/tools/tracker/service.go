@@ -1,7 +1,10 @@
 package tracker
 
 import (
+	"context"
+
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+
 	"github.com/n-r-w/yandex-mcp/internal/domain"
 	"github.com/n-r-w/yandex-mcp/internal/server"
 )
@@ -40,135 +43,186 @@ func NewRegistrator(
 	}
 }
 
+// registerTool adds a tracker tool only when it is enabled in the registrator.
+func registerTool[In, Out any](
+	enabled bool,
+	srv *mcp.Server,
+	definition *mcp.Tool,
+	handler func(context.Context, In) (*Out, error),
+) {
+	if !enabled {
+		return
+	}
+
+	mcp.AddTool(srv, definition, server.MakeHandler(handler))
+}
+
 // Register registers all tracker tools with the MCP server.
 func (r *Registrator) Register(srv *mcp.Server) error {
-	if r.enabledTools[domain.TrackerToolIssueGet] {
-		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+	registerTool(
+		r.enabledTools[domain.TrackerToolIssueGet],
+		srv,
+		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
 			Name:        domain.TrackerToolIssueGet.String(),
 			Description: "Retrieves a Yandex Tracker issue by its ID or key",
-		}, server.MakeHandler(r.getIssue))
-	}
-
-	if r.enabledTools[domain.TrackerToolIssueSearch] {
-		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		},
+		r.getIssue,
+	)
+	registerTool(
+		r.enabledTools[domain.TrackerToolIssueSearch],
+		srv,
+		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
 			Name:        domain.TrackerToolIssueSearch.String(),
 			Description: "Searches Yandex Tracker issues using filter or query",
-		}, server.MakeHandler(r.searchIssues))
-	}
-
-	if r.enabledTools[domain.TrackerToolIssueCount] {
-		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		},
+		r.searchIssues,
+	)
+	registerTool(
+		r.enabledTools[domain.TrackerToolIssueCount],
+		srv,
+		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
 			Name:        domain.TrackerToolIssueCount.String(),
 			Description: "Counts Yandex Tracker issues matching filter or query",
-		}, server.MakeHandler(r.countIssues))
-	}
-
-	if r.enabledTools[domain.TrackerToolTransitionsList] {
-		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		},
+		r.countIssues,
+	)
+	registerTool(
+		r.enabledTools[domain.TrackerToolTransitionsList],
+		srv,
+		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
 			Name:        domain.TrackerToolTransitionsList.String(),
 			Description: "Lists available status transitions for a Yandex Tracker issue",
-		}, server.MakeHandler(r.listTransitions))
-	}
-
-	if r.enabledTools[domain.TrackerToolQueuesList] {
-		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		},
+		r.listTransitions,
+	)
+	registerTool(
+		r.enabledTools[domain.TrackerToolQueuesList],
+		srv,
+		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
 			Name:        domain.TrackerToolQueuesList.String(),
 			Description: "Lists Yandex Tracker queues",
-		}, server.MakeHandler(r.listQueues))
-	}
-
-	if r.enabledTools[domain.TrackerToolBoardsList] {
-		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		},
+		r.listQueues,
+	)
+	registerTool(
+		r.enabledTools[domain.TrackerToolBoardsList],
+		srv,
+		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
 			Name:        domain.TrackerToolBoardsList.String(),
 			Description: "Lists Yandex Tracker boards",
 			InputSchema: emptyObjectInputSchema(),
-		}, server.MakeHandler(r.listBoards))
-	}
-
-	if r.enabledTools[domain.TrackerToolBoardSprintsList] {
-		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		},
+		r.listBoards,
+	)
+	registerTool(
+		r.enabledTools[domain.TrackerToolBoardSprintsList],
+		srv,
+		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
 			Name:        domain.TrackerToolBoardSprintsList.String(),
 			Description: "Lists sprints for a Yandex Tracker board",
-		}, server.MakeHandler(r.listBoardSprints))
-	}
-
-	if r.enabledTools[domain.TrackerToolCommentsList] {
-		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		},
+		r.listBoardSprints,
+	)
+	registerTool(
+		r.enabledTools[domain.TrackerToolCommentsList],
+		srv,
+		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
 			Name:        domain.TrackerToolCommentsList.String(),
 			Description: "Lists comments for a Yandex Tracker issue",
-		}, server.MakeHandler(r.listComments))
-	}
-
-	if r.enabledTools[domain.TrackerToolAttachmentsList] {
-		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		},
+		r.listComments,
+	)
+	registerTool(
+		r.enabledTools[domain.TrackerToolAttachmentsList],
+		srv,
+		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
 			Name:        domain.TrackerToolAttachmentsList.String(),
 			Description: "Lists attachments for a Yandex Tracker issue",
-		}, server.MakeHandler(r.listAttachments))
-	}
-
-	if r.enabledTools[domain.TrackerToolAttachmentGet] {
-		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		},
+		r.listAttachments,
+	)
+	registerTool(
+		r.enabledTools[domain.TrackerToolAttachmentGet],
+		srv,
+		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
 			Name:        domain.TrackerToolAttachmentGet.String(),
 			Description: "Downloads a file attached to a Yandex Tracker issue; requires exactly one of save_path or get_content",
-		}, server.MakeHandler(r.getAttachment))
-	}
-
-	if r.enabledTools[domain.TrackerToolAttachmentPreviewGet] {
-		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		},
+		r.getAttachment,
+	)
+	registerTool(
+		r.enabledTools[domain.TrackerToolAttachmentPreviewGet],
+		srv,
+		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
 			Name:        domain.TrackerToolAttachmentPreviewGet.String(),
 			Description: "Downloads a thumbnail for a Yandex Tracker issue attachment",
-		}, server.MakeHandler(r.getAttachmentPreview))
-	}
-
-	if r.enabledTools[domain.TrackerToolQueueGet] {
-		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		},
+		r.getAttachmentPreview,
+	)
+	registerTool(
+		r.enabledTools[domain.TrackerToolQueueGet],
+		srv,
+		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
 			Name:        domain.TrackerToolQueueGet.String(),
 			Description: "Gets a Yandex Tracker queue by ID or key",
-		}, server.MakeHandler(r.getQueue))
-	}
-
-	if r.enabledTools[domain.TrackerToolUserCurrent] {
-		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		},
+		r.getQueue,
+	)
+	registerTool(
+		r.enabledTools[domain.TrackerToolUserCurrent],
+		srv,
+		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
 			Name:        domain.TrackerToolUserCurrent.String(),
 			Description: "Gets the current authenticated Yandex Tracker user",
 			InputSchema: emptyObjectInputSchema(),
-		}, server.MakeHandler(r.getCurrentUser))
-	}
-
-	if r.enabledTools[domain.TrackerToolUsersList] {
-		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		},
+		r.getCurrentUser,
+	)
+	registerTool(
+		r.enabledTools[domain.TrackerToolUsersList],
+		srv,
+		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
 			Name:        domain.TrackerToolUsersList.String(),
 			Description: "Lists Yandex Tracker users",
-		}, server.MakeHandler(r.listUsers))
-	}
-
-	if r.enabledTools[domain.TrackerToolUserGet] {
-		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		},
+		r.listUsers,
+	)
+	registerTool(
+		r.enabledTools[domain.TrackerToolUserGet],
+		srv,
+		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
 			Name:        domain.TrackerToolUserGet.String(),
 			Description: "Gets a Yandex Tracker user by ID or login",
-		}, server.MakeHandler(r.getUser))
-	}
-
-	if r.enabledTools[domain.TrackerToolLinksList] {
-		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		},
+		r.getUser,
+	)
+	registerTool(
+		r.enabledTools[domain.TrackerToolLinksList],
+		srv,
+		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
 			Name:        domain.TrackerToolLinksList.String(),
 			Description: "Lists all links for a Yandex Tracker issue",
-		}, server.MakeHandler(r.listLinks))
-	}
-
-	if r.enabledTools[domain.TrackerToolChangelog] {
-		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		},
+		r.listLinks,
+	)
+	registerTool(
+		r.enabledTools[domain.TrackerToolChangelog],
+		srv,
+		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
 			Name:        domain.TrackerToolChangelog.String(),
 			Description: "Gets the changelog for a Yandex Tracker issue",
-		}, server.MakeHandler(r.getChangelog))
-	}
-
-	if r.enabledTools[domain.TrackerToolProjectCommentsList] {
-		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		},
+		r.getChangelog,
+	)
+	registerTool(
+		r.enabledTools[domain.TrackerToolProjectCommentsList],
+		srv,
+		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
 			Name:        domain.TrackerToolProjectCommentsList.String(),
 			Description: "Lists comments for a Yandex Tracker project entity",
-		}, server.MakeHandler(r.listProjectComments))
-	}
+		},
+		r.listProjectComments,
+	)
 
 	return nil
 }

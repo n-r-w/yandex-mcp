@@ -48,28 +48,78 @@ func NewClient(cfg *config.Config, tokenProvider apihelpers.ITokenProvider) *Cli
 	return client
 }
 
+// getWithOptionalExpand fetches a DTO from an endpoint that may accept an expand query.
+func getWithOptionalExpand[T any](
+	ctx context.Context,
+	client *Client,
+	endpointPath string,
+	expand string,
+	operation string,
+) (*T, error) {
+	u, err := url.Parse(endpointPath)
+	if err != nil {
+		return nil, client.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse endpoint path: %w", err))
+	}
+
+	if expand != "" {
+		q := u.Query()
+		q.Set("expand", expand)
+		u.RawQuery = q.Encode()
+	}
+
+	var dto T
+	_, err = client.apiClient.DoGET(ctx, u.String(), &dto, operation)
+	if err != nil {
+		return nil, err
+	}
+
+	return &dto, nil
+}
+
+// listMapped fetches a DTO slice from an endpoint and maps it to domain values.
+func listMapped[T any, R any](
+	ctx context.Context,
+	client *Client,
+	endpointPath string,
+	operation string,
+	mapFunc func(T) R,
+) ([]R, error) {
+	u, err := url.Parse(endpointPath)
+	if err != nil {
+		return nil, client.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse endpoint path: %w", err))
+	}
+
+	var items []T
+	_, err = client.apiClient.DoGET(ctx, u.String(), &items, operation)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]R, len(items))
+	for i := range items {
+		result[i] = mapFunc(items[i])
+	}
+
+	return result, nil
+}
+
 // GetIssue retrieves an issue by its ID or key.
 func (c *Client) GetIssue(
 	ctx context.Context,
 	issueID string,
 	opts domain.TrackerGetIssueOpts,
 ) (*domain.TrackerIssue, error) {
-	u, err := url.Parse("/v3/issues/" + url.PathEscape(issueID))
+	issue, err := getWithOptionalExpand[issueDTO](
+		ctx,
+		c,
+		"/v3/issues/"+url.PathEscape(issueID),
+		opts.Expand,
+		"GetIssue",
+	)
 	if err != nil {
-		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse endpoint path: %w", err))
-	}
-
-	if opts.Expand != "" {
-		q := u.Query()
-		q.Set("expand", opts.Expand)
-		u.RawQuery = q.Encode()
-	}
-
-	var issue issueDTO
-	if _, err := c.apiClient.DoGET(ctx, u.String(), &issue, "GetIssue"); err != nil {
 		return nil, err
 	}
-	result := issueToTrackerIssue(issue)
+	result := issueToTrackerIssue(*issue)
 	return &result, nil
 }
 
@@ -147,7 +197,7 @@ func (c *Client) CountIssues(ctx context.Context, opts domain.TrackerCountIssues
 	}
 
 	var count int
-	if _, err := c.apiClient.DoPOST(ctx, u.String(), reqBody, &count, "CountIssues"); err != nil {
+	if _, err = c.apiClient.DoPOST(ctx, u.String(), reqBody, &count, "CountIssues"); err != nil {
 		return 0, err
 	}
 
@@ -159,20 +209,13 @@ func (c *Client) ListIssueTransitions(
 	ctx context.Context,
 	issueID string,
 ) ([]domain.TrackerTransition, error) {
-	u, err := url.Parse(fmt.Sprintf("/v3/issues/%s/transitions", url.PathEscape(issueID)))
-	if err != nil {
-		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse endpoint path: %w", err))
-	}
-
-	var transitions []transitionDTO
-	if _, err := c.apiClient.DoGET(ctx, u.String(), &transitions, "ListIssueTransitions"); err != nil {
-		return nil, err
-	}
-	result := make([]domain.TrackerTransition, len(transitions))
-	for i, t := range transitions {
-		result[i] = transitionToTrackerTransition(t)
-	}
-	return result, nil
+	return listMapped(
+		ctx,
+		c,
+		fmt.Sprintf("/v3/issues/%s/transitions", url.PathEscape(issueID)),
+		"ListIssueTransitions",
+		transitionToTrackerTransition,
+	)
 }
 
 // ListQueues lists all queues.
@@ -219,7 +262,7 @@ func (c *Client) ListBoards(ctx context.Context) ([]domain.TrackerBoard, error) 
 	}
 
 	var boards []boardDTO
-	if _, err := c.apiClient.DoGET(ctx, u.String(), &boards, "ListBoards"); err != nil {
+	if _, err = c.apiClient.DoGET(ctx, u.String(), &boards, "ListBoards"); err != nil {
 		return nil, err
 	}
 
@@ -233,22 +276,13 @@ func (c *Client) ListBoards(ctx context.Context) ([]domain.TrackerBoard, error) 
 
 // ListBoardSprints lists board sprints.
 func (c *Client) ListBoardSprints(ctx context.Context, boardID string) ([]domain.TrackerSprint, error) {
-	u, err := url.Parse(fmt.Sprintf("/v3/boards/%s/sprints", url.PathEscape(boardID)))
-	if err != nil {
-		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse endpoint path: %w", err))
-	}
-
-	var sprints []sprintDTO
-	if _, err := c.apiClient.DoGET(ctx, u.String(), &sprints, "ListBoardSprints"); err != nil {
-		return nil, err
-	}
-
-	result := make([]domain.TrackerSprint, len(sprints))
-	for i, sprint := range sprints {
-		result[i] = sprintToTrackerSprint(sprint)
-	}
-
-	return result, nil
+	return listMapped(
+		ctx,
+		c,
+		fmt.Sprintf("/v3/boards/%s/sprints", url.PathEscape(boardID)),
+		"ListBoardSprints",
+		sprintToTrackerSprint,
+	)
 }
 
 // ListIssueComments lists comments for an issue.
@@ -428,23 +462,18 @@ func (c *Client) GetIssueAttachmentPreviewStream(
 func (c *Client) GetQueue(
 	ctx context.Context, queueID string, opts domain.TrackerGetQueueOpts,
 ) (*domain.TrackerQueueDetail, error) {
-	u, err := url.Parse("/v3/queues/" + url.PathEscape(queueID))
+	queue, err := getWithOptionalExpand[queueDetailDTO](
+		ctx,
+		c,
+		"/v3/queues/"+url.PathEscape(queueID),
+		opts.Expand,
+		"GetQueue",
+	)
 	if err != nil {
-		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse endpoint path: %w", err))
-	}
-
-	if opts.Expand != "" {
-		q := u.Query()
-		q.Set("expand", opts.Expand)
-		u.RawQuery = q.Encode()
-	}
-
-	var queue queueDetailDTO
-	if _, err := c.apiClient.DoGET(ctx, u.String(), &queue, "GetQueue"); err != nil {
 		return nil, err
 	}
 
-	result := queueDetailToTrackerQueueDetail(queue)
+	result := queueDetailToTrackerQueueDetail(*queue)
 	return &result, nil
 }
 
@@ -484,8 +513,8 @@ func (c *Client) ListUsers(ctx context.Context, opts domain.TrackerListUsersOpts
 	}
 
 	result := make([]domain.TrackerUserDetail, len(users))
-	for i, user := range users {
-		result[i] = userDetailToTrackerUserDetail(user)
+	for i := range users {
+		result[i] = userDetailToTrackerUserDetail(users[i])
 	}
 
 	return &domain.TrackerUsersPage{
@@ -510,21 +539,13 @@ func (c *Client) GetUser(ctx context.Context, userID string) (*domain.TrackerUse
 
 // ListIssueLinks lists all links for an issue.
 func (c *Client) ListIssueLinks(ctx context.Context, issueID string) ([]domain.TrackerLink, error) {
-	u, err := url.Parse(fmt.Sprintf("/v3/issues/%s/links", url.PathEscape(issueID)))
-	if err != nil {
-		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse endpoint path: %w", err))
-	}
-
-	var links []linkDTO
-	if _, err := c.apiClient.DoGET(ctx, u.String(), &links, "ListIssueLinks"); err != nil {
-		return nil, err
-	}
-
-	result := make([]domain.TrackerLink, len(links))
-	for i, link := range links {
-		result[i] = linkToTrackerLink(link)
-	}
-	return result, nil
+	return listMapped(
+		ctx,
+		c,
+		fmt.Sprintf("/v3/issues/%s/links", url.PathEscape(issueID)),
+		"ListIssueLinks",
+		linkToTrackerLink,
+	)
 }
 
 // GetIssueChangelog gets the changelog for an issue.
@@ -543,7 +564,7 @@ func (c *Client) GetIssueChangelog(
 	}
 
 	var entries []changelogEntryDTO
-	if _, err := c.apiClient.DoGET(ctx, u.String(), &entries, "GetIssueChangelog"); err != nil {
+	if _, err = c.apiClient.DoGET(ctx, u.String(), &entries, "GetIssueChangelog"); err != nil {
 		return nil, err
 	}
 
@@ -570,7 +591,7 @@ func (c *Client) ListProjectComments(
 	}
 
 	var comments []projectCommentDTO
-	if _, err := c.apiClient.DoGET(ctx, u.String(), &comments, "ListProjectComments"); err != nil {
+	if _, err = c.apiClient.DoGET(ctx, u.String(), &comments, "ListProjectComments"); err != nil {
 		return nil, err
 	}
 

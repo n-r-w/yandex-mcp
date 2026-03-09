@@ -1,4 +1,4 @@
-//nolint:lll
+//nolint:lll // long JSON schema tags keep tool descriptions self-contained
 package wiki
 
 // Input DTOs for wiki tools.

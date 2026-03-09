@@ -131,8 +131,8 @@ func convertItemToAttachment(item any) (*domain.WikiAttachment, error) {
 		return nil, fmt.Errorf("marshal item: %w", err)
 	}
 	var att attachmentDTO
-	if err := json.Unmarshal(data, &att); err != nil {
-		return nil, fmt.Errorf("unmarshal attachment: %w", err)
+	if unmarshalErr := json.Unmarshal(data, &att); unmarshalErr != nil {
+		return nil, fmt.Errorf("unmarshal attachment: %w", unmarshalErr)
 	}
 	return &domain.WikiAttachment{
 		ID:          att.ID.String(),
@@ -151,8 +151,8 @@ func convertItemToSharepoint(item any) (*domain.WikiSharepointResource, error) {
 		return nil, fmt.Errorf("marshal item: %w", err)
 	}
 	var sp sharepointResourceDTO
-	if err := json.Unmarshal(data, &sp); err != nil {
-		return nil, fmt.Errorf("unmarshal sharepoint: %w", err)
+	if unmarshalErr := json.Unmarshal(data, &sp); unmarshalErr != nil {
+		return nil, fmt.Errorf("unmarshal sharepoint: %w", unmarshalErr)
 	}
 	return &domain.WikiSharepointResource{
 		ID:        sp.ID.String(),
@@ -168,8 +168,8 @@ func convertItemToGrid(item any) (*domain.WikiGridResource, error) {
 		return nil, fmt.Errorf("marshal item: %w", err)
 	}
 	var g pageGridSummaryDTO
-	if err := json.Unmarshal(data, &g); err != nil {
-		return nil, fmt.Errorf("unmarshal grid: %w", err)
+	if unmarshalErr := json.Unmarshal(data, &g); unmarshalErr != nil {
+		return nil, fmt.Errorf("unmarshal grid: %w", unmarshalErr)
 	}
 	return &domain.WikiGridResource{
 		ID:        g.ID.String(),

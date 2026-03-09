@@ -9,6 +9,7 @@ Input/output schemas are derived from the MCP handler layer DTOs in `internal/to
 
 - Types are described using JSON-compatible terms (string, number/integer, boolean, array, object).
 - “Required” means the tool validates the parameter as required (and/or marks it required in the schema).
+- Tool handlers trim boundary-managed identifier and option strings once before validation and downstream use; opaque values such as attachment file names, save paths, and free-form filter maps are preserved unless a tool documents stricter validation.
 - Timestamp fields are strings as returned by the upstream Yandex Tracker API.
 
 ## tracker_issue_get
@@ -340,6 +341,7 @@ Notes:
 
 - The extension is validated against an allowlist. By default: txt, json, jsonc, yaml, yml, md, pdf, doc, docx, rtf, odt, xls, xlsx, ods, csv, tsv, ppt, pptx, odp, jpg, jpeg, png, tiff, tif, gif, bmp, webp, zip, 7z, tar, tgz, tar.gz, gz, bz2, xz, rar.
 - The extension is validated using the `save_path` file name.
+- `file_name` and `save_path` must not contain leading or trailing whitespace.
 - The allowlist can be replaced via `YANDEX_MCP_ATTACH_EXT` (comma-separated, without dots).
 - By default, `save_path` must be inside the user home directory, must not point to the home root, and must not be within a hidden top-level home subdirectory (for example, `~/.ssh`).
 - The directory restriction can be fully replaced via `YANDEX_MCP_ATTACH_DIR` (comma-separated absolute paths). When it is set, only the provided directories (and their subdirectories) are allowed.
@@ -374,6 +376,7 @@ Downloads a thumbnail for an attachment in a Yandex Tracker issue and saves it t
 Notes:
 
 - The same extension and directory rules as `tracker_issue_attachment_get` apply to the preview.
+- `save_path` must not contain leading or trailing whitespace.
 
 ### Output
 

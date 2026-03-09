@@ -13,8 +13,107 @@ import (
 	"github.com/n-r-w/yandex-mcp/internal/tools/helpers"
 )
 
+// validateGetAttachmentInput validates attachment download options before any I/O.
+func (r *Registrator) validateGetAttachmentInput(input getAttachmentInputDTO) error {
+	trimmedFileName := strings.TrimSpace(input.FileName)
+	trimmedSavePath := strings.TrimSpace(input.SavePath)
+
+	if input.IssueID == "" {
+		return errors.New("issue_id_or_key is required")
+	}
+	if input.AttachmentID == "" {
+		return errors.New("attachment_id is required")
+	}
+	if trimmedFileName == "" {
+		return errors.New("file_name is required")
+	}
+	if trimmedFileName != input.FileName {
+		return errors.New("file_name must not have leading or trailing whitespace")
+	}
+	if trimmedSavePath == "" && !input.GetContent {
+		return errors.New("save_path or get_content is required")
+	}
+	if trimmedSavePath != "" && trimmedSavePath != input.SavePath {
+		return errors.New("save_path must not have leading or trailing whitespace")
+	}
+	if trimmedSavePath != "" && input.GetContent {
+		return errors.New("save_path and get_content cannot be used together")
+	}
+	if input.GetContent {
+		return r.validateAttachmentViewExtension(input.FileName)
+	}
+
+	return nil
+}
+
+// saveAttachment streams an attachment to disk after the destination path is prepared.
+func (r *Registrator) saveAttachment(
+	ctx context.Context,
+	input getAttachmentInputDTO,
+	fullPath string,
+	savedPath string,
+) (*attachmentContentOutputDTO, error) {
+	stream, err := r.adapter.GetIssueAttachmentStream(ctx, input.IssueID, input.AttachmentID, input.FileName)
+	if err != nil {
+		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+	}
+
+	return r.saveAttachmentStreamOutput(ctx, fullPath, savedPath, input.Override, stream)
+}
+
+// saveAttachmentStreamOutput persists a fetched attachment stream and maps the saved-file response.
+func (r *Registrator) saveAttachmentStreamOutput(
+	ctx context.Context,
+	fullPath string,
+	savedPath string,
+	override bool,
+	stream *domain.TrackerAttachmentStream,
+) (*attachmentContentOutputDTO, error) {
+	if stream == nil || stream.Stream == nil {
+		return nil, r.logError(ctx, errors.New("attachment stream is empty"))
+	}
+
+	bytesWritten, writeErr := r.writeAttachmentStream(fullPath, override, stream.Stream)
+	closeErr := stream.Stream.Close()
+	if writeErr != nil {
+		return nil, r.logError(ctx, writeErr)
+	}
+	if closeErr != nil {
+		return nil, r.logError(ctx, fmt.Errorf("close attachment stream: %w", closeErr))
+	}
+
+	return &attachmentContentOutputDTO{
+		FileName:    stream.FileName,
+		ContentType: stream.ContentType,
+		SavedPath:   savedPath,
+		Content:     "",
+		Size:        bytesWritten,
+	}, nil
+}
+
+// loadAttachmentContent loads attachment bytes when the caller requested inline content or metadata only.
+func (r *Registrator) loadAttachmentContent(
+	ctx context.Context,
+	input getAttachmentInputDTO,
+	savedPath string,
+) (*attachmentContentOutputDTO, error) {
+	content, err := r.adapter.GetIssueAttachment(ctx, input.IssueID, input.AttachmentID, input.FileName)
+	if err != nil {
+		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+	}
+
+	inlineContent := ""
+	if input.GetContent {
+		inlineContent = string(content.Data)
+	}
+
+	return mapAttachmentContentToOutput(content, savedPath, inlineContent), nil
+}
+
 // getIssue retrieves a Tracker issue by its ID or key.
 func (r *Registrator) getIssue(ctx context.Context, input getIssueInputDTO) (*issueOutputDTO, error) {
+	helpers.TrimStringFields(&input.IssueID, &input.Expand)
+
 	if input.IssueID == "" {
 		return nil, errors.New("issue_id_or_key is required")
 	}
@@ -33,6 +132,8 @@ func (r *Registrator) getIssue(ctx context.Context, input getIssueInputDTO) (*is
 
 // searchIssues searches for Tracker issues using filter or query.
 func (r *Registrator) searchIssues(ctx context.Context, input searchIssuesInputDTO) (*searchIssuesOutputDTO, error) {
+	helpers.TrimStringFields(&input.Query, &input.Order, &input.Expand, &input.ScrollType, &input.ScrollID)
+
 	if input.PerPage < 0 {
 		return nil, errors.New("per_page must be non-negative")
 	}
@@ -72,6 +173,8 @@ func (r *Registrator) searchIssues(ctx context.Context, input searchIssuesInputD
 
 // countIssues counts Tracker issues matching the filter or query.
 func (r *Registrator) countIssues(ctx context.Context, input countIssuesInputDTO) (*countIssuesOutputDTO, error) {
+	helpers.TrimStringFields(&input.Query)
+
 	opts := domain.TrackerCountIssuesOpts{
 		Filter: input.Filter,
 		Query:  input.Query,
@@ -89,6 +192,8 @@ func (r *Registrator) countIssues(ctx context.Context, input countIssuesInputDTO
 func (r *Registrator) listTransitions(
 	ctx context.Context, input listTransitionsInputDTO,
 ) (*transitionsListOutputDTO, error) {
+	helpers.TrimStringFields(&input.IssueID)
+
 	if input.IssueID == "" {
 		return nil, errors.New("issue_id_or_key is required")
 	}
@@ -103,6 +208,8 @@ func (r *Registrator) listTransitions(
 
 // listQueues lists all Tracker queues.
 func (r *Registrator) listQueues(ctx context.Context, input listQueuesInputDTO) (*queuesListOutputDTO, error) {
+	helpers.TrimStringFields(&input.Expand)
+
 	if input.PerPage < 0 {
 		return nil, errors.New("per_page must be non-negative")
 	}
@@ -139,7 +246,9 @@ func (r *Registrator) listBoardSprints(
 	ctx context.Context,
 	input listBoardSprintsInputDTO,
 ) (*boardSprintsListOutputDTO, error) {
-	if strings.TrimSpace(input.BoardID) == "" {
+	helpers.TrimStringFields(&input.BoardID)
+
+	if input.BoardID == "" {
 		return nil, errors.New("board_id is required")
 	}
 
@@ -153,6 +262,8 @@ func (r *Registrator) listBoardSprints(
 
 // listComments lists comments for a Tracker issue.
 func (r *Registrator) listComments(ctx context.Context, input listCommentsInputDTO) (*commentsListOutputDTO, error) {
+	helpers.TrimStringFields(&input.IssueID, &input.Expand, &input.ID)
+
 	if input.IssueID == "" {
 		return nil, errors.New("issue_id_or_key is required")
 	}
@@ -177,6 +288,8 @@ func (r *Registrator) listComments(ctx context.Context, input listCommentsInputD
 func (r *Registrator) listAttachments(
 	ctx context.Context, input listAttachmentsInputDTO,
 ) (*attachmentsListOutputDTO, error) {
+	helpers.TrimStringFields(&input.IssueID)
+
 	if input.IssueID == "" {
 		return nil, errors.New("issue_id_or_key is required")
 	}
@@ -193,87 +306,42 @@ func (r *Registrator) listAttachments(
 func (r *Registrator) getAttachment(
 	ctx context.Context, input getAttachmentInputDTO,
 ) (*attachmentContentOutputDTO, error) {
-	if input.IssueID == "" {
-		return nil, errors.New("issue_id_or_key is required")
-	}
-	if input.AttachmentID == "" {
-		return nil, errors.New("attachment_id is required")
-	}
-	if input.FileName == "" {
-		return nil, errors.New("file_name is required")
-	}
-	if input.SavePath == "" && !input.GetContent {
-		return nil, errors.New("save_path or get_content is required")
-	}
-	if input.SavePath != "" && input.GetContent {
-		return nil, errors.New("save_path and get_content cannot be used together")
-	}
-	if input.GetContent {
-		if err := r.validateAttachmentViewExtension(input.FileName); err != nil {
-			return nil, err
-		}
+	helpers.TrimStringFields(&input.IssueID, &input.AttachmentID)
+
+	if err := r.validateGetAttachmentInput(input); err != nil {
+		return nil, err
 	}
 
-	var (
-		fullPath  string
-		savedPath string
-	)
-	if input.SavePath != "" {
-		var err error
-		fullPath, savedPath, err = r.prepareSavePath(ctx, input.SavePath, input.Override)
+	if strings.TrimSpace(input.SavePath) != "" {
+		fullPath, savedPath, err := r.prepareSavePath(ctx, input.SavePath, input.Override)
 		if err != nil {
 			return nil, err
 		}
-	}
-	if input.SavePath != "" {
-		stream, err := r.adapter.GetIssueAttachmentStream(ctx, input.IssueID, input.AttachmentID, input.FileName)
-		if err != nil {
-			return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
-		}
-		if stream == nil || stream.Stream == nil {
-			return nil, r.logError(ctx, errors.New("attachment stream is empty"))
-		}
-		bytesWritten, writeErr := r.writeAttachmentStream(fullPath, input.Override, stream.Stream)
-		closeErr := stream.Stream.Close()
-		if writeErr != nil {
-			return nil, r.logError(ctx, writeErr)
-		}
-		if closeErr != nil {
-			return nil, r.logError(ctx, fmt.Errorf("close attachment stream: %w", closeErr))
-		}
-		return &attachmentContentOutputDTO{
-			FileName:    stream.FileName,
-			ContentType: stream.ContentType,
-			SavedPath:   savedPath,
-			Content:     "",
-			Size:        bytesWritten,
-		}, nil
+
+		return r.saveAttachment(ctx, input, fullPath, savedPath)
 	}
 
-	content, err := r.adapter.GetIssueAttachment(ctx, input.IssueID, input.AttachmentID, input.FileName)
-	if err != nil {
-		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
-	}
-
-	inlineContent := ""
-	if input.GetContent {
-		inlineContent = string(content.Data)
-	}
-	return mapAttachmentContentToOutput(content, savedPath, inlineContent), nil
+	return r.loadAttachmentContent(ctx, input, "")
 }
 
 // getAttachmentPreview downloads an attachment thumbnail for an issue.
 func (r *Registrator) getAttachmentPreview(
 	ctx context.Context, input getAttachmentPreviewInputDTO,
 ) (*attachmentContentOutputDTO, error) {
+	helpers.TrimStringFields(&input.IssueID, &input.AttachmentID)
+
 	if input.IssueID == "" {
 		return nil, errors.New("issue_id_or_key is required")
 	}
 	if input.AttachmentID == "" {
 		return nil, errors.New("attachment_id is required")
 	}
-	if input.SavePath == "" {
+	trimmedSavePath := strings.TrimSpace(input.SavePath)
+	if trimmedSavePath == "" {
 		return nil, errors.New("save_path is required")
+	}
+	if trimmedSavePath != input.SavePath {
+		return nil, errors.New("save_path must not have leading or trailing whitespace")
 	}
 
 	fullPath, savedPath, err := r.prepareSavePath(ctx, input.SavePath, input.Override)
@@ -284,29 +352,12 @@ func (r *Registrator) getAttachmentPreview(
 	if err != nil {
 		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
 	}
-	if stream == nil || stream.Stream == nil {
-		return nil, r.logError(ctx, errors.New("attachment stream is empty"))
-	}
-	bytesWritten, writeErr := r.writeAttachmentStream(fullPath, input.Override, stream.Stream)
-	closeErr := stream.Stream.Close()
-	if writeErr != nil {
-		return nil, r.logError(ctx, writeErr)
-	}
-	if closeErr != nil {
-		return nil, r.logError(ctx, fmt.Errorf("close attachment stream: %w", closeErr))
-	}
 
-	return &attachmentContentOutputDTO{
-		FileName:    stream.FileName,
-		ContentType: stream.ContentType,
-		SavedPath:   savedPath,
-		Content:     "",
-		Size:        bytesWritten,
-	}, nil
+	return r.saveAttachmentStreamOutput(ctx, fullPath, savedPath, input.Override, stream)
 }
 
 // resolveSavePath validates the absolute save path against attachment safety rules.
-func (r *Registrator) resolveSavePath(ctx context.Context, savePath string) (string, string, error) {
+func (r *Registrator) resolveSavePath(ctx context.Context, savePath string) (fullPath, savedPath string, err error) {
 	cleanPath := filepath.Clean(savePath)
 	if !filepath.IsAbs(cleanPath) {
 		return "", "", fmt.Errorf("save_path must be absolute; allowed paths: %s", r.allowedPathsSummary())
@@ -314,11 +365,11 @@ func (r *Registrator) resolveSavePath(ctx context.Context, savePath string) (str
 	if cleanPath == "." || cleanPath == string(os.PathSeparator) {
 		return "", "", fmt.Errorf("save_path must point to a file; allowed paths: %s", r.allowedPathsSummary())
 	}
-	if err := r.validateAttachmentExtension(cleanPath); err != nil {
-		return "", "", err
+	if validateErr := r.validateAttachmentExtension(cleanPath); validateErr != nil {
+		return "", "", validateErr
 	}
-	if err := r.validateAttachmentDirectory(ctx, cleanPath); err != nil {
-		return "", "", err
+	if validateErr := r.validateAttachmentDirectory(ctx, cleanPath); validateErr != nil {
+		return "", "", validateErr
 	}
 
 	return cleanPath, cleanPath, nil
@@ -412,18 +463,22 @@ func (r *Registrator) allowedPathsSummary() string {
 }
 
 // prepareSavePath validates the destination path and checks overwrite rules.
-func (r *Registrator) prepareSavePath(ctx context.Context, savePath string, override bool) (string, string, error) {
-	fullPath, savedPath, err := r.resolveSavePath(ctx, savePath)
+func (r *Registrator) prepareSavePath(
+	ctx context.Context,
+	savePath string,
+	override bool,
+) (fullPath, savedPath string, err error) {
+	fullPath, savedPath, err = r.resolveSavePath(ctx, savePath)
 	if err != nil {
 		return "", "", err
 	}
 	if override {
 		return fullPath, savedPath, nil
 	}
-	if _, err := os.Stat(fullPath); err == nil {
+	if _, statErr := os.Stat(fullPath); statErr == nil {
 		return "", "", errors.New("save_path already exists")
-	} else if !os.IsNotExist(err) {
-		return "", "", r.logError(ctx, fmt.Errorf("check save_path: %w", err))
+	} else if !os.IsNotExist(statErr) {
+		return "", "", r.logError(ctx, fmt.Errorf("check save_path: %w", statErr))
 	}
 
 	return fullPath, savedPath, nil
@@ -467,19 +522,36 @@ func (r *Registrator) validateAttachmentDirectory(ctx context.Context, cleanPath
 	}
 
 	if len(r.allowedDirs) > 0 {
-		if ok, err := isWithinAllowedDirs(cleanPath, r.allowedDirs); err != nil {
-			return r.logError(ctx, err)
-		} else if !ok {
-			return fmt.Errorf("save_path must be within allowed directories: %s", formatAllowedDirs(r.allowedDirs))
-		}
-		if ok, err := isWithinResolvedAllowedDirs(resolvedPath, r.allowedDirs); err != nil {
-			return r.logError(ctx, err)
-		} else if !ok {
-			return fmt.Errorf("save_path must be within allowed directories: %s", formatAllowedDirs(r.allowedDirs))
-		}
-		return nil
+		return r.validateWithinAllowedDirs(ctx, cleanPath, resolvedPath)
 	}
 
+	return r.validateWithinHomeDir(ctx, resolvedPath)
+}
+
+// validateWithinAllowedDirs enforces both direct and resolved path containment for explicit allowlists.
+func (r *Registrator) validateWithinAllowedDirs(ctx context.Context, cleanPath, resolvedPath string) error {
+	allowedDirs := formatAllowedDirs(r.allowedDirs)
+	withinAllowedDirs, err := isWithinAllowedDirs(cleanPath, r.allowedDirs)
+	if err != nil {
+		return r.logError(ctx, err)
+	}
+	if !withinAllowedDirs {
+		return fmt.Errorf("save_path must be within allowed directories: %s", allowedDirs)
+	}
+
+	withinResolvedAllowedDirs, err := isWithinResolvedAllowedDirs(resolvedPath, r.allowedDirs)
+	if err != nil {
+		return r.logError(ctx, err)
+	}
+	if !withinResolvedAllowedDirs {
+		return fmt.Errorf("save_path must be within allowed directories: %s", allowedDirs)
+	}
+
+	return nil
+}
+
+// validateWithinHomeDir enforces containment rules when the home directory fallback policy is active.
+func (r *Registrator) validateWithinHomeDir(ctx context.Context, resolvedPath string) error {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return r.logError(ctx, fmt.Errorf("resolve home directory: %w", err))
@@ -493,11 +565,24 @@ func (r *Registrator) validateAttachmentDirectory(ctx context.Context, cleanPath
 	if resolvedPath == resolvedHomeDir {
 		return fmt.Errorf("save_path must not be home directory; allowed paths: %s", allowedPaths)
 	}
-	if ok, err := isWithinResolvedRoot(resolvedPath, resolvedHomeDir); err != nil {
+	withinResolvedRoot, err := isWithinResolvedRoot(resolvedPath, resolvedHomeDir)
+	if err != nil {
 		return r.logError(ctx, fmt.Errorf("resolve save_path: %w", err))
-	} else if !ok {
+	}
+	if !withinResolvedRoot {
 		return fmt.Errorf("save_path must be within home directory; allowed paths: %s", allowedPaths)
 	}
+
+	return r.validateHomeTopLevelDir(ctx, resolvedHomeDir, resolvedPath, allowedPaths)
+}
+
+// validateHomeTopLevelDir rejects writes into hidden top-level home subdirectories.
+func (r *Registrator) validateHomeTopLevelDir(
+	ctx context.Context,
+	resolvedHomeDir string,
+	resolvedPath string,
+	allowedPaths string,
+) error {
 	relativePath, err := filepath.Rel(resolvedHomeDir, resolvedPath)
 	if err != nil {
 		return r.logError(ctx, fmt.Errorf("resolve save_path: %w", err))
@@ -507,9 +592,9 @@ func (r *Registrator) validateAttachmentDirectory(ctx context.Context, cleanPath
 	if len(segments) > 0 {
 		topLevelName := segments[0]
 		topLevelPath := filepath.Join(resolvedHomeDir, topLevelName)
-		hidden, err := isHiddenTopLevelDir(topLevelName, topLevelPath)
-		if err != nil {
-			return r.logError(ctx, fmt.Errorf("resolve save_path: %w", err))
+		hidden, hiddenErr := isHiddenTopLevelDir(topLevelName, topLevelPath)
+		if hiddenErr != nil {
+			return r.logError(ctx, fmt.Errorf("resolve save_path: %w", hiddenErr))
 		}
 		if hidden {
 			return fmt.Errorf("save_path must not be within hidden top-level home directory; allowed paths: %s", allowedPaths)
@@ -540,7 +625,9 @@ func isWithinAllowedDirs(cleanPath string, allowedDirs []string) (bool, error) {
 		if err != nil {
 			return false, fmt.Errorf("resolve save_path: %w", err)
 		}
-		if relativePath == "." || relativePath == ".." || strings.HasPrefix(relativePath, ".."+string(os.PathSeparator)) {
+		if relativePath == "." ||
+			relativePath == parentDirMarker ||
+			strings.HasPrefix(relativePath, parentDirMarker+string(os.PathSeparator)) {
 			continue
 		}
 		return true, nil
@@ -623,7 +710,7 @@ func isWithinResolvedRoot(resolvedPath, resolvedRoot string) (bool, error) {
 	if rel == "." {
 		return true, nil
 	}
-	if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+	if rel == parentDirMarker || strings.HasPrefix(rel, parentDirMarker+string(os.PathSeparator)) {
 		return false, nil
 	}
 	return true, nil
@@ -653,8 +740,8 @@ func (r *Registrator) writeAttachmentStream(fullPath string, override bool, read
 		_ = file.Close()
 		return 0, fmt.Errorf("write attachment: %w", err)
 	}
-	if err := file.Close(); err != nil {
-		return 0, fmt.Errorf("close attachment: %w", err)
+	if closeErr := file.Close(); closeErr != nil {
+		return 0, fmt.Errorf("close attachment: %w", closeErr)
 	}
 
 	return bytesWritten, nil
@@ -662,6 +749,8 @@ func (r *Registrator) writeAttachmentStream(fullPath string, override bool, read
 
 // getQueue gets a queue by ID or key.
 func (r *Registrator) getQueue(ctx context.Context, input getQueueInputDTO) (*queueDetailOutputDTO, error) {
+	helpers.TrimStringFields(&input.QueueID, &input.Expand)
+
 	if input.QueueID == "" {
 		return nil, errors.New("queue_id_or_key is required")
 	}
@@ -712,6 +801,8 @@ func (r *Registrator) listUsers(ctx context.Context, input listUsersInputDTO) (*
 
 // getUser gets a user by ID or login.
 func (r *Registrator) getUser(ctx context.Context, input getUserInputDTO) (*userDetailOutputDTO, error) {
+	helpers.TrimStringFields(&input.UserID)
+
 	if input.UserID == "" {
 		return nil, errors.New("user_id is required")
 	}
@@ -726,6 +817,8 @@ func (r *Registrator) getUser(ctx context.Context, input getUserInputDTO) (*user
 
 // listLinks lists all links for an issue.
 func (r *Registrator) listLinks(ctx context.Context, input listLinksInputDTO) (*linksListOutputDTO, error) {
+	helpers.TrimStringFields(&input.IssueID)
+
 	if input.IssueID == "" {
 		return nil, errors.New("issue_id_or_key is required")
 	}
@@ -740,6 +833,8 @@ func (r *Registrator) listLinks(ctx context.Context, input listLinksInputDTO) (*
 
 // getChangelog gets the changelog for an issue.
 func (r *Registrator) getChangelog(ctx context.Context, input getChangelogInputDTO) (*changelogOutputDTO, error) {
+	helpers.TrimStringFields(&input.IssueID)
+
 	if input.IssueID == "" {
 		return nil, errors.New("issue_id_or_key is required")
 	}
@@ -763,6 +858,8 @@ func (r *Registrator) getChangelog(ctx context.Context, input getChangelogInputD
 func (r *Registrator) listProjectComments(
 	ctx context.Context, input listProjectCommentsInputDTO,
 ) (*projectCommentsListOutputDTO, error) {
+	helpers.TrimStringFields(&input.ProjectID, &input.Expand)
+
 	if input.ProjectID == "" {
 		return nil, errors.New("project_id is required")
 	}

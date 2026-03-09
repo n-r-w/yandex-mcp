@@ -8,12 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/n-r-w/yandex-mcp/internal/adapters/apihelpers"
-	"github.com/n-r-w/yandex-mcp/internal/config"
-	"github.com/n-r-w/yandex-mcp/internal/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
+
+	"github.com/n-r-w/yandex-mcp/internal/adapters/apihelpers"
+	"github.com/n-r-w/yandex-mcp/internal/config"
+	"github.com/n-r-w/yandex-mcp/internal/domain"
 )
 
 const testAttachInlineMaxBytes = 10 * 1024 * 1024
@@ -147,6 +148,33 @@ func TestClient_GetPageBySlug_Fields(t *testing.T) {
 	assert.Contains(t, capturedURL, "slug=test%2Fpage")
 	assert.Contains(t, capturedURL, "fields=content%2Cattributes")
 	assert.Equal(t, "test/page", page.Slug)
+}
+
+// TestClient_GetPageBySlug_RaiseOnRedirect verifies the slug endpoint forwards the redirect flag.
+func TestClient_GetPageBySlug_RaiseOnRedirect(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
+
+	var capturedURL string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedURL = r.URL.String()
+		w.Header().Set("Content-Type", "application/json")
+		//nolint:errcheck,exhaustruct // test helper
+		json.NewEncoder(w).Encode(pageDTO{ID: "1", Slug: "test/page"})
+	}))
+	t.Cleanup(func() {
+		server.Close()
+	})
+
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
+
+	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
+
+	_, err := client.GetPageBySlug(t.Context(), "test/page", domain.WikiGetPageOpts{RaiseOnRedirect: true})
+	require.NoError(t, err)
+	assert.Contains(t, capturedURL, "raise_on_redirect=true")
 }
 
 func TestClient_ListPageResources_Pagination(t *testing.T) {
@@ -467,6 +495,33 @@ func TestClient_GetPageByID_Success(t *testing.T) {
 	assert.Equal(t, "42", page.ID)
 	assert.Equal(t, "Test Page", page.Title)
 	assert.Equal(t, "Content here", page.Content)
+}
+
+// TestClient_GetPageByID_RaiseOnRedirect verifies the ID endpoint forwards the redirect flag.
+func TestClient_GetPageByID_RaiseOnRedirect(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
+
+	var capturedURL string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedURL = r.URL.String()
+		w.Header().Set("Content-Type", "application/json")
+		//nolint:errcheck,exhaustruct // test helper
+		json.NewEncoder(w).Encode(pageDTO{ID: "42", Title: "Test Page"})
+	}))
+	t.Cleanup(func() {
+		server.Close()
+	})
+
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
+
+	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
+
+	_, err := client.GetPageByID(t.Context(), "42", domain.WikiGetPageOpts{RaiseOnRedirect: true})
+	require.NoError(t, err)
+	assert.Contains(t, capturedURL, "raise_on_redirect=true")
 }
 
 func TestClient_UpstreamError_NoTokenLeak(t *testing.T) {
