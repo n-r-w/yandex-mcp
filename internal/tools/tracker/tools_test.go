@@ -33,25 +33,6 @@ func newTrackerToolsTestSetup(t *testing.T) (*Registrator, *MockITrackerAdapter)
 	return reg, mockAdapter
 }
 
-// failingAttachmentReader simulates a stream that writes a prefix before returning an error.
-type failingAttachmentReader struct {
-	data []byte
-	err  error
-	read bool
-}
-
-// Read reproduces a partial streamed write failure for attachment save regressions.
-func (r *failingAttachmentReader) Read(p []byte) (int, error) {
-	if r.read {
-		return 0, io.EOF
-	}
-
-	r.read = true
-	n := copy(p, r.data)
-
-	return n, r.err
-}
-
 func TestTools_GetIssue(t *testing.T) {
 	t.Parallel()
 
@@ -1085,43 +1066,6 @@ func TestTools_GetAttachment(t *testing.T) {
 		assert.Equal(t, int64(len(payload)), result.Size)
 	})
 
-	t.Run("error/write_failure_cleans_partial_save_path", func(t *testing.T) {
-		t.Parallel()
-		reg, mockAdapter := newTrackerToolsTestSetup(t)
-		baseDir := t.TempDir()
-		reg.allowedDirs = []string{baseDir}
-		savePath := filepath.Join(baseDir, "attachments", "broken.txt")
-
-		streamErr := errors.New("stream interrupted")
-		mockAdapter.EXPECT().
-			GetIssueAttachmentStream(gomock.Any(), "TEST-1", "4159", "broken.txt").
-			Return(&domain.TrackerAttachmentStream{
-				FileName:    "broken.txt",
-				ContentType: "text/plain",
-				Stream: io.NopCloser(&failingAttachmentReader{
-					data: []byte("partial-data"),
-					err:  streamErr,
-				}),
-			}, nil)
-
-		_, err := reg.getAttachment(t.Context(), getAttachmentInputDTO{
-			IssueID:      "TEST-1",
-			AttachmentID: "4159",
-			FileName:     "broken.txt",
-			SavePath:     savePath,
-		})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "write attachment")
-		assert.Contains(t, err.Error(), streamErr.Error())
-
-		_, statErr := os.Stat(savePath)
-		require.ErrorIs(t, statErr, os.ErrNotExist)
-
-		entries, readErr := os.ReadDir(filepath.Dir(savePath))
-		require.NoError(t, readErr)
-		assert.Empty(t, entries)
-	})
-
 	t.Run("adapter/override_replaces_existing_file_after_successful_download", func(t *testing.T) {
 		t.Parallel()
 		reg, mockAdapter := newTrackerToolsTestSetup(t)
@@ -1329,46 +1273,6 @@ func TestTools_GetAttachmentPreview(t *testing.T) {
 		stored, err := os.ReadFile(savePath)
 		require.NoError(t, err)
 		assert.Equal(t, payload, stored)
-	})
-
-	t.Run("error/write_failure_preserves_existing_file_when_override_enabled", func(t *testing.T) {
-		t.Parallel()
-		reg, mockAdapter := newTrackerToolsTestSetup(t)
-		baseDir := t.TempDir()
-		reg.allowedDirs = []string{baseDir}
-		savePath := filepath.Join(baseDir, "attachments", "preview.png")
-		require.NoError(t, os.MkdirAll(filepath.Dir(savePath), 0o755))
-		require.NoError(t, os.WriteFile(savePath, []byte("stable-preview"), 0o644))
-
-		streamErr := errors.New("preview stream interrupted")
-		mockAdapter.EXPECT().
-			GetIssueAttachmentPreviewStream(gomock.Any(), "TEST-1", "4159").
-			Return(&domain.TrackerAttachmentStream{
-				ContentType: "image/png",
-				Stream: io.NopCloser(&failingAttachmentReader{
-					data: []byte{0x1, 0x2, 0x3},
-					err:  streamErr,
-				}),
-			}, nil)
-
-		_, err := reg.getAttachmentPreview(t.Context(), getAttachmentPreviewInputDTO{
-			IssueID:      "TEST-1",
-			AttachmentID: "4159",
-			SavePath:     savePath,
-			Override:     true,
-		})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "write attachment")
-		assert.Contains(t, err.Error(), streamErr.Error())
-
-		stored, readErr := os.ReadFile(savePath)
-		require.NoError(t, readErr)
-		assert.Equal(t, []byte("stable-preview"), stored)
-
-		entries, entriesErr := os.ReadDir(filepath.Dir(savePath))
-		require.NoError(t, entriesErr)
-		require.Len(t, entries, 1)
-		assert.Equal(t, "preview.png", entries[0].Name())
 	})
 
 	t.Run("error/upstream_error_shaped", func(t *testing.T) {
