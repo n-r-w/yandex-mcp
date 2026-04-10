@@ -69,7 +69,7 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 	if r.enabledTools[domain.WikiToolPageDescendants] {
 		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
 			Name:        domain.WikiToolPageDescendants.String(),
-			Description: "Lists subpages (descendants) of a Yandex Wiki page by its slug",
+			Description: "Lists subpages of a Yandex Wiki page by slug. Use empty slug for root.",
 		}, server.MakeHandler(r.listDescendants))
 	}
 
