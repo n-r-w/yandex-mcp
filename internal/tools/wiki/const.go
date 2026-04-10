@@ -1,5 +1,6 @@
 package wiki
 
 const (
-	maxPageSize = 50
+	maxPageSize            = 50
+	maxDescendantsPageSize = 100
 )

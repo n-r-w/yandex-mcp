@@ -178,6 +178,24 @@ func convertItemToGrid(item any) (*domain.WikiGridResource, error) {
 	}, nil
 }
 
+func descendantsResponseToWikiDescendantsPage(resp *descendantsResponseDTO) *domain.WikiDescendantsPage {
+	if resp == nil {
+		return nil
+	}
+	pages := make([]domain.WikiPageSummary, len(resp.Results))
+	for i := range resp.Results {
+		pages[i] = domain.WikiPageSummary{
+			ID:   resp.Results[i].ID.String(),
+			Slug: resp.Results[i].Slug,
+		}
+	}
+	return &domain.WikiDescendantsPage{
+		Pages:      pages,
+		NextCursor: resp.NextCursor,
+		PrevCursor: resp.PrevCursor,
+	}
+}
+
 func gridsPageToWikiGridsPage(gp *gridsPageDTO) *domain.WikiGridsPage {
 	if gp == nil {
 		return nil

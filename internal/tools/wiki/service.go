@@ -66,5 +66,19 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 		}, server.MakeHandler(r.getGrid))
 	}
 
+	if r.enabledTools[domain.WikiToolPageDescendants] {
+		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+			Name:        domain.WikiToolPageDescendants.String(),
+			Description: "Lists subpages (descendants) of a Yandex Wiki page by its slug",
+		}, server.MakeHandler(r.listDescendants))
+	}
+
+	if r.enabledTools[domain.WikiToolPageDescendantsByID] {
+		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+			Name:        domain.WikiToolPageDescendantsByID.String(),
+			Description: "Lists subpages (descendants) of a Yandex Wiki page by its numeric ID",
+		}, server.MakeHandler(r.listDescendantsByID))
+	}
+
 	return nil
 }

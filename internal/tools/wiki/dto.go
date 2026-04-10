@@ -50,6 +50,22 @@ type getGridInputDTO struct {
 	Sort     string   `json:"sort,omitempty" jsonschema:"Sort expression to order rows by column"`
 }
 
+// listDescendantsInputDTO is the input for wiki_page_descendants tool.
+type listDescendantsInputDTO struct {
+	Slug      string `json:"slug" jsonschema:"Page slug (URL path). Required"`
+	Actuality string `json:"actuality,omitempty" jsonschema:"Filter by page status. Possible values: actual, obsolete"`
+	Cursor    string `json:"cursor,omitempty" jsonschema:"Pagination cursor for subsequent requests"`
+	PageSize  int    `json:"page_size,omitempty" jsonschema:"Number of items per page. Valid range: 1-100. Default: 50"`
+}
+
+// listDescendantsByIDInputDTO is the input for wiki_page_descendants_by_id tool.
+type listDescendantsByIDInputDTO struct {
+	PageID    string `json:"page_id" jsonschema:"Page ID (string). Required"`
+	Actuality string `json:"actuality,omitempty" jsonschema:"Filter by page status. Possible values: actual, obsolete"`
+	Cursor    string `json:"cursor,omitempty" jsonschema:"Pagination cursor for subsequent requests"`
+	PageSize  int    `json:"page_size,omitempty" jsonschema:"Number of items per page. Valid range: 1-100. Default: 50"`
+}
+
 // Output DTOs for wiki tools.
 
 // pageOutputDTO is the output for page retrieval tools.
@@ -165,4 +181,17 @@ type columnOutputDTO struct {
 type gridRowOutputDTO struct {
 	ID    string         `json:"id"`
 	Cells map[string]any `json:"cells"`
+}
+
+// descendantsListOutputDTO is the output for wiki_page_descendants tools.
+type descendantsListOutputDTO struct {
+	Pages      []pageSummaryOutputDTO `json:"pages"`
+	NextCursor string                 `json:"next_cursor,omitempty"`
+	PrevCursor string                 `json:"prev_cursor,omitempty"`
+}
+
+// pageSummaryOutputDTO represents a minimal page reference.
+type pageSummaryOutputDTO struct {
+	ID   string `json:"id"`
+	Slug string `json:"slug"`
 }

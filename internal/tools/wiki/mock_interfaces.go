@@ -86,6 +86,36 @@ func (mr *MockIWikiAdapterMockRecorder) GetPageBySlug(ctx, slug, opts any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPageBySlug", reflect.TypeOf((*MockIWikiAdapter)(nil).GetPageBySlug), ctx, slug, opts)
 }
 
+// ListDescendantsByID mocks base method.
+func (m *MockIWikiAdapter) ListDescendantsByID(ctx context.Context, id string, opts domain.WikiListDescendantsOpts) (*domain.WikiDescendantsPage, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDescendantsByID", ctx, id, opts)
+	ret0, _ := ret[0].(*domain.WikiDescendantsPage)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDescendantsByID indicates an expected call of ListDescendantsByID.
+func (mr *MockIWikiAdapterMockRecorder) ListDescendantsByID(ctx, id, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDescendantsByID", reflect.TypeOf((*MockIWikiAdapter)(nil).ListDescendantsByID), ctx, id, opts)
+}
+
+// ListDescendantsBySlug mocks base method.
+func (m *MockIWikiAdapter) ListDescendantsBySlug(ctx context.Context, slug string, opts domain.WikiListDescendantsOpts) (*domain.WikiDescendantsPage, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDescendantsBySlug", ctx, slug, opts)
+	ret0, _ := ret[0].(*domain.WikiDescendantsPage)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDescendantsBySlug indicates an expected call of ListDescendantsBySlug.
+func (mr *MockIWikiAdapterMockRecorder) ListDescendantsBySlug(ctx, slug, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDescendantsBySlug", reflect.TypeOf((*MockIWikiAdapter)(nil).ListDescendantsBySlug), ctx, slug, opts)
+}
+
 // ListPageGrids mocks base method.
 func (m *MockIWikiAdapter) ListPageGrids(ctx context.Context, pageID string, opts domain.WikiListGridsOpts) (*domain.WikiGridsPage, error) {
 	m.ctrl.T.Helper()

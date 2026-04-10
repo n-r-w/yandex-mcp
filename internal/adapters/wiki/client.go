@@ -46,7 +46,7 @@ func NewClient(cfg *config.Config, tokenProvider apihelpers.ITokenProvider) *Cli
 }
 
 // GetPageBySlug retrieves a page by its slug.
-func (c *Client) GetPageBySlug(
+func (c *Client) GetPageBySlug( //nolint:dupl // intentional parallel with ListDescendantsBySlug
 	ctx context.Context, slug string, opts domain.WikiGetPageOpts,
 ) (*domain.WikiPage, error) {
 	u, err := url.Parse("/v1/pages")
@@ -226,6 +226,72 @@ func (c *Client) GetGridByID(
 		return nil, err
 	}
 	return gridToWikiGrid(&grid), nil
+}
+
+// applyDescendantsOptsQuery writes shared descendants listing options into URL query values.
+func applyDescendantsOptsQuery(query url.Values, opts domain.WikiListDescendantsOpts) {
+	if opts.Actuality != "" {
+		query.Set("actuality", opts.Actuality)
+	}
+	if opts.Cursor != "" {
+		query.Set("cursor", opts.Cursor)
+	}
+	if opts.PageSize > 0 {
+		pageSize := opts.PageSize
+		if pageSize > maxDescendantsSize {
+			pageSize = maxDescendantsSize
+		}
+		query.Set("page_size", strconv.Itoa(pageSize))
+	}
+}
+
+// ListDescendantsBySlug lists subpages of a Wiki page by its slug.
+//
+//nolint:dupl // intentional parallel with GetPageBySlug
+func (c *Client) ListDescendantsBySlug(
+	ctx context.Context,
+	slug string,
+	opts domain.WikiListDescendantsOpts,
+) (*domain.WikiDescendantsPage, error) {
+	u, err := url.Parse("/v1/pages/descendants")
+	if err != nil {
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse endpoint path: %w", err))
+	}
+
+	q := u.Query()
+	q.Set("slug", slug)
+	applyDescendantsOptsQuery(q, opts)
+	u.RawQuery = q.Encode()
+
+	var resp descendantsResponseDTO
+	if _, err = c.apiClient.DoGET(ctx, u.String(), &resp, "ListDescendantsBySlug"); err != nil {
+		return nil, err
+	}
+
+	return descendantsResponseToWikiDescendantsPage(&resp), nil
+}
+
+// ListDescendantsByID lists subpages of a Wiki page by its ID.
+func (c *Client) ListDescendantsByID(
+	ctx context.Context,
+	id string,
+	opts domain.WikiListDescendantsOpts,
+) (*domain.WikiDescendantsPage, error) {
+	u, err := url.Parse("/v1/pages/" + url.PathEscape(id) + "/descendants")
+	if err != nil {
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse endpoint path: %w", err))
+	}
+
+	q := u.Query()
+	applyDescendantsOptsQuery(q, opts)
+	u.RawQuery = q.Encode()
+
+	var resp descendantsResponseDTO
+	if _, err = c.apiClient.DoGET(ctx, u.String(), &resp, "ListDescendantsByID"); err != nil {
+		return nil, err
+	}
+
+	return descendantsResponseToWikiDescendantsPage(&resp), nil
 }
 
 // parseError converts an HTTP error response into a domain.UpstreamError.

@@ -110,6 +110,19 @@ type gridsPageDTO struct {
 	PrevCursor string               `json:"prev_cursor,omitempty"`
 }
 
+// descendantDTO represents a page descendant in the API response.
+type descendantDTO struct {
+	ID   apihelpers.StringID `json:"id"`
+	Slug string              `json:"slug"`
+}
+
+// descendantsResponseDTO represents the raw descendants list response.
+type descendantsResponseDTO struct {
+	Results    []descendantDTO `json:"results"`
+	NextCursor string          `json:"next_cursor"`
+	PrevCursor string          `json:"prev_cursor"`
+}
+
 // errorResponseDTO represents the Wiki API error format.
 type errorResponseDTO struct {
 	DebugMessage string `json:"debug_message"`

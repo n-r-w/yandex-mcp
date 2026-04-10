@@ -10,6 +10,8 @@ const (
 	WikiToolResourcesList
 	WikiToolGridsList
 	WikiToolGridGet
+	WikiToolPageDescendants
+	WikiToolPageDescendantsByID
 	WikiToolCount // used to verify list completeness
 )
 
@@ -26,6 +28,10 @@ func (w WikiTool) String() string {
 		return "wiki_page_grids_list"
 	case WikiToolGridGet:
 		return "wiki_grid_get"
+	case WikiToolPageDescendants:
+		return "wiki_page_descendants"
+	case WikiToolPageDescendantsByID:
+		return "wiki_page_descendants_by_id"
 	case WikiToolCount:
 		return ""
 	default:
@@ -41,5 +47,7 @@ func WikiAllTools() []WikiTool {
 		WikiToolResourcesList,
 		WikiToolGridsList,
 		WikiToolGridGet,
+		WikiToolPageDescendants,
+		WikiToolPageDescendantsByID,
 	}
 }

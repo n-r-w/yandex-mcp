@@ -128,6 +128,26 @@ func mapGridsPageToOutput(gp *domain.WikiGridsPage) *gridsListOutputDTO {
 	}
 }
 
+func mapDescendantsPageToOutput(dp *domain.WikiDescendantsPage) *descendantsListOutputDTO {
+	if dp == nil {
+		return nil
+	}
+
+	pages := make([]pageSummaryOutputDTO, len(dp.Pages))
+	for i, p := range dp.Pages {
+		pages[i] = pageSummaryOutputDTO{
+			ID:   p.ID,
+			Slug: p.Slug,
+		}
+	}
+
+	return &descendantsListOutputDTO{
+		Pages:      pages,
+		NextCursor: dp.NextCursor,
+		PrevCursor: dp.PrevCursor,
+	}
+}
+
 func mapGridToOutput(g *domain.WikiGrid) *gridOutputDTO {
 	if g == nil {
 		return nil

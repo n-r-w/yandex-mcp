@@ -127,6 +127,70 @@ func (r *Registrator) listGrids(ctx context.Context, input listGridsInputDTO) (*
 	return mapGridsPageToOutput(result), nil
 }
 
+//nolint:dupl // intentional parallel with listDescendantsByID
+func (r *Registrator) listDescendants(
+	ctx context.Context, input listDescendantsInputDTO,
+) (*descendantsListOutputDTO, error) {
+	helpers.TrimStringFields(&input.Slug, &input.Actuality, &input.Cursor)
+
+	if input.Slug == "" {
+		return nil, errors.New("slug is required")
+	}
+
+	if input.PageSize < 0 {
+		return nil, errors.New("page_size must be non-negative")
+	}
+
+	if input.PageSize > maxDescendantsPageSize {
+		return nil, fmt.Errorf("page_size must not exceed %d", maxDescendantsPageSize)
+	}
+
+	opts := domain.WikiListDescendantsOpts{
+		Actuality: input.Actuality,
+		Cursor:    input.Cursor,
+		PageSize:  input.PageSize,
+	}
+
+	result, err := r.adapter.ListDescendantsBySlug(ctx, input.Slug, opts)
+	if err != nil {
+		return nil, helpers.ToSafeError(ctx, domain.ServiceWiki, err)
+	}
+
+	return mapDescendantsPageToOutput(result), nil
+}
+
+//nolint:dupl // intentional parallel with listDescendants
+func (r *Registrator) listDescendantsByID(
+	ctx context.Context, input listDescendantsByIDInputDTO,
+) (*descendantsListOutputDTO, error) {
+	helpers.TrimStringFields(&input.PageID, &input.Actuality, &input.Cursor)
+
+	if input.PageID == "" {
+		return nil, errors.New("page_id is required")
+	}
+
+	if input.PageSize < 0 {
+		return nil, errors.New("page_size must be non-negative")
+	}
+
+	if input.PageSize > maxDescendantsPageSize {
+		return nil, fmt.Errorf("page_size must not exceed %d", maxDescendantsPageSize)
+	}
+
+	opts := domain.WikiListDescendantsOpts{
+		Actuality: input.Actuality,
+		Cursor:    input.Cursor,
+		PageSize:  input.PageSize,
+	}
+
+	result, err := r.adapter.ListDescendantsByID(ctx, input.PageID, opts)
+	if err != nil {
+		return nil, helpers.ToSafeError(ctx, domain.ServiceWiki, err)
+	}
+
+	return mapDescendantsPageToOutput(result), nil
+}
+
 // getGrid retrieves a dynamic table by its ID.
 func (r *Registrator) getGrid(ctx context.Context, input getGridInputDTO) (*gridOutputDTO, error) {
 	input.Fields = helpers.TrimStrings(input.Fields)

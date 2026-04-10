@@ -20,4 +20,10 @@ type IWikiAdapter interface {
 		ctx context.Context, pageID string, opts domain.WikiListGridsOpts,
 	) (*domain.WikiGridsPage, error)
 	GetGridByID(ctx context.Context, gridID string, opts domain.WikiGetGridOpts) (*domain.WikiGrid, error)
+	ListDescendantsBySlug(
+		ctx context.Context, slug string, opts domain.WikiListDescendantsOpts,
+	) (*domain.WikiDescendantsPage, error)
+	ListDescendantsByID(
+		ctx context.Context, id string, opts domain.WikiListDescendantsOpts,
+	) (*domain.WikiDescendantsPage, error)
 }

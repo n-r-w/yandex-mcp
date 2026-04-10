@@ -37,6 +37,19 @@ type WikiRedirectTarget struct {
 	PageType string
 }
 
+// WikiDescendantsPage represents a paginated list of Wiki page descendants.
+type WikiDescendantsPage struct {
+	Pages      []WikiPageSummary
+	NextCursor string
+	PrevCursor string
+}
+
+// WikiPageSummary represents a minimal page reference (id + slug).
+type WikiPageSummary struct {
+	ID   string
+	Slug string
+}
+
 // WikiResourcesPage represents a paginated list of Wiki resources.
 type WikiResourcesPage struct {
 	Resources  []WikiResource

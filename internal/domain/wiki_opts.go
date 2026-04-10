@@ -28,6 +28,13 @@ type WikiGetGridOpts struct {
 	Sort     string
 }
 
+// WikiListDescendantsOpts represents options for listing Wiki page descendants.
+type WikiListDescendantsOpts struct {
+	Actuality string
+	Cursor    string
+	PageSize  int
+}
+
 // WikiGetPageOpts represents options for getting a Wiki page.
 type WikiGetPageOpts struct {
 	Fields          []string
