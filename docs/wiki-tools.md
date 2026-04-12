@@ -134,6 +134,48 @@ Returns `GridsListOutput`:
 - `next_cursor` (string, optional)
 - `prev_cursor` (string, optional)
 
+## wiki_page_descendants
+
+Lists subpages of a Yandex Wiki page by slug. Use empty slug for root.
+
+### Input
+
+- `slug` (string, optional): Page slug (URL path). Use empty string to list all pages from the root.
+- `actuality` (string, optional): Filter by page status.
+  - Allowed values: `actual`, `obsolete`
+- `cursor` (string, optional): Pagination cursor for subsequent requests.
+- `page_size` (integer, optional): Number of items per page.
+  - Tool validation: must be non-negative and must not exceed 100.
+  - Default: 50.
+
+### Output
+
+Returns `DescendantsListOutput`:
+
+- `pages` (array of object): array of `PageSummaryOutput`
+  - `id` (string)
+  - `slug` (string)
+- `next_cursor` (string, optional)
+- `prev_cursor` (string, optional)
+
+## wiki_page_descendants_by_id
+
+Lists subpages (descendants) of a Yandex Wiki page by its numeric ID.
+
+### Input
+
+- `page_id` (string, required): Page ID.
+- `actuality` (string, optional): Filter by page status.
+  - Allowed values: `actual`, `obsolete`
+- `cursor` (string, optional): Pagination cursor for subsequent requests.
+- `page_size` (integer, optional): Number of items per page.
+  - Tool validation: must be non-negative and must not exceed 100.
+  - Default: 50.
+
+### Output
+
+Returns `DescendantsListOutput` (same shape as `wiki_page_descendants`).
+
 ## wiki_grid_get
 
 Retrieves a Yandex Wiki dynamic table (grid) by its ID.
@@ -169,4 +211,3 @@ Returns `GridOutput`:
 - `created_at` (string)
 - `rich_text_format` (string)
 - `attributes` (object, optional): `AttributesOutput` (same shape as in `PageOutput`)
-
