@@ -52,7 +52,7 @@ type getGridInputDTO struct {
 
 // listDescendantsInputDTO is the input for wiki_page_descendants tool.
 type listDescendantsInputDTO struct {
-	Slug      string `json:"slug" jsonschema:"Page slug (URL path). Required"`
+	Slug      string `json:"slug" jsonschema:"Page slug (URL path). Use empty string to list all pages from the root."`
 	Actuality string `json:"actuality,omitempty" jsonschema:"Filter by page status. Possible values: actual, obsolete"`
 	Cursor    string `json:"cursor,omitempty" jsonschema:"Pagination cursor for subsequent requests"`
 	PageSize  int    `json:"page_size,omitempty" jsonschema:"Number of items per page. Valid range: 1-100. Default: 50"`

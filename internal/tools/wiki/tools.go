@@ -127,28 +127,34 @@ func (r *Registrator) listGrids(ctx context.Context, input listGridsInputDTO) (*
 	return mapGridsPageToOutput(result), nil
 }
 
-//nolint:dupl // intentional parallel with listDescendantsByID
+// normalizeDescendantsOpts validates and builds shared options for descendants listing.
+func normalizeDescendantsOpts(
+	actuality, cursor string, pageSize int,
+) (domain.WikiListDescendantsOpts, error) {
+	if pageSize < 0 {
+		return domain.WikiListDescendantsOpts{}, errors.New("page_size must be non-negative")
+	}
+
+	if pageSize > maxDescendantsPageSize {
+		return domain.WikiListDescendantsOpts{}, fmt.Errorf("page_size must not exceed %d", maxDescendantsPageSize)
+	}
+
+	return domain.WikiListDescendantsOpts{
+		Actuality: actuality,
+		Cursor:    cursor,
+		PageSize:  pageSize,
+	}, nil
+}
+
+// listDescendants lists subpages of a Wiki page by its slug. Empty slug lists from root.
 func (r *Registrator) listDescendants(
 	ctx context.Context, input listDescendantsInputDTO,
 ) (*descendantsListOutputDTO, error) {
 	helpers.TrimStringFields(&input.Slug, &input.Actuality, &input.Cursor)
 
-	if input.Slug == "" {
-		return nil, errors.New("slug is required")
-	}
-
-	if input.PageSize < 0 {
-		return nil, errors.New("page_size must be non-negative")
-	}
-
-	if input.PageSize > maxDescendantsPageSize {
-		return nil, fmt.Errorf("page_size must not exceed %d", maxDescendantsPageSize)
-	}
-
-	opts := domain.WikiListDescendantsOpts{
-		Actuality: input.Actuality,
-		Cursor:    input.Cursor,
-		PageSize:  input.PageSize,
+	opts, err := normalizeDescendantsOpts(input.Actuality, input.Cursor, input.PageSize)
+	if err != nil {
+		return nil, err
 	}
 
 	result, err := r.adapter.ListDescendantsBySlug(ctx, input.Slug, opts)
@@ -159,7 +165,7 @@ func (r *Registrator) listDescendants(
 	return mapDescendantsPageToOutput(result), nil
 }
 
-//nolint:dupl // intentional parallel with listDescendants
+// listDescendantsByID lists subpages of a Wiki page by its ID.
 func (r *Registrator) listDescendantsByID(
 	ctx context.Context, input listDescendantsByIDInputDTO,
 ) (*descendantsListOutputDTO, error) {
@@ -169,18 +175,9 @@ func (r *Registrator) listDescendantsByID(
 		return nil, errors.New("page_id is required")
 	}
 
-	if input.PageSize < 0 {
-		return nil, errors.New("page_size must be non-negative")
-	}
-
-	if input.PageSize > maxDescendantsPageSize {
-		return nil, fmt.Errorf("page_size must not exceed %d", maxDescendantsPageSize)
-	}
-
-	opts := domain.WikiListDescendantsOpts{
-		Actuality: input.Actuality,
-		Cursor:    input.Cursor,
-		PageSize:  input.PageSize,
+	opts, err := normalizeDescendantsOpts(input.Actuality, input.Cursor, input.PageSize)
+	if err != nil {
+		return nil, err
 	}
 
 	result, err := r.adapter.ListDescendantsByID(ctx, input.PageID, opts)
