@@ -655,6 +655,202 @@ func TestTools_GetGrid(t *testing.T) {
 	})
 }
 
+func TestTools_ListDescendants(t *testing.T) {
+	t.Parallel()
+
+	t.Run("accepts empty slug for root listing", func(t *testing.T) {
+		t.Parallel()
+		reg, mockAdapter := newWikiToolsTestSetup(t)
+
+		expectedResult := &domain.WikiDescendantsPage{
+			Pages: []domain.WikiPageSummary{
+				{ID: "1", Slug: "users/alice"},
+				{ID: "2", Slug: "homepage/docs"},
+			},
+			NextCursor: "next123",
+		}
+
+		mockAdapter.EXPECT().
+			ListDescendantsBySlug(gomock.Any(), "", domain.WikiListDescendantsOpts{}).
+			Return(expectedResult, nil)
+
+		result, err := reg.listDescendants(t.Context(), listDescendantsInputDTO{})
+		require.NoError(t, err)
+		assert.Len(t, result.Pages, 2)
+		assert.Equal(t, "1", result.Pages[0].ID)
+		assert.Equal(t, "users/alice", result.Pages[0].Slug)
+		assert.Equal(t, "next123", result.NextCursor)
+	})
+
+	t.Run("returns error when page_size is negative", func(t *testing.T) {
+		t.Parallel()
+		reg, _ := newWikiToolsTestSetup(t)
+
+		_, err := reg.listDescendants(t.Context(), listDescendantsInputDTO{
+			Slug:     "test",
+			PageSize: -1,
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "page_size must be non-negative")
+	})
+
+	t.Run("returns error when page_size exceeds max", func(t *testing.T) {
+		t.Parallel()
+		reg, _ := newWikiToolsTestSetup(t)
+
+		_, err := reg.listDescendants(t.Context(), listDescendantsInputDTO{
+			Slug:     "test",
+			PageSize: 101,
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "page_size must not exceed 100")
+	})
+
+	t.Run("calls adapter with correct parameters", func(t *testing.T) {
+		t.Parallel()
+		reg, mockAdapter := newWikiToolsTestSetup(t)
+
+		expectedResult := &domain.WikiDescendantsPage{
+			Pages: []domain.WikiPageSummary{
+				{ID: "10", Slug: "dev/ci-cd"},
+			},
+			NextCursor: "next",
+			PrevCursor: "prev",
+		}
+
+		mockAdapter.EXPECT().
+			ListDescendantsBySlug(gomock.Any(), "development", domain.WikiListDescendantsOpts{
+				Actuality: "actual",
+				Cursor:    "cursor1",
+				PageSize:  25,
+			}).
+			Return(expectedResult, nil)
+
+		result, err := reg.listDescendants(t.Context(), listDescendantsInputDTO{
+			Slug:      " development ",
+			Actuality: " actual ",
+			Cursor:    " cursor1 ",
+			PageSize:  25,
+		})
+		require.NoError(t, err)
+		assert.Len(t, result.Pages, 1)
+		assert.Equal(t, "10", result.Pages[0].ID)
+		assert.Equal(t, "dev/ci-cd", result.Pages[0].Slug)
+		assert.Equal(t, "next", result.NextCursor)
+		assert.Equal(t, "prev", result.PrevCursor)
+	})
+
+	t.Run("returns safe error on upstream error", func(t *testing.T) {
+		t.Parallel()
+		reg, mockAdapter := newWikiToolsTestSetup(t)
+
+		upstreamErr := domain.NewUpstreamError(
+			domain.ServiceWiki, "ListDescendantsBySlug", 404, "", "Not found", "",
+		)
+
+		mockAdapter.EXPECT().
+			ListDescendantsBySlug(gomock.Any(), "missing", domain.WikiListDescendantsOpts{}).
+			Return(nil, upstreamErr)
+
+		_, err := reg.listDescendants(t.Context(), listDescendantsInputDTO{Slug: "missing"})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "HTTP 404")
+	})
+}
+
+func TestTools_ListDescendantsByID(t *testing.T) {
+	t.Parallel()
+
+	t.Run("returns error when page_id is empty", func(t *testing.T) {
+		t.Parallel()
+		reg, _ := newWikiToolsTestSetup(t)
+
+		_, err := reg.listDescendantsByID(t.Context(), listDescendantsByIDInputDTO{})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "page_id is required")
+	})
+
+	t.Run("returns error when page_id is whitespace only", func(t *testing.T) {
+		t.Parallel()
+		reg, _ := newWikiToolsTestSetup(t)
+
+		_, err := reg.listDescendantsByID(t.Context(), listDescendantsByIDInputDTO{PageID: " \t "})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "page_id is required")
+	})
+
+	t.Run("returns error when page_size is negative", func(t *testing.T) {
+		t.Parallel()
+		reg, _ := newWikiToolsTestSetup(t)
+
+		_, err := reg.listDescendantsByID(t.Context(), listDescendantsByIDInputDTO{
+			PageID:   "123",
+			PageSize: -1,
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "page_size must be non-negative")
+	})
+
+	t.Run("returns error when page_size exceeds max", func(t *testing.T) {
+		t.Parallel()
+		reg, _ := newWikiToolsTestSetup(t)
+
+		_, err := reg.listDescendantsByID(t.Context(), listDescendantsByIDInputDTO{
+			PageID:   "123",
+			PageSize: 101,
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "page_size must not exceed 100")
+	})
+
+	t.Run("calls adapter with correct parameters", func(t *testing.T) {
+		t.Parallel()
+		reg, mockAdapter := newWikiToolsTestSetup(t)
+
+		expectedResult := &domain.WikiDescendantsPage{
+			Pages: []domain.WikiPageSummary{
+				{ID: "20", Slug: "dev/sandboxes/howto"},
+			},
+		}
+
+		mockAdapter.EXPECT().
+			ListDescendantsByID(gomock.Any(), "456", domain.WikiListDescendantsOpts{
+				Actuality: "obsolete",
+				Cursor:    "cur2",
+				PageSize:  10,
+			}).
+			Return(expectedResult, nil)
+
+		result, err := reg.listDescendantsByID(t.Context(), listDescendantsByIDInputDTO{
+			PageID:    " 456 ",
+			Actuality: " obsolete ",
+			Cursor:    " cur2 ",
+			PageSize:  10,
+		})
+		require.NoError(t, err)
+		assert.Len(t, result.Pages, 1)
+		assert.Equal(t, "20", result.Pages[0].ID)
+		assert.Equal(t, "dev/sandboxes/howto", result.Pages[0].Slug)
+	})
+
+	t.Run("returns safe error on upstream error", func(t *testing.T) {
+		t.Parallel()
+		reg, mockAdapter := newWikiToolsTestSetup(t)
+
+		upstreamErr := domain.NewUpstreamError(
+			domain.ServiceWiki, "ListDescendantsByID", 500, "", "Server error", "",
+		)
+
+		mockAdapter.EXPECT().
+			ListDescendantsByID(gomock.Any(), "999", domain.WikiListDescendantsOpts{}).
+			Return(nil, upstreamErr)
+
+		_, err := reg.listDescendantsByID(t.Context(), listDescendantsByIDInputDTO{PageID: "999"})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "HTTP 500")
+	})
+}
+
 func TestTools_ErrorShaping(t *testing.T) {
 	t.Parallel()
 
