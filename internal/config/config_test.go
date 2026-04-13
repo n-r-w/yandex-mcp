@@ -55,14 +55,16 @@ func TestLoad_DefaultRefreshPeriod(t *testing.T) {
 	assert.Equal(t, defaultRefreshHours*time.Hour, cfg.IAMTokenRefreshPeriod)
 }
 
-func TestLoad_MissingCloudOrgID(t *testing.T) {
+func TestLoad_MissingBothOrgIDs(t *testing.T) {
 	t.Setenv("YANDEX_CLOUD_ORG_ID", "")
+	t.Setenv("YANDEX_ORG_ID", "")
 
 	cfg, err := Load()
 
 	require.Error(t, err)
 	assert.Nil(t, cfg)
 	assert.Contains(t, err.Error(), "YANDEX_CLOUD_ORG_ID")
+	assert.Contains(t, err.Error(), "YANDEX_ORG_ID")
 }
 
 func TestLoad_WikiBaseURLNotHTTPS(t *testing.T) {

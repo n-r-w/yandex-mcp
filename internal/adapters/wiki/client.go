@@ -34,7 +34,8 @@ func NewClient(cfg *config.Config, tokenProvider apihelpers.ITokenProvider) *Cli
 		HTTPClient:          nil, // uses default
 		TokenProvider:       tokenProvider,
 		BaseURL:             strings.TrimSuffix(cfg.WikiBaseURL, "/"),
-		OrgID:               cfg.CloudOrgID,
+		CloudOrgID:          cfg.CloudOrgID,
+		OrgID:               cfg.OrgID,
 		ExtraHeaders:        nil,
 		ServiceName:         string(domain.ServiceWiki),
 		ParseError:          client.parseError,

@@ -6,6 +6,7 @@ import "time"
 const (
 	HeaderAuthorization = "Authorization"
 	HeaderCloudOrgID    = "X-Cloud-Org-Id"
+	HeaderOrgID         = "X-Org-Id"
 	HeaderContentType   = "Content-Type"
 
 	ContentTypeJSON = "application/json"

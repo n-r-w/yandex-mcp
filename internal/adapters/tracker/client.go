@@ -35,7 +35,8 @@ func NewClient(cfg *config.Config, tokenProvider apihelpers.ITokenProvider) *Cli
 		HTTPClient:    nil, // uses default
 		TokenProvider: tokenProvider,
 		BaseURL:       strings.TrimSuffix(cfg.TrackerBaseURL, "/"),
-		OrgID:         cfg.CloudOrgID,
+		CloudOrgID:    cfg.CloudOrgID,
+		OrgID:         cfg.OrgID,
 		ExtraHeaders: map[string]string{
 			headerAcceptLanguage: acceptLangEN,
 		},

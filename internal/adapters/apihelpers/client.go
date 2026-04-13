@@ -25,6 +25,7 @@ type APIClient struct {
 	tokenProvider       ITokenProvider
 	baseURL             *url.URL
 	baseURLParseErr     error
+	cloudOrgID          string
 	orgID               string
 	extraHeaders        map[string]string
 	serviceName         string
@@ -37,6 +38,7 @@ type APIClientConfig struct {
 	HTTPClient          *http.Client
 	TokenProvider       ITokenProvider
 	BaseURL             string
+	CloudOrgID          string
 	OrgID               string
 	ExtraHeaders        map[string]string
 	ServiceName         string
@@ -65,6 +67,7 @@ func NewAPIClient(cfg APIClientConfig) *APIClient {
 		tokenProvider:       cfg.TokenProvider,
 		baseURL:             parsedBaseURL,
 		baseURLParseErr:     baseURLParseErr,
+		cloudOrgID:          cfg.CloudOrgID,
 		orgID:               cfg.OrgID,
 		extraHeaders:        cfg.ExtraHeaders,
 		serviceName:         cfg.ServiceName,
@@ -382,7 +385,12 @@ func (c *APIClient) executeHTTPRequest(
 	}
 
 	req.Header.Set(HeaderAuthorization, "Bearer "+token)
-	req.Header.Set(HeaderCloudOrgID, c.orgID)
+	if c.cloudOrgID != "" {
+		req.Header.Set(HeaderCloudOrgID, c.cloudOrgID)
+	}
+	if c.orgID != "" {
+		req.Header.Set(HeaderOrgID, c.orgID)
+	}
 	req.Header.Set(HeaderContentType, ContentTypeJSON)
 
 	for key, value := range c.extraHeaders {

@@ -30,6 +30,9 @@ type Config struct {
 	// CloudOrgID is the Yandex Cloud Organization ID for X-Cloud-Org-Id header.
 	CloudOrgID string
 
+	// OrgID is the Yandex 360 Organization ID for X-Org-Id header.
+	OrgID string
+
 	// IAMTokenRefreshPeriod is the period after which the IAM token should be refreshed.
 	IAMTokenRefreshPeriod time.Duration
 
@@ -53,7 +56,8 @@ type Config struct {
 type envConfig struct {
 	WikiBaseURL          string `env:"YANDEX_WIKI_BASE_URL"`
 	TrackerBaseURL       string `env:"YANDEX_TRACKER_BASE_URL"`
-	CloudOrgID           string `env:"YANDEX_CLOUD_ORG_ID,required"`
+	CloudOrgID           string `env:"YANDEX_CLOUD_ORG_ID"`
+	OrgID                string `env:"YANDEX_ORG_ID"`
 	RefreshPeriodHours   int    `env:"YANDEX_IAM_TOKEN_REFRESH_PERIOD" envDefault:"10"`
 	HTTPTimeoutSeconds   int    `env:"YANDEX_HTTP_TIMEOUT" envDefault:"30"`
 	AttachExtensions     string `env:"YANDEX_MCP_ATTACH_EXT"`
@@ -95,6 +99,7 @@ func Load() (*Config, error) {
 		WikiBaseURL:             applyDefault(ec.WikiBaseURL, defaultWikiBaseURL),
 		TrackerBaseURL:          applyDefault(ec.TrackerBaseURL, defaultTrackerBaseURL),
 		CloudOrgID:              ec.CloudOrgID,
+		OrgID:                   ec.OrgID,
 		IAMTokenRefreshPeriod:   resolveRefreshPeriod(ec.RefreshPeriodHours),
 		HTTPTimeout:             time.Duration(ec.HTTPTimeoutSeconds) * time.Second,
 		AttachAllowedExtensions: allowedExtensions,
@@ -266,8 +271,8 @@ func (c *Config) validate() error {
 		errs = append(errs, err)
 	}
 
-	if c.CloudOrgID == "" {
-		errs = append(errs, errors.New("YANDEX_CLOUD_ORG_ID is required"))
+	if c.CloudOrgID == "" && c.OrgID == "" {
+		errs = append(errs, errors.New("at least one of YANDEX_CLOUD_ORG_ID or YANDEX_ORG_ID is required"))
 	}
 	if len(c.AttachAllowedExtensions) == 0 {
 		errs = append(errs, errors.New("YANDEX_MCP_ATTACH_EXT resolved to an empty list"))
