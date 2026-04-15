@@ -223,6 +223,15 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 		},
 		r.listProjectComments,
 	)
+	registerTool(
+		r.enabledTools[domain.TrackerToolIssueCreate],
+		srv,
+		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+			Name:        domain.TrackerToolIssueCreate.String(),
+			Description: "Creates a new Yandex Tracker issue in a specified queue",
+		},
+		r.createIssue,
+	)
 
 	return nil
 }

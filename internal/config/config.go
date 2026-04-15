@@ -50,6 +50,9 @@ type Config struct {
 
 	// AttachInlineMaxBytes is the maximum size of attachment content returned inline.
 	AttachInlineMaxBytes int64
+
+	// WriteToolsEnabled enables write tools (e.g., issue creation) when true.
+	WriteToolsEnabled bool
 }
 
 // envConfig is an intermediate struct for parsing environment variables.
@@ -64,6 +67,7 @@ type envConfig struct {
 	AttachViewExts       string `env:"YANDEX_MCP_ATTACH_VIEW_EXT"`
 	AttachDirs           string `env:"YANDEX_MCP_ATTACH_DIR"`
 	AttachInlineMaxBytes int64  `env:"YANDEX_MCP_ATTACH_INLINE_MAX_BYTES" envDefault:"10485760"`
+	WriteTools           bool   `env:"YANDEX_MCP_WRITE_TOOLS" envDefault:"false"`
 }
 
 // Load parses configuration from environment variables and validates it.
@@ -106,6 +110,7 @@ func Load() (*Config, error) {
 		AttachViewExtensions:    viewExtensions,
 		AttachAllowedDirs:       allowedDirs,
 		AttachInlineMaxBytes:    ec.AttachInlineMaxBytes,
+		WriteToolsEnabled:       ec.WriteTools,
 	}
 
 	if validateErr := cfg.validate(); validateErr != nil {

@@ -1859,3 +1859,116 @@ func TestTools_ListProjectComments(t *testing.T) {
 		assert.NotContains(t, errStr, "secrets")
 	})
 }
+
+func TestTools_CreateIssue(t *testing.T) {
+	t.Parallel()
+
+	t.Run("returns error when summary is empty", func(t *testing.T) {
+		t.Parallel()
+		reg, _ := newTrackerToolsTestSetup(t)
+
+		_, err := reg.createIssue(t.Context(), createIssueInputDTO{Queue: "BACK"})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "summary is required")
+	})
+
+	t.Run("returns error when queue is empty", func(t *testing.T) {
+		t.Parallel()
+		reg, _ := newTrackerToolsTestSetup(t)
+
+		_, err := reg.createIssue(t.Context(), createIssueInputDTO{Summary: "test"})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "queue is required")
+	})
+
+	t.Run("returns error when summary is whitespace only", func(t *testing.T) {
+		t.Parallel()
+		reg, _ := newTrackerToolsTestSetup(t)
+
+		_, err := reg.createIssue(t.Context(), createIssueInputDTO{Summary: "  ", Queue: "BACK"})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "summary is required")
+	})
+
+	t.Run("trims followers and drops empty entries", func(t *testing.T) {
+		t.Parallel()
+		reg, mockAdapter := newTrackerToolsTestSetup(t)
+
+		mockAdapter.EXPECT().
+			CreateIssue(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ any, opts domain.TrackerCreateIssueOpts) (*domain.TrackerIssue, error) {
+				assert.Equal(t, []string{"user1", "user2"}, opts.Followers)
+				return &domain.TrackerIssue{ID: "1", Key: "BACK-1", Summary: "test"}, nil
+			})
+
+		_, err := reg.createIssue(t.Context(), createIssueInputDTO{
+			Summary:   "test",
+			Queue:     "BACK",
+			Followers: []string{" user1 ", "", " user2 ", "  "},
+		})
+		require.NoError(t, err)
+	})
+
+	t.Run("calls adapter with correct parameters and maps output", func(t *testing.T) {
+		t.Parallel()
+		reg, mockAdapter := newTrackerToolsTestSetup(t)
+
+		expectedIssue := &domain.TrackerIssue{
+			Self:    "https://api.tracker/v3/issues/BACK-1",
+			ID:      "1",
+			Key:     "BACK-1",
+			Version: 1,
+			Summary: "New Issue",
+			Status:  &domain.TrackerStatus{ID: "1", Key: "open", Display: "Open"},
+			Queue:   &domain.TrackerQueue{ID: "10", Key: "BACK", Display: "Backend"},
+		}
+
+		mockAdapter.EXPECT().
+			CreateIssue(gomock.Any(), domain.TrackerCreateIssueOpts{
+				Summary:  "New Issue",
+				Queue:    "BACK",
+				Type:     "task",
+				Priority: "normal",
+			}).
+			Return(expectedIssue, nil)
+
+		result, err := reg.createIssue(t.Context(), createIssueInputDTO{
+			Summary:  " New Issue ",
+			Queue:    " BACK ",
+			Type:     " task ",
+			Priority: " normal ",
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "BACK-1", result.Key)
+		assert.Equal(t, "New Issue", result.Summary)
+		assert.Equal(t, "BACK", result.Queue.Key)
+	})
+
+	t.Run("wraps adapter error safely", func(t *testing.T) {
+		t.Parallel()
+		reg, mockAdapter := newTrackerToolsTestSetup(t)
+
+		upstreamErr := domain.NewUpstreamError(
+			domain.ServiceTracker,
+			"CreateIssue",
+			403,
+			"forbidden",
+			"Forbidden",
+			"raw secrets internal-info",
+		)
+
+		mockAdapter.EXPECT().
+			CreateIssue(gomock.Any(), gomock.Any()).
+			Return(nil, upstreamErr)
+
+		_, err := reg.createIssue(t.Context(), createIssueInputDTO{
+			Summary: "test",
+			Queue:   "BACK",
+		})
+		require.Error(t, err)
+		errStr := err.Error()
+		assert.Contains(t, errStr, domain.ServiceTracker)
+		assert.Contains(t, errStr, "HTTP 403")
+		assert.NotContains(t, errStr, "secrets")
+	})
+}

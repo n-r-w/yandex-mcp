@@ -5,7 +5,7 @@ An MCP (Model Context Protocol) server that lets MCP-capable clients work with:
 - Yandex Tracker (issues, queues, transitions, comments)
 - Yandex Wiki (pages, attachments/resources, dynamic tables)
 
-The server operates in read-only mode. Modification operations are not supported due to the risk of allowing LLMs to perform such operations.
+The server operates in read-only mode by default. Write tools (e.g., issue creation) can be enabled via `YANDEX_MCP_WRITE_TOOLS=true`.
 
 The project is not an official MCP from Yandex.
 
@@ -46,6 +46,7 @@ Exact JSON schemas (including validation rules) are also available via MCP tool 
 - `tracker_issue_links_list` — Lists links for a Yandex Tracker issue
 - `tracker_issue_changelog` — Retrieves the changelog for a Yandex Tracker issue
 - `tracker_project_comments_list` — Lists comments for a Yandex Tracker project entity
+- `tracker_issue_create` — Creates a new Yandex Tracker issue *(requires `YANDEX_MCP_WRITE_TOOLS=true`)*
 
 ## Installation
 
@@ -158,6 +159,10 @@ After these steps, the executable will be permanently allowed to run on your sys
   * Fully replaces the default directory rules. When set, only the provided directories (and their subdirectories) are allowed.
   * Default rule: `save_path` must be inside the user home directory, must not point to the home root, and must not be within a hidden top-level home subdirectory (for example, `~/.ssh`).
 
+- `YANDEX_MCP_WRITE_TOOLS` (optional, default: `false`)
+  * Enables write tools (e.g., `tracker_issue_create`).
+  * When enabled, the server adds a system prompt warning that write tools must only be used with explicit user permission.
+
 ## Authentication
 
 The project supports IAM token authentication via the Yandex Cloud CLI (`yc`) only.
@@ -193,6 +198,8 @@ Official references:
 claude mcp add -s user -e YANDEX_CLOUD_ORG_ID={yandex cloud organization id} --transport stdio yandex /path/to/yandex-mcp
 # Or for Yandex 360 organizations:
 # claude mcp add -s user -e YANDEX_ORG_ID={yandex 360 organization id} --transport stdio yandex /path/to/yandex-mcp
+# To enable write tools (e.g., issue creation), add:
+# -e YANDEX_MCP_WRITE_TOOLS=true
 ```
 
 ### VS Code, RooCode, etc.

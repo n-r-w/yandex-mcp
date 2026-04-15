@@ -86,3 +86,16 @@ type TrackerListProjectCommentsOpts struct {
 	// Allowed values: all, html, attachments, reactions.
 	Expand string
 }
+
+// TrackerCreateIssueOpts contains options for creating a Tracker issue.
+type TrackerCreateIssueOpts struct {
+	Summary     string
+	Queue       string
+	Description string
+	Type        string
+	Priority    string
+	Assignee    string
+	Parent      string
+	Followers   []string
+	Unique      string
+}

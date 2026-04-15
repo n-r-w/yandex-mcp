@@ -171,6 +171,19 @@ type listProjectCommentsInputDTO struct {
 	Expand    string `json:"expand,omitempty" jsonschema:"Additional fields to include in response. Possible values: 'all' (all additional fields), 'html' (comment HTML markup), 'attachments' (attached files metadata), 'reactions' (user reactions). Can be combined: 'html,attachments'. Example: 'all'"`
 }
 
+// createIssueInputDTO is the input for tracker_issue_create tool.
+type createIssueInputDTO struct {
+	Summary     string   `json:"summary" jsonschema:"Issue summary/title,required"`
+	Queue       string   `json:"queue" jsonschema:"Queue key where the issue will be created (e.g., MYQUEUE),required"`
+	Description string   `json:"description,omitempty" jsonschema:"Issue description in wiki markup or plain text"`
+	Type        string   `json:"type,omitempty" jsonschema:"Issue type key (e.g., task, bug, story). If omitted, uses queue default type"`
+	Priority    string   `json:"priority,omitempty" jsonschema:"Priority key (e.g., trivial, minor, normal, critical, blocker). If omitted, uses queue default priority"`
+	Assignee    string   `json:"assignee,omitempty" jsonschema:"Assignee login or user ID"`
+	Parent      string   `json:"parent,omitempty" jsonschema:"Parent issue key for sub-tasks (e.g., MYQUEUE-123)"`
+	Followers   []string `json:"followers,omitempty" jsonschema:"List of follower logins or user IDs to subscribe to the issue"`
+	Unique      string   `json:"unique,omitempty" jsonschema:"Unique string for idempotent creation. If an issue with this value already exists, no duplicate is created"`
+}
+
 // Output DTOs for tracker tools.
 
 // issueOutputDTO represents a Tracker issue.

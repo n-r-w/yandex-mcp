@@ -645,3 +645,31 @@ func parseIntHeaderValue(headers http.Header, key string) int {
 	}
 	return n
 }
+
+// CreateIssue creates a new issue in Yandex Tracker.
+func (c *Client) CreateIssue(ctx context.Context, opts domain.TrackerCreateIssueOpts) (*domain.TrackerIssue, error) {
+	reqBody := createIssueRequestDTO{
+		Summary:     opts.Summary,
+		Queue:       opts.Queue,
+		Description: opts.Description,
+		Assignee:    opts.Assignee,
+		Parent:      opts.Parent,
+		Followers:   opts.Followers,
+		Unique:      opts.Unique,
+	}
+	if opts.Type != "" {
+		reqBody.Type = &keyObjectDTO{Key: opts.Type}
+	}
+	if opts.Priority != "" {
+		reqBody.Priority = &keyObjectDTO{Key: opts.Priority}
+	}
+
+	var issue issueDTO
+	_, err := c.apiClient.DoPOST(ctx, "/v3/issues", reqBody, &issue, "CreateIssue")
+	if err != nil {
+		return nil, err
+	}
+
+	result := issueToTrackerIssue(issue)
+	return &result, nil
+}

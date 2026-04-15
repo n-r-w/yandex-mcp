@@ -318,3 +318,21 @@ type projectCommentDTO struct {
 	CreatedBy *userDTO            `json:"createdBy,omitempty"`
 	UpdatedBy *userDTO            `json:"updatedBy,omitempty"`
 }
+
+// createIssueRequestDTO is the request body for creating a Tracker issue.
+type createIssueRequestDTO struct {
+	Summary     string        `json:"summary"`
+	Queue       string        `json:"queue"`
+	Description string        `json:"description,omitempty"`
+	Type        *keyObjectDTO `json:"type,omitempty"`
+	Priority    *keyObjectDTO `json:"priority,omitempty"`
+	Assignee    string        `json:"assignee,omitempty"`
+	Parent      string        `json:"parent,omitempty"`
+	Followers   []string      `json:"followers,omitempty"`
+	Unique      string        `json:"unique,omitempty"`
+}
+
+// keyObjectDTO wraps a key field for Tracker API objects (type, priority, etc.).
+type keyObjectDTO struct {
+	Key string `json:"key"`
+}

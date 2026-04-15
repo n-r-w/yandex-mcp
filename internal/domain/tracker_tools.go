@@ -23,6 +23,7 @@ const (
 	TrackerToolLinksList
 	TrackerToolChangelog
 	TrackerToolProjectCommentsList
+	TrackerToolIssueCreate
 	TrackerToolCount // used to verify list completeness
 )
 
@@ -47,6 +48,7 @@ func (t TrackerTool) String() string {
 		TrackerToolLinksList:            "tracker_issue_links_list",
 		TrackerToolChangelog:            "tracker_issue_changelog",
 		TrackerToolProjectCommentsList:  "tracker_project_comments_list",
+		TrackerToolIssueCreate:          "tracker_issue_create",
 	}
 	return names[t]
 }
@@ -72,5 +74,48 @@ func TrackerAllTools() []TrackerTool {
 		TrackerToolLinksList,
 		TrackerToolChangelog,
 		TrackerToolProjectCommentsList,
+		TrackerToolIssueCreate,
 	}
+}
+
+// ToolGroup classifies tools as read-only or write (mutating).
+type ToolGroup int
+
+const (
+	// ToolGroupRead marks tools that only read data.
+	ToolGroupRead ToolGroup = iota
+	// ToolGroupWrite marks tools that create, update, or delete data.
+	ToolGroupWrite
+)
+
+// Group returns the tool group for the tracker tool.
+func (t TrackerTool) Group() ToolGroup {
+	switch t {
+	case TrackerToolIssueCreate:
+		return ToolGroupWrite
+	default:
+		return ToolGroupRead
+	}
+}
+
+// TrackerReadTools returns only read-only tracker tools.
+func TrackerReadTools() []TrackerTool {
+	var tools []TrackerTool
+	for _, t := range TrackerAllTools() {
+		if t.Group() == ToolGroupRead {
+			tools = append(tools, t)
+		}
+	}
+	return tools
+}
+
+// TrackerWriteTools returns only write (mutating) tracker tools.
+func TrackerWriteTools() []TrackerTool {
+	var tools []TrackerTool
+	for _, t := range TrackerAllTools() {
+		if t.Group() == ToolGroupWrite {
+			tools = append(tools, t)
+		}
+	}
+	return tools
 }

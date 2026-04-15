@@ -69,7 +69,7 @@ func TestServerIntegration_ReadOnlyToolsRegistered(t *testing.T) {
 		),
 	}
 
-	srv, err := server.New("v1.0.0", registrators)
+	srv, err := server.New("v1.0.0", registrators, false)
 	require.NoError(t, err)
 
 	toolNames := listToolNames(t, srv)
@@ -106,7 +106,7 @@ func TestServerIntegration_AllowlistGating_ReducedList(t *testing.T) {
 		),
 	}
 
-	srv, err := server.New("v1.0.0", registrators)
+	srv, err := server.New("v1.0.0", registrators, false)
 	require.NoError(t, err)
 
 	toolNames := listToolNames(t, srv)
@@ -118,6 +118,33 @@ func TestServerIntegration_AllowlistGating_ReducedList(t *testing.T) {
 
 	assert.NotContains(t, toolNames, domain.WikiToolPageGetByID.String())
 	assert.NotContains(t, toolNames, domain.TrackerToolIssueSearch.String())
+}
+
+func TestServerIntegration_ReadToolsOnly_ExcludesWriteTools(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	wikiMock := wikitools.NewMockIWikiAdapter(ctrl)
+	trackerMock := trackertools.NewMockITrackerAdapter(ctrl)
+
+	registrators := []server.IToolsRegistrator{
+		wikitools.NewRegistrator(wikiMock, domain.WikiAllTools()),
+		trackertools.NewRegistrator(
+			trackerMock,
+			domain.TrackerReadTools(),
+			defaultAttachExtensions,
+			defaultAttachViewExts,
+			defaultAttachDirs,
+		),
+	}
+
+	srv, err := server.New("v1.0.0", registrators, false)
+	require.NoError(t, err)
+
+	toolNames := listToolNames(t, srv)
+
+	assert.NotContains(t, toolNames, domain.TrackerToolIssueCreate.String())
+	assert.Contains(t, toolNames, domain.TrackerToolIssueGet.String())
 }
 
 func TestServerIntegration_EmptyAllowlist_NoToolsRegistered(t *testing.T) {
@@ -138,7 +165,7 @@ func TestServerIntegration_EmptyAllowlist_NoToolsRegistered(t *testing.T) {
 		),
 	}
 
-	srv, err := server.New("v1.0.0", registrators)
+	srv, err := server.New("v1.0.0", registrators, false)
 	require.NoError(t, err)
 
 	toolNames := listToolNames(t, srv)

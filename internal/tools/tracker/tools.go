@@ -875,3 +875,35 @@ func (r *Registrator) listProjectComments(
 
 	return mapProjectCommentsToOutput(comments), nil
 }
+
+func (r *Registrator) createIssue(ctx context.Context, input createIssueInputDTO) (*issueOutputDTO, error) {
+	helpers.TrimStringFields(&input.Summary, &input.Queue, &input.Description,
+		&input.Type, &input.Priority, &input.Assignee, &input.Parent, &input.Unique)
+	input.Followers = helpers.TrimStrings(input.Followers)
+
+	if input.Summary == "" {
+		return nil, errors.New("summary is required")
+	}
+	if input.Queue == "" {
+		return nil, errors.New("queue is required")
+	}
+
+	opts := domain.TrackerCreateIssueOpts{
+		Summary:     input.Summary,
+		Queue:       input.Queue,
+		Description: input.Description,
+		Type:        input.Type,
+		Priority:    input.Priority,
+		Assignee:    input.Assignee,
+		Parent:      input.Parent,
+		Followers:   input.Followers,
+		Unique:      input.Unique,
+	}
+
+	issue, err := r.adapter.CreateIssue(ctx, opts)
+	if err != nil {
+		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+	}
+
+	return mapIssueToOutput(issue), nil
+}

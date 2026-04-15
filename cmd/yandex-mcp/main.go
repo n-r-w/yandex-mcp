@@ -95,13 +95,22 @@ func run(serverVersion string) error {
 		slog.String("tracker_base_url", cfg.TrackerBaseURL),
 	)
 
+	if cfg.OrgID != "" {
+		slog.Warn("YANDEX_ORG_ID is set: Yandex 360 organizations require OAuth authentication, " +
+			"but this server only supports IAM tokens via yc; requests may fail with 401/403")
+	}
+
 	tokenProvider := ytoken.NewProvider(cfg)
 
 	wikiClient := wiki.NewClient(cfg, tokenProvider)
 	trackerClient := tracker.NewClient(cfg, tokenProvider)
 
 	wikiTools := domain.WikiAllTools()
-	trackerTools := domain.TrackerAllTools()
+	trackerTools := domain.TrackerReadTools()
+	if cfg.WriteToolsEnabled {
+		trackerTools = domain.TrackerAllTools()
+		slog.Warn("write tools are enabled: issue creation and other mutating operations are available")
+	}
 
 	registrators := []server.IToolsRegistrator{
 		wikitools.NewRegistrator(wikiClient, wikiTools),
@@ -114,7 +123,7 @@ func run(serverVersion string) error {
 		),
 	}
 
-	srv, err := server.New(serverVersion, registrators)
+	srv, err := server.New(serverVersion, registrators, cfg.WriteToolsEnabled)
 	if err != nil {
 		return err
 	}

@@ -59,4 +59,5 @@ type ITrackerAdapter interface {
 	ListProjectComments(
 		ctx context.Context, projectID string, opts domain.TrackerListProjectCommentsOpts,
 	) ([]domain.TrackerProjectComment, error)
+	CreateIssue(ctx context.Context, opts domain.TrackerCreateIssueOpts) (*domain.TrackerIssue, error)
 }

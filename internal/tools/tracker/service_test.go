@@ -30,7 +30,7 @@ func TestRegistrator_Register_RegistersOnlyEnabledTrackerTools(t *testing.T) {
 		defaultAttachDirs,
 	)
 
-	srv, err := mcpserver.New("v1.0.0", []mcpserver.IToolsRegistrator{registrator})
+	srv, err := mcpserver.New("v1.0.0", []mcpserver.IToolsRegistrator{registrator}, false)
 	require.NoError(t, err)
 
 	client := mcp.NewClient(

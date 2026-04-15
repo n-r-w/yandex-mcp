@@ -259,3 +259,22 @@ func TestLoad_AttachViewExtensionsInvalid(t *testing.T) {
 	assert.Nil(t, cfg)
 	assert.Contains(t, err.Error(), "YANDEX_MCP_ATTACH_VIEW_EXT")
 }
+
+func TestLoad_WriteToolsEnabled(t *testing.T) {
+	t.Setenv("YANDEX_MCP_WRITE_TOOLS", "true")
+	t.Setenv("YANDEX_CLOUD_ORG_ID", "org-123")
+
+	cfg, err := Load()
+
+	require.NoError(t, err)
+	assert.True(t, cfg.WriteToolsEnabled)
+}
+
+func TestLoad_WriteToolsDisabledByDefault(t *testing.T) {
+	t.Setenv("YANDEX_CLOUD_ORG_ID", "org-123")
+
+	cfg, err := Load()
+
+	require.NoError(t, err)
+	assert.False(t, cfg.WriteToolsEnabled)
+}

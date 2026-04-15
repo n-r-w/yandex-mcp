@@ -56,6 +56,21 @@ func (mr *MockITrackerAdapterMockRecorder) CountIssues(ctx, opts any) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountIssues", reflect.TypeOf((*MockITrackerAdapter)(nil).CountIssues), ctx, opts)
 }
 
+// CreateIssue mocks base method.
+func (m *MockITrackerAdapter) CreateIssue(ctx context.Context, opts domain.TrackerCreateIssueOpts) (*domain.TrackerIssue, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateIssue", ctx, opts)
+	ret0, _ := ret[0].(*domain.TrackerIssue)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateIssue indicates an expected call of CreateIssue.
+func (mr *MockITrackerAdapterMockRecorder) CreateIssue(ctx, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateIssue", reflect.TypeOf((*MockITrackerAdapter)(nil).CreateIssue), ctx, opts)
+}
+
 // GetCurrentUser mocks base method.
 func (m *MockITrackerAdapter) GetCurrentUser(ctx context.Context) (*domain.TrackerUserDetail, error) {
 	m.ctrl.T.Helper()

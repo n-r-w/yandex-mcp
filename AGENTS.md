@@ -60,6 +60,7 @@ THIS IS A NEW PROJECT, NOT IN PRODUCTION YET. NO DATA IN DATABASE YET. FEEL FREE
 7. `YANDEX_MCP_ATTACH_EXT`: Comma-separated list of allowed attachment extensions without dots (e.g. "jpg,png,txt"). Optional, if not set, default to predefined list of common extensions.
 8. `YANDEX_MCP_ATTACH_VIEW_EXT`: Comma-separated list of allowed attachment extensions without dots for inline viewing (e.g. "txt,json,md"). Optional, if not set, default to predefined list of text formats.
 9. `YANDEX_MCP_ATTACH_DIR`: Directory path for saving attachments (must be absolute path, e.g. "/home/user/attachments"). Optional, if not set, default to rules that allow saving attachments in user home directory except hidden top-level subdirectories (e.g. "~/.ssh").
+10. `YANDEX_MCP_WRITE_TOOLS`: Enable write tools such as issue creation (default false).
 
 ## Folder structure
 ```

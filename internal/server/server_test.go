@@ -79,7 +79,7 @@ func TestServer_ToolsRegistered(t *testing.T) {
 		newTrackerStubRegistrator(ctrl),
 	}
 
-	srv, err := New("v1.0.0", registrators)
+	srv, err := New("v1.0.0", registrators, false)
 	require.NoError(t, err)
 
 	ctx := t.Context()
@@ -128,7 +128,7 @@ func TestServerCreation(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	srv, err := New("v1.0.0", []IToolsRegistrator{newWikiStubRegistrator(ctrl)})
+	srv, err := New("v1.0.0", []IToolsRegistrator{newWikiStubRegistrator(ctrl)}, false)
 	require.NoError(t, err)
 	assert.NotNil(t, srv)
 }
@@ -136,7 +136,7 @@ func TestServerCreation(t *testing.T) {
 func TestServerCreation_EmptyRegistrators(t *testing.T) {
 	t.Parallel()
 
-	srv, err := New("v1.0.0", nil)
+	srv, err := New("v1.0.0", nil, false)
 	require.NoError(t, err)
 	assert.NotNil(t, srv)
 }
@@ -144,7 +144,7 @@ func TestServerCreation_EmptyRegistrators(t *testing.T) {
 func TestServerCreation_NoRegistrators(t *testing.T) {
 	t.Parallel()
 
-	srv, err := New("v1.0.0", []IToolsRegistrator{})
+	srv, err := New("v1.0.0", []IToolsRegistrator{}, false)
 	require.NoError(t, err)
 	assert.NotNil(t, srv)
 }
@@ -156,7 +156,7 @@ func TestServer_RegistrationError(t *testing.T) {
 	mockReg := NewMockIToolsRegistrator(ctrl)
 	mockReg.EXPECT().Register(gomock.Any()).Return(assert.AnError)
 
-	_, err := New("v1.0.0", []IToolsRegistrator{mockReg})
+	_, err := New("v1.0.0", []IToolsRegistrator{mockReg}, false)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, assert.AnError)
 }

@@ -71,3 +71,27 @@ func TestWikiTool_String_InvalidValue(t *testing.T) {
 	invalidTool := domain.WikiTool(9999)
 	assert.Empty(t, invalidTool.String(), "Invalid WikiTool should return empty string")
 }
+
+func TestTrackerToolGroups_Complete(t *testing.T) {
+	t.Parallel()
+
+	readTools := domain.TrackerReadTools()
+	writeTools := domain.TrackerWriteTools()
+
+	assert.Equal(t, len(domain.TrackerAllTools()), len(readTools)+len(writeTools),
+		"TrackerReadTools + TrackerWriteTools should equal TrackerAllTools")
+
+	readSet := make(map[domain.TrackerTool]bool)
+	for _, tool := range readTools {
+		readSet[tool] = true
+	}
+	for _, tool := range writeTools {
+		assert.False(t, readSet[tool], "TrackerWriteTools should not overlap with TrackerReadTools")
+	}
+}
+
+func TestTrackerToolIssueCreate_IsWrite(t *testing.T) {
+	t.Parallel()
+
+	assert.Equal(t, domain.ToolGroupWrite, domain.TrackerToolIssueCreate.Group())
+}
