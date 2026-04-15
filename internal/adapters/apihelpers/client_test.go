@@ -167,6 +167,94 @@ func TestResolveRequestURL_Validation(t *testing.T) {
 	})
 }
 
+// TestExecuteHTTPRequest_SetsOrgIDHeader verifies that X-Org-Id is set when only orgID is configured.
+func TestExecuteHTTPRequest_SetsOrgIDHeader(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+
+	doer := NewMockIHTTPDoer(ctrl)
+	provider := NewMockITokenProvider(ctrl)
+
+	provider.EXPECT().Token(gomock.Any(), false).Return("token", nil)
+
+	var capturedReq *http.Request
+	doer.EXPECT().Do(gomock.Any()).DoAndReturn(func(req *http.Request) (*http.Response, error) {
+		capturedReq = req
+		return &http.Response{ //nolint:exhaustruct // test
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(bytes.NewBufferString(`{}`)),
+			Header:     make(http.Header),
+		}, nil
+	})
+
+	parsedBaseURL, err := url.Parse("https://api.example.test")
+	require.NoError(t, err)
+
+	client := &APIClient{
+		httpDoer:            doer,
+		tokenProvider:       provider,
+		baseURL:             parsedBaseURL,
+		baseURLParseErr:     nil,
+		cloudOrgID:          "",
+		orgID:               "org-360",
+		extraHeaders:        nil,
+		serviceName:         "test-service",
+		parseError:          nil,
+		rawResponseMaxBytes: 0,
+	}
+
+	_, _, err = client.DoGETRaw(t.Context(), "/v1/resource", "operation")
+	require.NoError(t, err)
+
+	assert.Equal(t, "org-360", capturedReq.Header.Get(HeaderOrgID))
+	assert.Empty(t, capturedReq.Header.Get(HeaderCloudOrgID))
+}
+
+// TestExecuteHTTPRequest_SetsCloudOrgIDHeader verifies that X-Cloud-Org-Id is set when only cloudOrgID is configured.
+func TestExecuteHTTPRequest_SetsCloudOrgIDHeader(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+
+	doer := NewMockIHTTPDoer(ctrl)
+	provider := NewMockITokenProvider(ctrl)
+
+	provider.EXPECT().Token(gomock.Any(), false).Return("token", nil)
+
+	var capturedReq *http.Request
+	doer.EXPECT().Do(gomock.Any()).DoAndReturn(func(req *http.Request) (*http.Response, error) {
+		capturedReq = req
+		return &http.Response{ //nolint:exhaustruct // test
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(bytes.NewBufferString(`{}`)),
+			Header:     make(http.Header),
+		}, nil
+	})
+
+	parsedBaseURL, err := url.Parse("https://api.example.test")
+	require.NoError(t, err)
+
+	client := &APIClient{
+		httpDoer:            doer,
+		tokenProvider:       provider,
+		baseURL:             parsedBaseURL,
+		baseURLParseErr:     nil,
+		cloudOrgID:          "cloud-org-123",
+		orgID:               "",
+		extraHeaders:        nil,
+		serviceName:         "test-service",
+		parseError:          nil,
+		rawResponseMaxBytes: 0,
+	}
+
+	_, _, err = client.DoGETRaw(t.Context(), "/v1/resource", "operation")
+	require.NoError(t, err)
+
+	assert.Equal(t, "cloud-org-123", capturedReq.Header.Get(HeaderCloudOrgID))
+	assert.Empty(t, capturedReq.Header.Get(HeaderOrgID))
+}
+
 // TestDoGETRaw_RetriesAfterUnauthorized verifies auth retry for raw responses.
 func TestDoGETRaw_RetriesAfterUnauthorized(t *testing.T) {
 	t.Parallel()

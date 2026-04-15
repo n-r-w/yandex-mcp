@@ -55,6 +55,28 @@ func TestLoad_DefaultRefreshPeriod(t *testing.T) {
 	assert.Equal(t, defaultRefreshHours*time.Hour, cfg.IAMTokenRefreshPeriod)
 }
 
+func TestLoad_OrgIDOnly(t *testing.T) {
+	t.Setenv("YANDEX_CLOUD_ORG_ID", "")
+	t.Setenv("YANDEX_ORG_ID", "org-360")
+
+	cfg, err := Load()
+
+	require.NoError(t, err)
+	assert.Empty(t, cfg.CloudOrgID)
+	assert.Equal(t, "org-360", cfg.OrgID)
+}
+
+func TestLoad_BothOrgIDsSet_Error(t *testing.T) {
+	t.Setenv("YANDEX_CLOUD_ORG_ID", "org-cloud")
+	t.Setenv("YANDEX_ORG_ID", "org-360")
+
+	cfg, err := Load()
+
+	require.Error(t, err)
+	assert.Nil(t, cfg)
+	assert.Contains(t, err.Error(), "mutually exclusive")
+}
+
 func TestLoad_MissingBothOrgIDs(t *testing.T) {
 	t.Setenv("YANDEX_CLOUD_ORG_ID", "")
 	t.Setenv("YANDEX_ORG_ID", "")

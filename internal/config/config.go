@@ -271,8 +271,11 @@ func (c *Config) validate() error {
 		errs = append(errs, err)
 	}
 
+	if c.CloudOrgID != "" && c.OrgID != "" {
+		errs = append(errs, errors.New("YANDEX_CLOUD_ORG_ID and YANDEX_ORG_ID are mutually exclusive; set exactly one"))
+	}
 	if c.CloudOrgID == "" && c.OrgID == "" {
-		errs = append(errs, errors.New("at least one of YANDEX_CLOUD_ORG_ID or YANDEX_ORG_ID is required"))
+		errs = append(errs, errors.New("exactly one of YANDEX_CLOUD_ORG_ID or YANDEX_ORG_ID is required"))
 	}
 	if len(c.AttachAllowedExtensions) == 0 {
 		errs = append(errs, errors.New("YANDEX_MCP_ATTACH_EXT resolved to an empty list"))

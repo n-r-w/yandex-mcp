@@ -61,6 +61,45 @@ func TestClient_HeaderInjection(t *testing.T) {
 	assert.Contains(t, capturedHeaders.Get(apihelpers.HeaderContentType), "application/json")
 }
 
+func TestClient_HeaderInjection_OrgID(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
+
+	const (
+		testToken = "test-iam-token"
+		testOrgID = "test-360-org-id"
+	)
+
+	var capturedHeaders http.Header
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedHeaders = r.Header.Clone()
+		w.Header().Set("Content-Type", "application/json")
+		//nolint:errcheck,exhaustruct // test helper
+		json.NewEncoder(w).Encode(pageDTO{ID: "1", Title: "Test"})
+	}))
+	t.Cleanup(func() {
+		server.Close()
+	})
+
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return(testToken, nil)
+
+	cfg := &config.Config{ //nolint:exhaustruct // test helper
+		WikiBaseURL:          server.URL,
+		OrgID:                testOrgID,
+		AttachInlineMaxBytes: testAttachInlineMaxBytes,
+	}
+	client := NewClient(cfg, tokenProvider)
+
+	_, err := client.GetPageBySlug(t.Context(), "test/page", domain.WikiGetPageOpts{})
+	require.NoError(t, err)
+
+	assert.Equal(t, "Bearer "+testToken, capturedHeaders.Get(apihelpers.HeaderAuthorization))
+	assert.Equal(t, testOrgID, capturedHeaders.Get(apihelpers.HeaderOrgID))
+	assert.Empty(t, capturedHeaders.Get(apihelpers.HeaderCloudOrgID))
+}
+
 func TestClient_Non2xx_ReturnsUpstreamError_Sanitized(t *testing.T) {
 	t.Parallel()
 

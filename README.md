@@ -113,10 +113,15 @@ After these steps, the executable will be permanently allowed to run on your sys
 
 ## Environment variables
 
-- `YANDEX_CLOUD_ORG_ID` (required)
-  * Yandex Cloud Organization ID.
-  * Used to set the organization header required by Yandex APIs.
+- `YANDEX_CLOUD_ORG_ID` (required if `YANDEX_ORG_ID` is not set)
+  * Yandex Cloud Organization ID. Sets the `X-Cloud-Org-Id` header.
+  * Mutually exclusive with `YANDEX_ORG_ID` — set exactly one.
   * Run `yc organization-manager organization list` to get your organization ID.
+
+- `YANDEX_ORG_ID` (required if `YANDEX_CLOUD_ORG_ID` is not set)
+  * Yandex 360 Organization ID. Sets the `X-Org-Id` header.
+  * Mutually exclusive with `YANDEX_CLOUD_ORG_ID` — set exactly one.
+  * Note: Yandex 360 organizations typically require OAuth authentication. The server currently automates only IAM token auth via `yc`. Ensure your organization and auth method are compatible.
 
 - `YANDEX_WIKI_BASE_URL` (optional, default: `https://api.wiki.yandex.net`)
   * Base URL for Yandex Wiki API.
@@ -185,7 +190,9 @@ Official references:
 ### Claude Code
 
 ```bash
-claude mcp add -s user -e YANDEX_CLOUD_ORG_ID={yandex organization id} --transport stdio yandex /path/to/yandex-mcp
+claude mcp add -s user -e YANDEX_CLOUD_ORG_ID={yandex cloud organization id} --transport stdio yandex /path/to/yandex-mcp
+# Or for Yandex 360 organizations:
+# claude mcp add -s user -e YANDEX_ORG_ID={yandex 360 organization id} --transport stdio yandex /path/to/yandex-mcp
 ```
 
 ### VS Code, RooCode, etc.
@@ -194,7 +201,7 @@ claude mcp add -s user -e YANDEX_CLOUD_ORG_ID={yandex organization id} --transpo
 "yandex": {
   "command": "/path/to/yandex-mcp",
   "env": {
-    "YANDEX_CLOUD_ORG_ID": "yandex organization id"
+    "YANDEX_CLOUD_ORG_ID": "yandex cloud organization id"
   }
 }
 ```
