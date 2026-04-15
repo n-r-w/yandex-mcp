@@ -93,9 +93,28 @@ func (t TrackerTool) Group() ToolGroup {
 	switch t {
 	case TrackerToolIssueCreate:
 		return ToolGroupWrite
-	default:
+	case TrackerToolIssueGet,
+		TrackerToolIssueSearch,
+		TrackerToolIssueCount,
+		TrackerToolTransitionsList,
+		TrackerToolQueuesList,
+		TrackerToolBoardsList,
+		TrackerToolBoardSprintsList,
+		TrackerToolCommentsList,
+		TrackerToolAttachmentsList,
+		TrackerToolAttachmentGet,
+		TrackerToolAttachmentPreviewGet,
+		TrackerToolQueueGet,
+		TrackerToolUserCurrent,
+		TrackerToolUsersList,
+		TrackerToolUserGet,
+		TrackerToolLinksList,
+		TrackerToolChangelog,
+		TrackerToolProjectCommentsList,
+		TrackerToolCount:
 		return ToolGroupRead
 	}
+	return ToolGroupRead
 }
 
 // TrackerReadTools returns only read-only tracker tools.

@@ -648,20 +648,26 @@ func parseIntHeaderValue(headers http.Header, key string) int {
 
 // CreateIssue creates a new issue in Yandex Tracker.
 func (c *Client) CreateIssue(ctx context.Context, opts domain.TrackerCreateIssueOpts) (*domain.TrackerIssue, error) {
+	var issueType *keyObjectDTO
+	if opts.Type != "" {
+		issueType = &keyObjectDTO{Key: opts.Type}
+	}
+
+	var priority *keyObjectDTO
+	if opts.Priority != "" {
+		priority = &keyObjectDTO{Key: opts.Priority}
+	}
+
 	reqBody := createIssueRequestDTO{
 		Summary:     opts.Summary,
 		Queue:       opts.Queue,
 		Description: opts.Description,
+		Type:        issueType,
+		Priority:    priority,
 		Assignee:    opts.Assignee,
 		Parent:      opts.Parent,
 		Followers:   opts.Followers,
 		Unique:      opts.Unique,
-	}
-	if opts.Type != "" {
-		reqBody.Type = &keyObjectDTO{Key: opts.Type}
-	}
-	if opts.Priority != "" {
-		reqBody.Priority = &keyObjectDTO{Key: opts.Priority}
 	}
 
 	var issue issueDTO
