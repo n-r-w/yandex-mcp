@@ -23,6 +23,9 @@ const (
 	TrackerToolLinksList
 	TrackerToolChangelog
 	TrackerToolProjectCommentsList
+	TrackerToolEntityGet
+	TrackerToolEntitiesSearch
+	TrackerToolAttachmentGlobalGet
 	TrackerToolCount // used to verify list completeness
 )
 
@@ -47,6 +50,9 @@ func (t TrackerTool) String() string {
 		TrackerToolLinksList:            "tracker_issue_links_list",
 		TrackerToolChangelog:            "tracker_issue_changelog",
 		TrackerToolProjectCommentsList:  "tracker_project_comments_list",
+		TrackerToolEntityGet:            "tracker_entity_get",
+		TrackerToolEntitiesSearch:       "tracker_entities_search",
+		TrackerToolAttachmentGlobalGet:  "tracker_attachment_get",
 	}
 	return names[t]
 }
@@ -72,5 +78,8 @@ func TrackerAllTools() []TrackerTool {
 		TrackerToolLinksList,
 		TrackerToolChangelog,
 		TrackerToolProjectCommentsList,
+		TrackerToolEntityGet,
+		TrackerToolEntitiesSearch,
+		TrackerToolAttachmentGlobalGet,
 	}
 }

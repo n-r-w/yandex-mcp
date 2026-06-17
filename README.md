@@ -142,7 +142,7 @@ After these steps, the executable will be permanently allowed to run on your sys
 - `YANDEX_MCP_ATTACH_EXT` (optional)
   * Comma-separated list of allowed attachment extensions **without dots**.
   * Fully replaces the default allowlist.
-  * Default allowlist: txt, json, jsonc, yaml, yml, md, pdf, doc, docx, rtf, odt, xls, xlsx, ods, csv, tsv, ppt, pptx, odp, jpg, jpeg, png, tiff, tif, gif, bmp, webp, zip, 7z, tar, tgz, tar.gz, gz, bz2, xz, rar.
+  * Default allowlist: txt, json, jsonc, yaml, yml, md, csv, tsv, rtf, html, htm, pdf, doc, docx, odt, xls, xlsx, ods, ppt, pptx, odp, jpg, jpeg, png, tiff, tif, gif, bmp, webp, zip, 7z, tar, tgz, tar.gz, gz, bz2, xz, rar.
 
 - `YANDEX_MCP_ATTACH_VIEW_EXT` (optional)
   * Comma-separated list of allowed attachment extensions **without dots** for inline viewing.

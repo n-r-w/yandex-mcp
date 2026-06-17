@@ -145,6 +145,8 @@ func defaultAttachExtensions() []string {
 // defaultNonTextAttachExtensions provides the default allowlist additions for non-text files.
 func defaultNonTextAttachExtensions() []string {
 	return []string{
+		"html",
+		"htm",
 		"pdf",
 		"doc",
 		"docx",

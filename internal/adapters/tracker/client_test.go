@@ -192,6 +192,116 @@ func TestClient_GetIssue_WithExpand(t *testing.T) {
 	assert.Equal(t, "Test Issue", issue.Summary)
 }
 
+func TestClient_GetEntity_WithFieldsAndAttachments(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
+
+	var capturedURL string
+	var capturedMethod string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedURL = r.URL.String()
+		capturedMethod = r.Method
+		w.Header().Set("Content-Type", "application/json")
+		//nolint:errcheck,exhaustruct // test helper
+		json.NewEncoder(w).Encode(entityDTO{
+			Self:       "https://api.tracker.yandex.net/v3/entities/project/entity-1",
+			ID:         "entity-1",
+			Version:    14,
+			ShortID:    3,
+			EntityType: "project",
+			Fields: map[string]any{
+				"summary":      "Apple gift card",
+				"entityStatus": "draft",
+			},
+			Attachments: []attachmentDTO{{ID: "5", Name: "full.html", Content: "https://api/attachments/5/full.html"}},
+		})
+	}))
+	t.Cleanup(func() {
+		server.Close()
+	})
+
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
+
+	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
+
+	entity, err := client.GetEntity(t.Context(), "project", "3", domain.TrackerGetEntityOpts{
+		Fields: "summary,entityStatus",
+		Expand: "attachments",
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t, http.MethodGet, capturedMethod)
+	assert.Contains(t, capturedURL, "/v3/entities/project/3")
+	assert.Contains(t, capturedURL, "fields=summary%2CentityStatus")
+	assert.Contains(t, capturedURL, "expand=attachments")
+	assert.Equal(t, "entity-1", entity.ID)
+	assert.Equal(t, 3, entity.ShortID)
+	assert.Equal(t, "project", entity.EntityType)
+	assert.Equal(t, "Apple gift card", entity.Fields["summary"])
+	require.Len(t, entity.Attachments, 1)
+	assert.Equal(t, "5", entity.Attachments[0].ID)
+}
+
+func TestClient_SearchEntities(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
+
+	var capturedURL string
+	var capturedMethod string
+	var capturedBody searchEntitiesRequestDTO
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedURL = r.URL.String()
+		capturedMethod = r.Method
+		_ = json.NewDecoder(r.Body).Decode(&capturedBody)
+
+		w.Header().Set("Content-Type", "application/json")
+		//nolint:errcheck,exhaustruct // test helper
+		json.NewEncoder(w).Encode(searchEntitiesResponseDTO{
+			Hits:    1,
+			Pages:   1,
+			OrderBy: "entityStatus",
+			Values:  []entityDTO{{ID: "entity-1", ShortID: 3, EntityType: "project"}},
+		})
+	}))
+	t.Cleanup(func() {
+		server.Close()
+	})
+
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
+
+	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
+
+	result, err := client.SearchEntities(t.Context(), "project", domain.TrackerSearchEntitiesOpts{
+		Input:    "Apple",
+		Filter:   map[string]string{"entityStatus": "draft"},
+		OrderBy:  "entityStatus",
+		OrderAsc: true,
+		RootOnly: true,
+		Fields:   "summary,entityStatus",
+		PerPage:  10,
+		Page:     2,
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t, http.MethodPost, capturedMethod)
+	assert.Contains(t, capturedURL, "/v3/entities/project/_search")
+	assert.Contains(t, capturedURL, "fields=summary%2CentityStatus")
+	assert.Contains(t, capturedURL, "perPage=10")
+	assert.Contains(t, capturedURL, "page=2")
+	assert.Equal(t, "Apple", capturedBody.Input)
+	assert.Equal(t, map[string]string{"entityStatus": "draft"}, capturedBody.Filter)
+	assert.Equal(t, "entityStatus", capturedBody.OrderBy)
+	assert.True(t, capturedBody.OrderAsc)
+	assert.True(t, capturedBody.RootOnly)
+	assert.Equal(t, 1, result.Hits)
+	require.Len(t, result.Values, 1)
+	assert.Equal(t, "entity-1", result.Values[0].ID)
+}
+
 func TestClient_SearchIssues_StandardPagination(t *testing.T) {
 	t.Parallel()
 
@@ -762,6 +872,73 @@ func TestClient_GetIssueAttachmentStream(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "attachment.txt", stream.FileName)
 	assert.Equal(t, "application/pdf", stream.ContentType)
+	assert.Equal(t, payload, data)
+}
+
+func TestClient_GetAttachment(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
+
+	var capturedURL string
+	var capturedMethod string
+	payload := []byte("global attachment payload")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedURL = r.URL.String()
+		capturedMethod = r.Method
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = w.Write(payload)
+	}))
+	t.Cleanup(func() {
+		server.Close()
+	})
+
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
+
+	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
+
+	result, err := client.GetAttachment(t.Context(), "5", "apple gc.html")
+	require.NoError(t, err)
+	assert.Equal(t, http.MethodGet, capturedMethod)
+	assert.Contains(t, capturedURL, "/v3/attachments/5/apple%20gc.html")
+	assert.Equal(t, "apple gc.html", result.FileName)
+	assert.Equal(t, "text/html", result.ContentType)
+	assert.Equal(t, payload, result.Data)
+}
+
+func TestClient_GetAttachmentStream(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
+
+	var capturedURL string
+	payload := []byte("streamed global payload")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedURL = r.URL.String()
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = w.Write(payload)
+	}))
+	t.Cleanup(func() {
+		server.Close()
+	})
+
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
+
+	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
+
+	stream, err := client.GetAttachmentStream(t.Context(), "5", "apple gc.html")
+	require.NoError(t, err)
+	defer func() {
+		_ = stream.Stream.Close()
+	}()
+	data, err := io.ReadAll(stream.Stream)
+	require.NoError(t, err)
+
+	assert.Contains(t, capturedURL, "/v3/attachments/5/apple%20gc.html")
+	assert.Equal(t, "apple gc.html", stream.FileName)
+	assert.Equal(t, "text/html", stream.ContentType)
 	assert.Equal(t, payload, data)
 }
 

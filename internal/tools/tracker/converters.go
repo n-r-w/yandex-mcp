@@ -506,3 +506,51 @@ func mapProjectCommentsToOutput(comments []domain.TrackerProjectComment) *projec
 	}
 	return &projectCommentsListOutputDTO{Comments: result}
 }
+
+func mapEntityToOutput(entity *domain.TrackerEntity) *entityOutputDTO {
+	if entity == nil {
+		return nil
+	}
+
+	attachments := make([]attachmentOutputDTO, len(entity.Attachments))
+	for i := range entity.Attachments {
+		out := mapAttachmentToOutput(&entity.Attachments[i])
+		if out != nil {
+			attachments[i] = *out
+		}
+	}
+
+	return &entityOutputDTO{
+		Self:        entity.Self,
+		ID:          entity.ID,
+		Version:     entity.Version,
+		ShortID:     entity.ShortID,
+		EntityType:  entity.EntityType,
+		CreatedBy:   mapUserToOutput(entity.CreatedBy),
+		CreatedAt:   entity.CreatedAt,
+		UpdatedAt:   entity.UpdatedAt,
+		Fields:      entity.Fields,
+		Attachments: attachments,
+	}
+}
+
+func mapEntitiesPageToOutput(page *domain.TrackerEntitiesPage) *searchEntitiesOutputDTO {
+	if page == nil {
+		return nil
+	}
+
+	values := make([]entityOutputDTO, len(page.Values))
+	for i := range page.Values {
+		out := mapEntityToOutput(&page.Values[i])
+		if out != nil {
+			values[i] = *out
+		}
+	}
+
+	return &searchEntitiesOutputDTO{
+		Hits:    page.Hits,
+		Pages:   page.Pages,
+		Values:  values,
+		OrderBy: page.OrderBy,
+	}
+}

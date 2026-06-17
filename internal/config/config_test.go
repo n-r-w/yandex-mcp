@@ -148,7 +148,11 @@ func TestLoad_DefaultAttachExtensions(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, defaultAttachExtensions(), cfg.AttachAllowedExtensions)
+	assert.Contains(t, cfg.AttachAllowedExtensions, "html")
+	assert.Contains(t, cfg.AttachAllowedExtensions, "htm")
 	assert.Equal(t, defaultTextAttachExtensions(), cfg.AttachViewExtensions)
+	assert.NotContains(t, cfg.AttachViewExtensions, "html")
+	assert.NotContains(t, cfg.AttachViewExtensions, "htm")
 	assert.Nil(t, cfg.AttachAllowedDirs)
 	assert.Equal(t, int64(defaultAttachInlineMaxBytes), cfg.AttachInlineMaxBytes)
 }

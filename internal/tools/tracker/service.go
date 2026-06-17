@@ -223,6 +223,33 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 		},
 		r.listProjectComments,
 	)
+	registerTool(
+		r.enabledTools[domain.TrackerToolEntityGet],
+		srv,
+		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+			Name:        domain.TrackerToolEntityGet.String(),
+			Description: "Gets a Yandex Tracker project, portfolio, or goal by ID or short ID",
+		},
+		r.getEntity,
+	)
+	registerTool(
+		r.enabledTools[domain.TrackerToolEntitiesSearch],
+		srv,
+		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+			Name:        domain.TrackerToolEntitiesSearch.String(),
+			Description: "Searches Yandex Tracker projects, portfolios, or goals",
+		},
+		r.searchEntities,
+	)
+	registerTool(
+		r.enabledTools[domain.TrackerToolAttachmentGlobalGet],
+		srv,
+		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+			Name:        domain.TrackerToolAttachmentGlobalGet.String(),
+			Description: "Downloads a Yandex Tracker attachment by attachment ID and file name",
+		},
+		r.getGlobalAttachment,
+	)
 
 	return nil
 }

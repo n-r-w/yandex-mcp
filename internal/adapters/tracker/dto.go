@@ -318,3 +318,34 @@ type projectCommentDTO struct {
 	CreatedBy *userDTO            `json:"createdBy,omitempty"`
 	UpdatedBy *userDTO            `json:"updatedBy,omitempty"`
 }
+
+// entityDTO is a Yandex Tracker project, portfolio, or goal.
+type entityDTO struct {
+	Self        string              `json:"self"`
+	ID          apihelpers.StringID `json:"id"`
+	Version     int                 `json:"version"`
+	ShortID     int                 `json:"shortId"`
+	EntityType  string              `json:"entityType"`
+	CreatedBy   *userDTO            `json:"createdBy,omitempty"`
+	CreatedAt   string              `json:"createdAt,omitempty"`
+	UpdatedAt   string              `json:"updatedAt,omitempty"`
+	Fields      map[string]any      `json:"fields,omitempty"`
+	Attachments []attachmentDTO     `json:"attachments,omitempty"`
+}
+
+// searchEntitiesRequestDTO is a Yandex Tracker entity search request.
+type searchEntitiesRequestDTO struct {
+	Input    string            `json:"input,omitempty"`
+	Filter   map[string]string `json:"filter,omitempty"`
+	OrderBy  string            `json:"orderBy,omitempty"`
+	OrderAsc bool              `json:"orderAsc,omitempty"`
+	RootOnly bool              `json:"rootOnly,omitempty"`
+}
+
+// searchEntitiesResponseDTO is a Yandex Tracker entity search response.
+type searchEntitiesResponseDTO struct {
+	Hits    int         `json:"hits"`
+	Pages   int         `json:"pages"`
+	Values  []entityDTO `json:"values"`
+	OrderBy string      `json:"orderBy,omitempty"`
+}
