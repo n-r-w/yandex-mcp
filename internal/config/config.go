@@ -30,6 +30,9 @@ type Config struct {
 	// CloudOrgID is the Yandex Cloud Organization ID for X-Cloud-Org-Id header.
 	CloudOrgID string
 
+	// CLIProfile is the optional yc CLI profile used for IAM token retrieval.
+	CLIProfile string
+
 	// IAMTokenRefreshPeriod is the period after which the IAM token should be refreshed.
 	IAMTokenRefreshPeriod time.Duration
 
@@ -54,6 +57,7 @@ type envConfig struct {
 	WikiBaseURL          string `env:"YANDEX_WIKI_BASE_URL"`
 	TrackerBaseURL       string `env:"YANDEX_TRACKER_BASE_URL"`
 	CloudOrgID           string `env:"YANDEX_CLOUD_ORG_ID,required"`
+	CLIProfile           string `env:"YANDEX_CLI_PROFILE"`
 	RefreshPeriodHours   int    `env:"YANDEX_IAM_TOKEN_REFRESH_PERIOD" envDefault:"10"`
 	HTTPTimeoutSeconds   int    `env:"YANDEX_HTTP_TIMEOUT" envDefault:"30"`
 	AttachExtensions     string `env:"YANDEX_MCP_ATTACH_EXT"`
@@ -95,6 +99,7 @@ func Load() (*Config, error) {
 		WikiBaseURL:             applyDefault(ec.WikiBaseURL, defaultWikiBaseURL),
 		TrackerBaseURL:          applyDefault(ec.TrackerBaseURL, defaultTrackerBaseURL),
 		CloudOrgID:              ec.CloudOrgID,
+		CLIProfile:              ec.CLIProfile,
 		IAMTokenRefreshPeriod:   resolveRefreshPeriod(ec.RefreshPeriodHours),
 		HTTPTimeout:             time.Duration(ec.HTTPTimeoutSeconds) * time.Second,
 		AttachAllowedExtensions: allowedExtensions,

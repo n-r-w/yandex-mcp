@@ -12,6 +12,7 @@ func TestLoad_AllValuesProvided(t *testing.T) {
 	t.Setenv("YANDEX_WIKI_BASE_URL", "https://wiki.example.com")
 	t.Setenv("YANDEX_TRACKER_BASE_URL", "https://tracker.example.com")
 	t.Setenv("YANDEX_CLOUD_ORG_ID", "org-123")
+	t.Setenv("YANDEX_CLI_PROFILE", "tracker-profile")
 	t.Setenv("YANDEX_IAM_TOKEN_REFRESH_PERIOD", "5")
 
 	cfg, err := Load()
@@ -20,6 +21,7 @@ func TestLoad_AllValuesProvided(t *testing.T) {
 	assert.Equal(t, "https://wiki.example.com", cfg.WikiBaseURL)
 	assert.Equal(t, "https://tracker.example.com", cfg.TrackerBaseURL)
 	assert.Equal(t, "org-123", cfg.CloudOrgID)
+	assert.Equal(t, "tracker-profile", cfg.CLIProfile)
 	assert.Equal(t, 5*time.Hour, cfg.IAMTokenRefreshPeriod)
 }
 
@@ -52,6 +54,7 @@ func TestLoad_DefaultRefreshPeriod(t *testing.T) {
 	cfg, err := Load()
 
 	require.NoError(t, err)
+	assert.Empty(t, cfg.CLIProfile)
 	assert.Equal(t, defaultRefreshHours*time.Hour, cfg.IAMTokenRefreshPeriod)
 }
 

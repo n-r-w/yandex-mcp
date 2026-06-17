@@ -6,6 +6,9 @@ import (
 	"strconv"
 )
 
+// jsonNull is the JSON null literal accepted by custom unmarshaling.
+const jsonNull = "null"
+
 // StringMapToAnyMap converts map[string]string to map[string]any for API request bodies.
 func StringMapToAnyMap(m map[string]string) map[string]any {
 	if m == nil {
@@ -60,7 +63,7 @@ func StringIDsToStrings(ids []StringID) []string {
 // It accepts both JSON string and JSON number values, converting numbers to strings.
 func (s *StringID) UnmarshalJSON(data []byte) error {
 	// Check if it's a null value
-	if string(data) == "null" {
+	if string(data) == jsonNull {
 		return nil
 	}
 

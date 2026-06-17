@@ -38,7 +38,7 @@ var _ apihelpers.ITokenProvider = (*Provider)(nil)
 func NewProvider(cfg *config.Config) *Provider {
 	//nolint:exhaustruct // cache and sync fields intentionally start with zero values
 	return &Provider{
-		executor:      newCommandExecutor(),
+		executor:      newCommandExecutor(cfg.CLIProfile),
 		refreshPeriod: cfg.IAMTokenRefreshPeriod,
 		nowFunc:       time.Now,
 		tokenRegex:    regexp.MustCompile(tokenRegexPattern),

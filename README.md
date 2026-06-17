@@ -118,6 +118,11 @@ After these steps, the executable will be permanently allowed to run on your sys
   * Used to set the organization header required by Yandex APIs.
   * Run `yc organization-manager organization list` to get your organization ID.
 
+- `YANDEX_CLI_PROFILE` (optional)
+  * yc CLI profile used to retrieve IAM tokens.
+  * When empty, yc uses the active profile.
+  * When set, the server runs `yc iam create-token --profile <YANDEX_CLI_PROFILE>`.
+
 - `YANDEX_WIKI_BASE_URL` (optional, default: `https://api.wiki.yandex.net`)
   * Base URL for Yandex Wiki API.
   * Must be an `https://` URL.
@@ -162,12 +167,14 @@ The project supports IAM token authentication via the Yandex Cloud CLI (`yc`) on
 Installation: https://yandex.cloud/en/docs/cli/operations/install-cli
 
 This server obtains IAM tokens by running:
-- `yc iam create-token`
+- `yc iam create-token` when `YANDEX_CLI_PROFILE` is empty.
+- `yc iam create-token --profile <YANDEX_CLI_PROFILE>` when `YANDEX_CLI_PROFILE` is set.
 
 That means:
 
 - You must have the **Yandex Cloud CLI** (`yc`) installed and available in `PATH`.
 - You must have an initialized/authenticated `yc` profile (typically via `yc init`).
+- Set `YANDEX_CLI_PROFILE` when the server must use a specific yc profile instead of the active profile.
 
 Notes:
 
@@ -185,7 +192,7 @@ Official references:
 ### Claude Code
 
 ```bash
-claude mcp add -s user -e YANDEX_CLOUD_ORG_ID={yandex organization id} --transport stdio yandex /path/to/yandex-mcp
+claude mcp add -s user -e YANDEX_CLOUD_ORG_ID={yandex organization id} -e YANDEX_CLI_PROFILE={yc profile name} --transport stdio yandex /path/to/yandex-mcp
 ```
 
 ### VS Code, RooCode, etc.
@@ -194,7 +201,29 @@ claude mcp add -s user -e YANDEX_CLOUD_ORG_ID={yandex organization id} --transpo
 "yandex": {
   "command": "/path/to/yandex-mcp",
   "env": {
-    "YANDEX_CLOUD_ORG_ID": "yandex organization id"
+    "YANDEX_CLOUD_ORG_ID": "yandex organization id",
+    "YANDEX_CLI_PROFILE": "yc profile name"
+  }
+}
+```
+
+### Multiple organizations
+
+When you need to work with two organizations, configure two independent MCP server entries. Each entry should use its own `YANDEX_CLOUD_ORG_ID` and `YANDEX_CLI_PROFILE`.
+
+```json
+"yandex_primary": {
+  "command": "/path/to/yandex-mcp",
+  "env": {
+    "YANDEX_CLOUD_ORG_ID": "primary organization id",
+    "YANDEX_CLI_PROFILE": "primary yc profile"
+  }
+},
+"yandex_partner": {
+  "command": "/path/to/yandex-mcp",
+  "env": {
+    "YANDEX_CLOUD_ORG_ID": "partner organization id",
+    "YANDEX_CLI_PROFILE": "partner yc profile"
   }
 }
 ```
