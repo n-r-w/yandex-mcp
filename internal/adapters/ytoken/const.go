@@ -13,5 +13,6 @@ const ycCommandName = "yc"
 const (
 	ycCommandArgIAM         = "iam"
 	ycCommandArgCreateToken = "create-token"
+	ycCommandArgProfile     = "--profile"
 	tokenRefreshRequestKey  = "token"
 )

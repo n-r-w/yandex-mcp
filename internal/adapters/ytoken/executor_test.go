@@ -10,7 +10,7 @@ import (
 // TestCommandExecutor_ExecuteWrapsExecutionError verifies command execution failures are wrapped with context.
 func TestCommandExecutor_ExecuteWrapsExecutionError(t *testing.T) {
 	t.Setenv("PATH", "")
-	exec := newCommandExecutor()
+	exec := newCommandExecutor("")
 
 	_, err := exec.Execute(t.Context())
 	require.Error(t, err)

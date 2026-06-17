@@ -49,7 +49,7 @@ func TestStringID_UnmarshalJSON(t *testing.T) {
 		},
 		{
 			name:     "null value",
-			json:     `null`,
+			json:     jsonNull,
 			expected: "",
 			wantErr:  false,
 		},
