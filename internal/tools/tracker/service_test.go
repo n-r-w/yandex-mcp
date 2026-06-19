@@ -24,6 +24,7 @@ func TestRegistrator_Register_RegistersOnlyEnabledTrackerTools(t *testing.T) {
 			domain.TrackerToolIssueGet,
 			domain.TrackerToolBoardsList,
 			domain.TrackerToolAttachmentGet,
+			domain.TrackerToolEntityGet,
 		},
 		defaultAttachExtensions,
 		defaultAttachViewExts,
@@ -49,7 +50,7 @@ func TestRegistrator_Register_RegistersOnlyEnabledTrackerTools(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = session.Close() })
 
-	toolNames := make([]string, 0, 3)
+	toolNames := make([]string, 0, 4)
 	boardsToolHasSchema := false
 	for tool, toolErr := range session.Tools(t.Context(), nil) {
 		require.NoError(t, toolErr)
@@ -59,10 +60,11 @@ func TestRegistrator_Register_RegistersOnlyEnabledTrackerTools(t *testing.T) {
 		}
 	}
 
-	assert.Len(t, toolNames, 3)
+	assert.Len(t, toolNames, 4)
 	assert.Contains(t, toolNames, domain.TrackerToolIssueGet.String())
 	assert.Contains(t, toolNames, domain.TrackerToolBoardsList.String())
 	assert.Contains(t, toolNames, domain.TrackerToolAttachmentGet.String())
+	assert.Contains(t, toolNames, domain.TrackerToolEntityGet.String())
 	assert.NotContains(t, toolNames, domain.TrackerToolQueueGet.String())
 	assert.True(t, boardsToolHasSchema)
 }

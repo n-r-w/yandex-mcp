@@ -56,6 +56,36 @@ func (mr *MockITrackerAdapterMockRecorder) CountIssues(ctx, opts any) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountIssues", reflect.TypeOf((*MockITrackerAdapter)(nil).CountIssues), ctx, opts)
 }
 
+// GetAttachment mocks base method.
+func (m *MockITrackerAdapter) GetAttachment(ctx context.Context, attachmentID, fileName string) (*domain.TrackerAttachmentContent, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAttachment", ctx, attachmentID, fileName)
+	ret0, _ := ret[0].(*domain.TrackerAttachmentContent)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAttachment indicates an expected call of GetAttachment.
+func (mr *MockITrackerAdapterMockRecorder) GetAttachment(ctx, attachmentID, fileName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAttachment", reflect.TypeOf((*MockITrackerAdapter)(nil).GetAttachment), ctx, attachmentID, fileName)
+}
+
+// GetAttachmentStream mocks base method.
+func (m *MockITrackerAdapter) GetAttachmentStream(ctx context.Context, attachmentID, fileName string) (*domain.TrackerAttachmentStream, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAttachmentStream", ctx, attachmentID, fileName)
+	ret0, _ := ret[0].(*domain.TrackerAttachmentStream)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAttachmentStream indicates an expected call of GetAttachmentStream.
+func (mr *MockITrackerAdapterMockRecorder) GetAttachmentStream(ctx, attachmentID, fileName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAttachmentStream", reflect.TypeOf((*MockITrackerAdapter)(nil).GetAttachmentStream), ctx, attachmentID, fileName)
+}
+
 // GetCurrentUser mocks base method.
 func (m *MockITrackerAdapter) GetCurrentUser(ctx context.Context) (*domain.TrackerUserDetail, error) {
 	m.ctrl.T.Helper()
@@ -69,6 +99,21 @@ func (m *MockITrackerAdapter) GetCurrentUser(ctx context.Context) (*domain.Track
 func (mr *MockITrackerAdapterMockRecorder) GetCurrentUser(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCurrentUser", reflect.TypeOf((*MockITrackerAdapter)(nil).GetCurrentUser), ctx)
+}
+
+// GetEntity mocks base method.
+func (m *MockITrackerAdapter) GetEntity(ctx context.Context, entityType, entityID string, opts domain.TrackerGetEntityOpts) (*domain.TrackerEntity, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEntity", ctx, entityType, entityID, opts)
+	ret0, _ := ret[0].(*domain.TrackerEntity)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEntity indicates an expected call of GetEntity.
+func (mr *MockITrackerAdapterMockRecorder) GetEntity(ctx, entityType, entityID, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEntity", reflect.TypeOf((*MockITrackerAdapter)(nil).GetEntity), ctx, entityType, entityID, opts)
 }
 
 // GetIssue mocks base method.
@@ -324,6 +369,21 @@ func (m *MockITrackerAdapter) ListUsers(ctx context.Context, opts domain.Tracker
 func (mr *MockITrackerAdapterMockRecorder) ListUsers(ctx, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListUsers", reflect.TypeOf((*MockITrackerAdapter)(nil).ListUsers), ctx, opts)
+}
+
+// SearchEntities mocks base method.
+func (m *MockITrackerAdapter) SearchEntities(ctx context.Context, entityType string, opts domain.TrackerSearchEntitiesOpts) (*domain.TrackerEntitiesPage, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SearchEntities", ctx, entityType, opts)
+	ret0, _ := ret[0].(*domain.TrackerEntitiesPage)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SearchEntities indicates an expected call of SearchEntities.
+func (mr *MockITrackerAdapterMockRecorder) SearchEntities(ctx, entityType, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchEntities", reflect.TypeOf((*MockITrackerAdapter)(nil).SearchEntities), ctx, entityType, opts)
 }
 
 // SearchIssues mocks base method.

@@ -86,3 +86,31 @@ type TrackerListProjectCommentsOpts struct {
 	// Allowed values: all, html, attachments, reactions.
 	Expand string
 }
+
+// TrackerGetEntityOpts represents options for getting a single Tracker entity.
+type TrackerGetEntityOpts struct {
+	// Fields specifies additional entity fields to include.
+	Fields string
+	// Expand specifies additional blocks to include.
+	Expand string
+}
+
+// TrackerSearchEntitiesOpts represents options for searching Tracker entities.
+type TrackerSearchEntitiesOpts struct {
+	// Input specifies a substring in the entity name.
+	Input string
+	// Filter is a field-based filter as key-value string pairs.
+	Filter map[string]string
+	// OrderBy specifies the entity field used for sorting.
+	OrderBy string
+	// OrderAsc specifies ascending sort direction.
+	OrderAsc bool
+	// RootOnly returns only entities that are not nested.
+	RootOnly bool
+	// Fields specifies additional entity fields to include.
+	Fields string
+	// PerPage specifies the number of entities per page.
+	PerPage int
+	// Page specifies the page number.
+	Page int
+}

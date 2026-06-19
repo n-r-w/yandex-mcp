@@ -171,6 +171,36 @@ type listProjectCommentsInputDTO struct {
 	Expand    string `json:"expand,omitempty" jsonschema:"Additional fields to include in response. Possible values: 'all' (all additional fields), 'html' (comment HTML markup), 'attachments' (attached files metadata), 'reactions' (user reactions). Can be combined: 'html,attachments'. Example: 'all'"`
 }
 
+// getEntityInputDTO is the input for tracker_entity_get tool.
+type getEntityInputDTO struct {
+	EntityType string `json:"entity_type" jsonschema:"Entity type. Valid values: 'project', 'portfolio', 'goal',required"`
+	EntityID   string `json:"entity_id" jsonschema:"Entity ID or short ID. Example: '3',required"`
+	Fields     string `json:"fields,omitempty" jsonschema:"Comma-separated additional entity fields to include. For project: 'summary', 'description', 'author', 'lead', 'teamUsers', 'clients', 'followers', 'end', 'metricItems', 'tags', 'parentEntity', 'teamAccess', 'entityStatus', 'lastCommentUpdatedAt', 'start', 'quarter', 'checklistItems', 'issueQueues', 'linkedGoalsCount'. For portfolio: 'summary', 'description', 'author', 'lead', 'teamUsers', 'clients', 'followers', 'end', 'metricItems', 'tags', 'parentEntity', 'teamAccess', 'entityStatus', 'lastCommentUpdatedAt', 'start', 'quarter', 'checklistItems', 'linkedGoalsCount'. For goal: 'summary', 'description', 'author', 'lead', 'teamUsers', 'clients', 'followers', 'end', 'metricItems', 'tags', 'parentEntity', 'teamAccess', 'entityStatus', 'lastCommentUpdatedAt', 'keyResultItems', 'progressPercentage', 'linkedProjectsCount'."`
+	Expand     string `json:"expand,omitempty" jsonschema:"Additional information to include. Valid values: 'attachments'."`
+}
+
+// searchEntitiesInputDTO is the input for tracker_entities_search tool.
+type searchEntitiesInputDTO struct {
+	EntityType string            `json:"entity_type" jsonschema:"Entity type. Valid values: 'project', 'portfolio', 'goal',required"`
+	Input      string            `json:"input,omitempty" jsonschema:"Substring in the entity name."`
+	Filter     map[string]string `json:"filter,omitempty" jsonschema:"Field-based filter with key-value pairs. Values are entity field keys and string values."`
+	OrderBy    string            `json:"order_by,omitempty" jsonschema:"Entity field key used for sorting. Example: 'entityStatus'."`
+	OrderAsc   bool              `json:"order_asc,omitempty" jsonschema:"Sort in ascending order when true."`
+	RootOnly   bool              `json:"root_only,omitempty" jsonschema:"Return only entities that are not nested when true."`
+	Fields     string            `json:"fields,omitempty" jsonschema:"Comma-separated additional entity fields to include. For project: 'summary', 'description', 'author', 'lead', 'teamUsers', 'clients', 'followers', 'end', 'metricItems', 'tags', 'parentEntity', 'teamAccess', 'entityStatus', 'lastCommentUpdatedAt', 'start', 'quarter', 'checklistItems', 'issueQueues', 'linkedGoalsCount'. For portfolio: 'summary', 'description', 'author', 'lead', 'teamUsers', 'clients', 'followers', 'end', 'metricItems', 'tags', 'parentEntity', 'teamAccess', 'entityStatus', 'lastCommentUpdatedAt', 'start', 'quarter', 'checklistItems', 'linkedGoalsCount'. For goal: 'summary', 'description', 'author', 'lead', 'teamUsers', 'clients', 'followers', 'end', 'metricItems', 'tags', 'parentEntity', 'teamAccess', 'entityStatus', 'lastCommentUpdatedAt', 'keyResultItems', 'progressPercentage', 'linkedProjectsCount'."`
+	PerPage    int               `json:"per_page,omitempty" jsonschema:"Number of entities per response page. Valid range: 1-50."`
+	Page       int               `json:"page,omitempty" jsonschema:"Page number. Minimum 1."`
+}
+
+// getGlobalAttachmentInputDTO is the input for tracker_attachment_get tool.
+type getGlobalAttachmentInputDTO struct {
+	AttachmentID string `json:"attachment_id" jsonschema:"Attachment ID as string. Example: '5',required"`
+	FileName     string `json:"file_name" jsonschema:"Attachment file name including extension. Example: 'document.html',required"`
+	SavePath     string `json:"save_path,omitempty" jsonschema:"Absolute path to save the attachment. Required when get_content is false. Exactly one of save_path or get_content must be provided. Example: '/Users/me/attachments/document.html'."`
+	GetContent   bool   `json:"get_content,omitempty" jsonschema:"If true, returns text content in output. Allowed only for text file_name formats. Exactly one of save_path or get_content must be provided. Example: true"`
+	Override     bool   `json:"override,omitempty" jsonschema:"Overwrite existing file if true (default: false). Example: true"`
+}
+
 // Output DTOs for tracker tools.
 
 // issueOutputDTO represents a Tracker issue.
@@ -503,4 +533,26 @@ type projectCommentOutputDTO struct {
 // projectCommentsListOutputDTO is the output for tracker_project_comments_list tool.
 type projectCommentsListOutputDTO struct {
 	Comments []projectCommentOutputDTO `json:"comments"`
+}
+
+// entityOutputDTO represents a Tracker project, portfolio, or goal.
+type entityOutputDTO struct {
+	Self        string                `json:"self"`
+	ID          string                `json:"id"`
+	Version     int                   `json:"version"`
+	ShortID     int                   `json:"short_id"`
+	EntityType  string                `json:"entity_type"`
+	CreatedBy   *userOutputDTO        `json:"created_by,omitempty"`
+	CreatedAt   string                `json:"created_at,omitempty"`
+	UpdatedAt   string                `json:"updated_at,omitempty"`
+	Fields      map[string]any        `json:"fields,omitempty"`
+	Attachments []attachmentOutputDTO `json:"attachments,omitempty"`
+}
+
+// searchEntitiesOutputDTO is the output for tracker_entities_search tool.
+type searchEntitiesOutputDTO struct {
+	Hits    int               `json:"hits"`
+	Pages   int               `json:"pages"`
+	Values  []entityOutputDTO `json:"values"`
+	OrderBy string            `json:"order_by,omitempty"`
 }

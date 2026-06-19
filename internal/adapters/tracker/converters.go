@@ -361,3 +361,37 @@ func projectCommentToTrackerProjectComment(dto projectCommentDTO) domain.Tracker
 		UpdatedBy: userToTrackerUser(dto.UpdatedBy),
 	}
 }
+
+func entityToTrackerEntity(dto entityDTO) domain.TrackerEntity {
+	attachments := make([]domain.TrackerAttachment, len(dto.Attachments))
+	for i := range dto.Attachments {
+		attachments[i] = attachmentToTrackerAttachment(dto.Attachments[i])
+	}
+
+	return domain.TrackerEntity{
+		Self:        dto.Self,
+		ID:          dto.ID.String(),
+		Version:     dto.Version,
+		ShortID:     dto.ShortID,
+		EntityType:  dto.EntityType,
+		CreatedBy:   userToTrackerUser(dto.CreatedBy),
+		CreatedAt:   dto.CreatedAt,
+		UpdatedAt:   dto.UpdatedAt,
+		Fields:      dto.Fields,
+		Attachments: attachments,
+	}
+}
+
+func searchEntitiesResponseToTrackerEntitiesPage(dto searchEntitiesResponseDTO) domain.TrackerEntitiesPage {
+	values := make([]domain.TrackerEntity, len(dto.Values))
+	for i := range dto.Values {
+		values[i] = entityToTrackerEntity(dto.Values[i])
+	}
+
+	return domain.TrackerEntitiesPage{
+		Hits:    dto.Hits,
+		Pages:   dto.Pages,
+		Values:  values,
+		OrderBy: dto.OrderBy,
+	}
+}

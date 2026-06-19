@@ -59,4 +59,25 @@ type ITrackerAdapter interface {
 	ListProjectComments(
 		ctx context.Context, projectID string, opts domain.TrackerListProjectCommentsOpts,
 	) ([]domain.TrackerProjectComment, error)
+	GetEntity(
+		ctx context.Context,
+		entityType string,
+		entityID string,
+		opts domain.TrackerGetEntityOpts,
+	) (*domain.TrackerEntity, error)
+	SearchEntities(
+		ctx context.Context,
+		entityType string,
+		opts domain.TrackerSearchEntitiesOpts,
+	) (*domain.TrackerEntitiesPage, error)
+	GetAttachment(
+		ctx context.Context,
+		attachmentID string,
+		fileName string,
+	) (*domain.TrackerAttachmentContent, error)
+	GetAttachmentStream(
+		ctx context.Context,
+		attachmentID string,
+		fileName string,
+	) (*domain.TrackerAttachmentStream, error)
 }

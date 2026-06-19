@@ -410,6 +410,54 @@ func (c *Client) GetIssueAttachmentStream(
 	}, nil
 }
 
+// GetAttachment downloads a global Tracker attachment.
+func (c *Client) GetAttachment(
+	ctx context.Context,
+	attachmentID string,
+	fileName string,
+) (*domain.TrackerAttachmentContent, error) {
+	u := fmt.Sprintf(
+		"/v3/attachments/%s/%s",
+		url.PathEscape(attachmentID),
+		url.PathEscape(fileName),
+	)
+
+	headers, body, err := c.apiClient.DoGETRaw(ctx, u, "GetAttachment")
+	if err != nil {
+		return nil, err
+	}
+
+	return &domain.TrackerAttachmentContent{
+		FileName:    fileName,
+		ContentType: headers.Get(apihelpers.HeaderContentType),
+		Data:        body,
+	}, nil
+}
+
+// GetAttachmentStream streams a global Tracker attachment.
+func (c *Client) GetAttachmentStream(
+	ctx context.Context,
+	attachmentID string,
+	fileName string,
+) (*domain.TrackerAttachmentStream, error) {
+	u := fmt.Sprintf(
+		"/v3/attachments/%s/%s",
+		url.PathEscape(attachmentID),
+		url.PathEscape(fileName),
+	)
+
+	headers, body, err := c.apiClient.DoGETStream(ctx, u, "GetAttachment")
+	if err != nil {
+		return nil, err
+	}
+
+	return &domain.TrackerAttachmentStream{
+		FileName:    fileName,
+		ContentType: headers.Get(apihelpers.HeaderContentType),
+		Stream:      &attachmentStream{reader: body},
+	}, nil
+}
+
 // GetIssueAttachmentPreview downloads an attachment thumbnail for an issue.
 func (c *Client) GetIssueAttachmentPreview(
 	ctx context.Context,
@@ -600,6 +648,76 @@ func (c *Client) ListProjectComments(
 		result[i] = projectCommentToTrackerProjectComment(comment)
 	}
 	return result, nil
+}
+
+// GetEntity retrieves a Tracker project, portfolio, or goal.
+func (c *Client) GetEntity(
+	ctx context.Context,
+	entityType string,
+	entityID string,
+	opts domain.TrackerGetEntityOpts,
+) (*domain.TrackerEntity, error) {
+	u, err := url.Parse(fmt.Sprintf("/v3/entities/%s/%s", url.PathEscape(entityType), url.PathEscape(entityID)))
+	if err != nil {
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse endpoint path: %w", err))
+	}
+
+	q := u.Query()
+	if opts.Fields != "" {
+		q.Set("fields", opts.Fields)
+	}
+	if opts.Expand != "" {
+		q.Set("expand", opts.Expand)
+	}
+	u.RawQuery = q.Encode()
+
+	var dto entityDTO
+	if _, err = c.apiClient.DoGET(ctx, u.String(), &dto, "GetEntity"); err != nil {
+		return nil, err
+	}
+
+	entity := entityToTrackerEntity(dto)
+	return &entity, nil
+}
+
+// SearchEntities searches Tracker projects, portfolios, or goals.
+func (c *Client) SearchEntities(
+	ctx context.Context,
+	entityType string,
+	opts domain.TrackerSearchEntitiesOpts,
+) (*domain.TrackerEntitiesPage, error) {
+	u, err := url.Parse(fmt.Sprintf("/v3/entities/%s/_search", url.PathEscape(entityType)))
+	if err != nil {
+		return nil, c.apiClient.ErrorLogWrapper(ctx, fmt.Errorf("parse endpoint path: %w", err))
+	}
+
+	q := u.Query()
+	if opts.Fields != "" {
+		q.Set("fields", opts.Fields)
+	}
+	if opts.PerPage > 0 {
+		q.Set("perPage", strconv.Itoa(opts.PerPage))
+	}
+	if opts.Page > 0 {
+		q.Set("page", strconv.Itoa(opts.Page))
+	}
+	u.RawQuery = q.Encode()
+
+	reqBody := searchEntitiesRequestDTO{
+		Input:    opts.Input,
+		Filter:   opts.Filter,
+		OrderBy:  opts.OrderBy,
+		OrderAsc: opts.OrderAsc,
+		RootOnly: opts.RootOnly,
+	}
+
+	var dto searchEntitiesResponseDTO
+	if _, err = c.apiClient.DoPOST(ctx, u.String(), reqBody, &dto, "SearchEntities"); err != nil {
+		return nil, err
+	}
+
+	result := searchEntitiesResponseToTrackerEntitiesPage(dto)
+	return &result, nil
 }
 
 // parseError converts an HTTP error response into a domain.UpstreamError.

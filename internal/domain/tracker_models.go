@@ -304,3 +304,25 @@ type TrackerProjectComment struct {
 	CreatedBy *TrackerUser
 	UpdatedBy *TrackerUser
 }
+
+// TrackerEntity represents a Tracker project, portfolio, or goal.
+type TrackerEntity struct {
+	Self        string
+	ID          string
+	Version     int
+	ShortID     int
+	EntityType  string
+	CreatedBy   *TrackerUser
+	CreatedAt   string
+	UpdatedAt   string
+	Fields      map[string]any
+	Attachments []TrackerAttachment
+}
+
+// TrackerEntitiesPage represents paginated Tracker entity search results.
+type TrackerEntitiesPage struct {
+	Hits    int
+	Pages   int
+	Values  []TrackerEntity
+	OrderBy string
+}

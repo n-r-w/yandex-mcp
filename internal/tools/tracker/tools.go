@@ -7,46 +7,62 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/n-r-w/yandex-mcp/internal/domain"
 	"github.com/n-r-w/yandex-mcp/internal/tools/helpers"
 )
 
-// validateGetAttachmentInput validates attachment download options before any I/O.
+// validateGetAttachmentInput validates issue attachment download options before any I/O.
 func (r *Registrator) validateGetAttachmentInput(input getAttachmentInputDTO) error {
-	trimmedFileName := strings.TrimSpace(input.FileName)
-	trimmedSavePath := strings.TrimSpace(input.SavePath)
-
 	if input.IssueID == "" {
 		return errors.New("issue_id_or_key is required")
 	}
-	if input.AttachmentID == "" {
+	return r.validateAttachmentDownloadInput(input.AttachmentID, input.FileName, input.SavePath, input.GetContent)
+}
+
+// validateGetGlobalAttachmentInput validates global attachment download options before any I/O.
+func (r *Registrator) validateGetGlobalAttachmentInput(input getGlobalAttachmentInputDTO) error {
+	return r.validateAttachmentDownloadInput(input.AttachmentID, input.FileName, input.SavePath, input.GetContent)
+}
+
+// validateAttachmentDownloadInput enforces shared attachment download rules before any I/O.
+func (r *Registrator) validateAttachmentDownloadInput(
+	attachmentID string,
+	fileName string,
+	savePath string,
+	getContent bool,
+) error {
+	trimmedFileName := strings.TrimSpace(fileName)
+	trimmedSavePath := strings.TrimSpace(savePath)
+
+	if attachmentID == "" {
 		return errors.New("attachment_id is required")
 	}
 	if trimmedFileName == "" {
 		return errors.New("file_name is required")
 	}
-	if trimmedFileName != input.FileName {
+	if trimmedFileName != fileName {
 		return errors.New("file_name must not have leading or trailing whitespace")
 	}
-	if trimmedSavePath == "" && !input.GetContent {
+	if trimmedSavePath == "" && !getContent {
 		return errors.New("save_path or get_content is required")
 	}
-	if trimmedSavePath != "" && trimmedSavePath != input.SavePath {
+	if trimmedSavePath != "" && trimmedSavePath != savePath {
 		return errors.New("save_path must not have leading or trailing whitespace")
 	}
-	if trimmedSavePath != "" && input.GetContent {
+	if trimmedSavePath != "" && getContent {
 		return errors.New("save_path and get_content cannot be used together")
 	}
-	if input.GetContent {
-		return r.validateAttachmentViewExtension(input.FileName)
+	if getContent {
+		return r.validateAttachmentViewExtension(fileName)
 	}
 
 	return nil
 }
 
-// saveAttachment streams an attachment to disk after the destination path is prepared.
+// saveAttachment streams an issue attachment to disk after the destination path is prepared.
 func (r *Registrator) saveAttachment(
 	ctx context.Context,
 	input getAttachmentInputDTO,
@@ -54,6 +70,21 @@ func (r *Registrator) saveAttachment(
 	savedPath string,
 ) (*attachmentContentOutputDTO, error) {
 	stream, err := r.adapter.GetIssueAttachmentStream(ctx, input.IssueID, input.AttachmentID, input.FileName)
+	if err != nil {
+		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+	}
+
+	return r.saveAttachmentStreamOutput(ctx, fullPath, savedPath, input.Override, stream)
+}
+
+// saveGlobalAttachment streams a global attachment to disk after the destination path is prepared.
+func (r *Registrator) saveGlobalAttachment(
+	ctx context.Context,
+	input getGlobalAttachmentInputDTO,
+	fullPath string,
+	savedPath string,
+) (*attachmentContentOutputDTO, error) {
+	stream, err := r.adapter.GetAttachmentStream(ctx, input.AttachmentID, input.FileName)
 	if err != nil {
 		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
 	}
@@ -91,7 +122,7 @@ func (r *Registrator) saveAttachmentStreamOutput(
 	}, nil
 }
 
-// loadAttachmentContent loads attachment bytes when the caller requested inline content or metadata only.
+// loadAttachmentContent loads issue attachment bytes when inline content is requested.
 func (r *Registrator) loadAttachmentContent(
 	ctx context.Context,
 	input getAttachmentInputDTO,
@@ -110,12 +141,105 @@ func (r *Registrator) loadAttachmentContent(
 	return mapAttachmentContentToOutput(content, savedPath, inlineContent), nil
 }
 
+// loadGlobalAttachmentContent loads global attachment bytes when inline content is requested.
+func (r *Registrator) loadGlobalAttachmentContent(
+	ctx context.Context,
+	input getGlobalAttachmentInputDTO,
+	savedPath string,
+) (*attachmentContentOutputDTO, error) {
+	content, err := r.adapter.GetAttachment(ctx, input.AttachmentID, input.FileName)
+	if err != nil {
+		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+	}
+
+	inlineContent := ""
+	if input.GetContent {
+		inlineContent = string(content.Data)
+	}
+
+	return mapAttachmentContentToOutput(content, savedPath, inlineContent), nil
+}
+
+// splitCommaSeparatedValues splits and trims a comma-separated tool input value.
+func splitCommaSeparatedValues(value string) []string {
+	if value == "" {
+		return nil
+	}
+
+	parts := strings.Split(value, ",")
+	result := make([]string, 0, len(parts))
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		if trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+	return result
+}
+
+// normalizeAndValidateCommaSeparatedValues enforces documented finite value sets for comma-separated input.
+func normalizeAndValidateCommaSeparatedValues(paramName, value string, allowedValues ...string) (string, error) {
+	values := splitCommaSeparatedValues(value)
+	for _, item := range values {
+		if !slices.Contains(allowedValues, item) {
+			return "", fmt.Errorf("%s values must be one of: %s", paramName, strings.Join(allowedValues, ", "))
+		}
+	}
+	return strings.Join(values, ","), nil
+}
+
+// validateEntityType rejects unsupported Tracker entity types before calling the API.
+func validateEntityType(entityType string) error {
+	switch entityType {
+	case "project", "portfolio", "goal":
+		return nil
+	default:
+		return errors.New("entity_type must be one of: project, portfolio, goal")
+	}
+}
+
+// entityFieldValues returns documented Tracker entity field names for the selected entity type.
+func entityFieldValues(entityType string) []string {
+	common := []string{
+		"summary",
+		"description",
+		"author",
+		"lead",
+		"teamUsers",
+		"clients",
+		"followers",
+		"end",
+		"metricItems",
+		"tags",
+		"parentEntity",
+		"teamAccess",
+		"entityStatus",
+		"lastCommentUpdatedAt",
+	}
+
+	switch entityType {
+	case "project":
+		return append(common, "start", "quarter", "checklistItems", "issueQueues", "linkedGoalsCount")
+	case "portfolio":
+		return append(common, "start", "quarter", "checklistItems", "linkedGoalsCount")
+	case "goal":
+		return append(common, "keyResultItems", "progressPercentage", "linkedProjectsCount")
+	default:
+		return nil
+	}
+}
+
 // getIssue retrieves a Tracker issue by its ID or key.
 func (r *Registrator) getIssue(ctx context.Context, input getIssueInputDTO) (*issueOutputDTO, error) {
 	helpers.TrimStringFields(&input.IssueID, &input.Expand)
 
 	if input.IssueID == "" {
 		return nil, errors.New("issue_id_or_key is required")
+	}
+	var err error
+	input.Expand, err = normalizeAndValidateCommaSeparatedValues("expand", input.Expand, "attachments")
+	if err != nil {
+		return nil, err
 	}
 
 	opts := domain.TrackerGetIssueOpts{
@@ -149,6 +273,11 @@ func (r *Registrator) searchIssues(ctx context.Context, input searchIssuesInputD
 	if input.ScrollTTLMillis < 0 {
 		return nil, errors.New("scroll_ttl_millis must be non-negative")
 	}
+	var err error
+	input.Expand, err = normalizeAndValidateCommaSeparatedValues("expand", input.Expand, "transitions", "attachments")
+	if err != nil {
+		return nil, err
+	}
 
 	opts := domain.TrackerSearchIssuesOpts{
 		Filter:          input.Filter,
@@ -169,6 +298,93 @@ func (r *Registrator) searchIssues(ctx context.Context, input searchIssuesInputD
 	}
 
 	return mapSearchResultToOutput(result), nil
+}
+
+// getEntity retrieves a Tracker project, portfolio, or goal.
+func (r *Registrator) getEntity(ctx context.Context, input getEntityInputDTO) (*entityOutputDTO, error) {
+	helpers.TrimStringFields(&input.EntityType, &input.EntityID, &input.Fields, &input.Expand)
+
+	if input.EntityType == "" {
+		return nil, errors.New("entity_type is required")
+	}
+	if err := validateEntityType(input.EntityType); err != nil {
+		return nil, err
+	}
+	if input.EntityID == "" {
+		return nil, errors.New("entity_id is required")
+	}
+	var err error
+	input.Fields, err = normalizeAndValidateCommaSeparatedValues(
+		"fields",
+		input.Fields,
+		entityFieldValues(input.EntityType)...,
+	)
+	if err != nil {
+		return nil, err
+	}
+	input.Expand, err = normalizeAndValidateCommaSeparatedValues("expand", input.Expand, "attachments")
+	if err != nil {
+		return nil, err
+	}
+
+	entity, err := r.adapter.GetEntity(ctx, input.EntityType, input.EntityID, domain.TrackerGetEntityOpts{
+		Fields: input.Fields,
+		Expand: input.Expand,
+	})
+	if err != nil {
+		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+	}
+
+	return mapEntityToOutput(entity), nil
+}
+
+// searchEntities searches Tracker projects, portfolios, or goals.
+func (r *Registrator) searchEntities(
+	ctx context.Context,
+	input searchEntitiesInputDTO,
+) (*searchEntitiesOutputDTO, error) {
+	helpers.TrimStringFields(&input.EntityType, &input.Input, &input.OrderBy, &input.Fields)
+
+	if input.EntityType == "" {
+		return nil, errors.New("entity_type is required")
+	}
+	if err := validateEntityType(input.EntityType); err != nil {
+		return nil, err
+	}
+	var err error
+	input.Fields, err = normalizeAndValidateCommaSeparatedValues(
+		"fields",
+		input.Fields,
+		entityFieldValues(input.EntityType)...,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if input.PerPage < 0 {
+		return nil, errors.New("per_page must be non-negative")
+	}
+	if input.PerPage > maxEntitiesPerPage {
+		return nil, fmt.Errorf("per_page must not exceed %d", maxEntitiesPerPage)
+	}
+	if input.Page < 0 {
+		return nil, errors.New("page must be non-negative")
+	}
+
+	result, err := r.adapter.SearchEntities(ctx, input.EntityType, domain.TrackerSearchEntitiesOpts{
+		Input:    input.Input,
+		Filter:   input.Filter,
+		OrderBy:  input.OrderBy,
+		OrderAsc: input.OrderAsc,
+		RootOnly: input.RootOnly,
+		Fields:   input.Fields,
+		PerPage:  input.PerPage,
+		Page:     input.Page,
+	})
+	if err != nil {
+		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+	}
+
+	return mapEntitiesPageToOutput(result), nil
 }
 
 // countIssues counts Tracker issues matching the filter or query.
@@ -215,6 +431,21 @@ func (r *Registrator) listQueues(ctx context.Context, input listQueuesInputDTO) 
 	}
 	if input.Page < 0 {
 		return nil, errors.New("page must be non-negative")
+	}
+	var err error
+	input.Expand, err = normalizeAndValidateCommaSeparatedValues(
+		"expand",
+		input.Expand,
+		"projects",
+		"components",
+		"versions",
+		"types",
+		"team",
+		"workflows",
+		"all",
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	opts := domain.TrackerListQueuesOpts{
@@ -270,6 +501,11 @@ func (r *Registrator) listComments(ctx context.Context, input listCommentsInputD
 	if input.PerPage < 0 {
 		return nil, errors.New("per_page must be non-negative")
 	}
+	var err error
+	input.Expand, err = normalizeAndValidateCommaSeparatedValues("expand", input.Expand, "attachments", "html", "all")
+	if err != nil {
+		return nil, err
+	}
 	opts := domain.TrackerListCommentsOpts{
 		Expand:  input.Expand,
 		PerPage: input.PerPage,
@@ -322,6 +558,28 @@ func (r *Registrator) getAttachment(
 	}
 
 	return r.loadAttachmentContent(ctx, input, "")
+}
+
+// getGlobalAttachment downloads a global Tracker attachment.
+func (r *Registrator) getGlobalAttachment(
+	ctx context.Context, input getGlobalAttachmentInputDTO,
+) (*attachmentContentOutputDTO, error) {
+	helpers.TrimStringFields(&input.AttachmentID)
+
+	if err := r.validateGetGlobalAttachmentInput(input); err != nil {
+		return nil, err
+	}
+
+	if strings.TrimSpace(input.SavePath) != "" {
+		fullPath, savedPath, err := r.prepareSavePath(ctx, input.SavePath, input.Override)
+		if err != nil {
+			return nil, err
+		}
+
+		return r.saveGlobalAttachment(ctx, input, fullPath, savedPath)
+	}
+
+	return r.loadGlobalAttachmentContent(ctx, input, "")
 }
 
 // getAttachmentPreview downloads an attachment thumbnail for an issue.
@@ -496,7 +754,20 @@ func (r *Registrator) validateAttachmentExtension(cleanPath string) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("save_path extension is not allowed; allowed extensions: %s", allowedExtensions)
+	return fmt.Errorf(
+		"save_path extension %q is not allowed; allowed extensions: %s",
+		rejectedPathExtension(cleanPath),
+		allowedExtensions,
+	)
+}
+
+// rejectedPathExtension returns the suffix that failed extension allowlist validation.
+func rejectedPathExtension(path string) string {
+	ext := filepath.Ext(path)
+	if ext == "" {
+		return emptyAllowlistLabel
+	}
+	return strings.ToLower(ext)
 }
 
 // validateAttachmentViewExtension blocks unsupported file types for inline viewing.
@@ -754,6 +1025,21 @@ func (r *Registrator) getQueue(ctx context.Context, input getQueueInputDTO) (*qu
 	if input.QueueID == "" {
 		return nil, errors.New("queue_id_or_key is required")
 	}
+	var err error
+	input.Expand, err = normalizeAndValidateCommaSeparatedValues(
+		"expand",
+		input.Expand,
+		"projects",
+		"components",
+		"versions",
+		"types",
+		"team",
+		"workflows",
+		"all",
+	)
+	if err != nil {
+		return nil, err
+	}
 
 	opts := domain.TrackerGetQueueOpts{
 		Expand: input.Expand,
@@ -862,6 +1148,18 @@ func (r *Registrator) listProjectComments(
 
 	if input.ProjectID == "" {
 		return nil, errors.New("project_id is required")
+	}
+	var err error
+	input.Expand, err = normalizeAndValidateCommaSeparatedValues(
+		"expand",
+		input.Expand,
+		"all",
+		"html",
+		"attachments",
+		"reactions",
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	opts := domain.TrackerListProjectCommentsOpts{

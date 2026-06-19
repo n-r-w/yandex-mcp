@@ -174,7 +174,7 @@ func TestTools_SearchIssues(t *testing.T) {
 				Filter:          map[string]string{" status ": " open "},
 				Query:           "Queue: TEST",
 				Order:           "+updated",
-				Expand:          "transitions",
+				Expand:          "transitions,attachments",
 				PerPage:         20,
 				Page:            2,
 				ScrollType:      "sorted",
@@ -188,7 +188,7 @@ func TestTools_SearchIssues(t *testing.T) {
 			Filter:          map[string]string{" status ": " open "},
 			Query:           " Queue: TEST ",
 			Order:           " +updated ",
-			Expand:          " transitions ",
+			Expand:          " transitions, attachments ",
 			PerPage:         20,
 			Page:            2,
 			ScrollType:      " sorted ",
@@ -206,6 +206,69 @@ func TestTools_SearchIssues(t *testing.T) {
 		assert.Equal(t, "token456", result.ScrollToken)
 		assert.Equal(t, "https://api/next", result.NextLink)
 	})
+}
+
+func TestTools_ExpandValidation(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		call func(*Registrator) error
+	}{
+		{
+			name: "get_issue",
+			call: func(reg *Registrator) error {
+				_, err := reg.getIssue(t.Context(), getIssueInputDTO{IssueID: "TEST-1", Expand: "comments"})
+				return err
+			},
+		},
+		{
+			name: "search_issues",
+			call: func(reg *Registrator) error {
+				_, err := reg.searchIssues(t.Context(), searchIssuesInputDTO{Expand: "comments"})
+				return err
+			},
+		},
+		{
+			name: "list_queues",
+			call: func(reg *Registrator) error {
+				_, err := reg.listQueues(t.Context(), listQueuesInputDTO{Expand: "lead"})
+				return err
+			},
+		},
+		{
+			name: "list_comments",
+			call: func(reg *Registrator) error {
+				_, err := reg.listComments(t.Context(), listCommentsInputDTO{IssueID: "TEST-1", Expand: "reactions"})
+				return err
+			},
+		},
+		{
+			name: "get_queue",
+			call: func(reg *Registrator) error {
+				_, err := reg.getQueue(t.Context(), getQueueInputDTO{QueueID: "TEST", Expand: "attachments"})
+				return err
+			},
+		},
+		{
+			name: "list_project_comments",
+			call: func(reg *Registrator) error {
+				_, err := reg.listProjectComments(t.Context(), listProjectCommentsInputDTO{ProjectID: "3", Expand: "transitions"})
+				return err
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			reg, _ := newTrackerToolsTestSetup(t)
+
+			err := tt.call(reg)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "expand values must be one of")
+		})
+	}
 }
 
 func TestTools_CountIssues(t *testing.T) {
@@ -322,14 +385,14 @@ func TestTools_ListQueues(t *testing.T) {
 
 		mockAdapter.EXPECT().
 			ListQueues(gomock.Any(), domain.TrackerListQueuesOpts{
-				Expand:  "lead",
+				Expand:  "team",
 				PerPage: 10,
 				Page:    1,
 			}).
 			Return(expectedResult, nil)
 
 		result, err := reg.listQueues(t.Context(), listQueuesInputDTO{
-			Expand:  " lead ",
+			Expand:  " team ",
 			PerPage: 10,
 			Page:    1,
 		})
@@ -916,7 +979,7 @@ func TestTools_GetAttachment(t *testing.T) {
 			SavePath:     filepath.Join(tmpDir, "attachment.exe"),
 		})
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "save_path extension is not allowed")
+		assert.Contains(t, err.Error(), `save_path extension ".exe" is not allowed`)
 		assert.Contains(t, err.Error(), "allowed extensions")
 		assert.Contains(t, err.Error(), "txt")
 	})
@@ -1857,5 +1920,205 @@ func TestTools_ListProjectComments(t *testing.T) {
 		assert.Contains(t, errStr, domain.ServiceTracker)
 		assert.Contains(t, errStr, "HTTP 404")
 		assert.NotContains(t, errStr, "secrets")
+	})
+}
+
+func TestTools_GetEntity(t *testing.T) {
+	t.Parallel()
+
+	t.Run("validation/entity_type_required", func(t *testing.T) {
+		t.Parallel()
+		reg, _ := newTrackerToolsTestSetup(t)
+
+		_, err := reg.getEntity(t.Context(), getEntityInputDTO{EntityID: "3"})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "entity_type is required")
+	})
+
+	t.Run("validation/entity_type_allowed", func(t *testing.T) {
+		t.Parallel()
+		reg, _ := newTrackerToolsTestSetup(t)
+
+		_, err := reg.getEntity(t.Context(), getEntityInputDTO{EntityType: "issue", EntityID: "3"})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "entity_type must be one of")
+	})
+
+	t.Run("validation/entity_id_required", func(t *testing.T) {
+		t.Parallel()
+		reg, _ := newTrackerToolsTestSetup(t)
+
+		_, err := reg.getEntity(t.Context(), getEntityInputDTO{EntityType: "project"})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "entity_id is required")
+	})
+
+	t.Run("validation/expand_allowed", func(t *testing.T) {
+		t.Parallel()
+		reg, _ := newTrackerToolsTestSetup(t)
+
+		_, err := reg.getEntity(t.Context(), getEntityInputDTO{
+			EntityType: "project",
+			EntityID:   "3",
+			Expand:     "comments",
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "expand values must be one of")
+	})
+
+	t.Run("validation/project_fields_reject_goal_only_fields", func(t *testing.T) {
+		t.Parallel()
+		reg, _ := newTrackerToolsTestSetup(t)
+
+		_, err := reg.getEntity(t.Context(), getEntityInputDTO{
+			EntityType: "project",
+			EntityID:   "3",
+			Fields:     "summary,keyResultItems,progressPercentage,linkedProjectsCount",
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "fields values must be one of")
+		assert.Contains(t, err.Error(), "issueQueues")
+		assert.NotContains(t, err.Error(), "keyResultItems")
+	})
+
+	t.Run("adapter/call_with_fields_and_expand", func(t *testing.T) {
+		t.Parallel()
+		reg, mockAdapter := newTrackerToolsTestSetup(t)
+
+		mockAdapter.EXPECT().
+			GetEntity(gomock.Any(), "project", "3", domain.TrackerGetEntityOpts{
+				Fields: "summary,description",
+				Expand: "attachments",
+			}).
+			Return(&domain.TrackerEntity{
+				ID:         "entity-1",
+				ShortID:    3,
+				EntityType: "project",
+				Fields:     map[string]any{"summary": "Apple gift card"},
+				Attachments: []domain.TrackerAttachment{
+					{ID: "5", Name: "full.html", ContentURL: "https://api/attachments/5/full.html"},
+				},
+			}, nil)
+
+		result, err := reg.getEntity(t.Context(), getEntityInputDTO{
+			EntityType: " project ",
+			EntityID:   " 3 ",
+			Fields:     "summary, description",
+			Expand:     " attachments ",
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "entity-1", result.ID)
+		assert.Equal(t, 3, result.ShortID)
+		assert.Equal(t, "Apple gift card", result.Fields["summary"])
+		require.Len(t, result.Attachments, 1)
+		assert.Equal(t, "5", result.Attachments[0].ID)
+	})
+}
+
+func TestTools_SearchEntities(t *testing.T) {
+	t.Parallel()
+
+	t.Run("validation/per_page_max", func(t *testing.T) {
+		t.Parallel()
+		reg, _ := newTrackerToolsTestSetup(t)
+
+		_, err := reg.searchEntities(t.Context(), searchEntitiesInputDTO{EntityType: "project", PerPage: 51})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "per_page must not exceed 50")
+	})
+
+	t.Run("adapter/call_with_filter_and_fields", func(t *testing.T) {
+		t.Parallel()
+		reg, mockAdapter := newTrackerToolsTestSetup(t)
+
+		mockAdapter.EXPECT().
+			SearchEntities(gomock.Any(), "project", domain.TrackerSearchEntitiesOpts{
+				Input:    "Apple",
+				Filter:   map[string]string{"entityStatus": "draft"},
+				OrderBy:  "entityStatus",
+				OrderAsc: true,
+				RootOnly: true,
+				Fields:   "summary,entityStatus",
+				PerPage:  10,
+				Page:     2,
+			}).
+			Return(&domain.TrackerEntitiesPage{
+				Hits:    1,
+				Pages:   1,
+				OrderBy: "entityStatus",
+				Values:  []domain.TrackerEntity{{ID: "entity-1", ShortID: 3, EntityType: "project"}},
+			}, nil)
+
+		result, err := reg.searchEntities(t.Context(), searchEntitiesInputDTO{
+			EntityType: " project ",
+			Input:      " Apple ",
+			Filter:     map[string]string{"entityStatus": "draft"},
+			OrderBy:    " entityStatus ",
+			OrderAsc:   true,
+			RootOnly:   true,
+			Fields:     "summary, entityStatus",
+			PerPage:    10,
+			Page:       2,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, 1, result.Hits)
+		assert.Equal(t, "entityStatus", result.OrderBy)
+		require.Len(t, result.Values, 1)
+		assert.Equal(t, "entity-1", result.Values[0].ID)
+	})
+}
+
+func TestTools_GetGlobalAttachment(t *testing.T) {
+	t.Parallel()
+
+	t.Run("validation/attachment_id_required", func(t *testing.T) {
+		t.Parallel()
+		reg, _ := newTrackerToolsTestSetup(t)
+
+		_, err := reg.getGlobalAttachment(t.Context(), getGlobalAttachmentInputDTO{FileName: "file.txt", GetContent: true})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "attachment_id is required")
+	})
+
+	t.Run("validation/save_path_extension_not_allowed_lists_allowed_extensions", func(t *testing.T) {
+		t.Parallel()
+		reg, _ := newTrackerToolsTestSetup(t)
+		tmpDir := t.TempDir()
+		reg.allowedDirs = []string{tmpDir}
+
+		_, err := reg.getGlobalAttachment(t.Context(), getGlobalAttachmentInputDTO{
+			AttachmentID: "5",
+			FileName:     "file.exe",
+			SavePath:     filepath.Join(tmpDir, "file.exe"),
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), `save_path extension ".exe" is not allowed`)
+		assert.Contains(t, err.Error(), "allowed extensions")
+		assert.Contains(t, err.Error(), "txt")
+		assert.Contains(t, err.Error(), "png")
+	})
+
+	t.Run("adapter/inline_content", func(t *testing.T) {
+		t.Parallel()
+		reg, mockAdapter := newTrackerToolsTestSetup(t)
+
+		mockAdapter.EXPECT().
+			GetAttachment(gomock.Any(), "5", "file.txt").
+			Return(&domain.TrackerAttachmentContent{
+				FileName:    "file.txt",
+				ContentType: "text/plain",
+				Data:        []byte("hello"),
+			}, nil)
+
+		result, err := reg.getGlobalAttachment(t.Context(), getGlobalAttachmentInputDTO{
+			AttachmentID: " 5 ",
+			FileName:     "file.txt",
+			GetContent:   true,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "file.txt", result.FileName)
+		assert.Equal(t, "text/plain", result.ContentType)
+		assert.Equal(t, "hello", result.Content)
+		assert.EqualValues(t, 5, result.Size)
 	})
 }

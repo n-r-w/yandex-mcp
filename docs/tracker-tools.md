@@ -89,6 +89,7 @@ Searches Yandex Tracker issues using filter or query.
 
 - `filter` (object, optional): Field-based filter object with key-value pairs.
   - Note: the tool requires all filter values to be strings.
+  - Project issues can be searched with `filter.project`, for example `{"project":"3"}`.
 - `query` (string, optional): Query language filter string (Yandex Tracker query syntax).
 - `order` (string, optional): Sorting direction and field.
   - Format: `+<field_key>` or `-<field_key>`
@@ -575,3 +576,95 @@ Returns `ProjectCommentsListOutput`:
 - `updated_at` (string, optional)
 - `created_by` (object, optional): `UserOutput`
 - `updated_by` (object, optional): `UserOutput`
+
+## tracker_entity_get
+
+Gets a Yandex Tracker project, portfolio, or goal by ID or short ID.
+
+### Input
+
+- `entity_type` (string, required): Entity type.
+  - Allowed values: `project`, `portfolio`, `goal`
+- `entity_id` (string, required): Entity ID or short ID.
+- `fields` (string, optional): Comma-separated additional entity fields to include.
+  - For `project`: `summary`, `description`, `author`, `lead`, `teamUsers`, `clients`, `followers`, `end`, `metricItems`, `tags`, `parentEntity`, `teamAccess`, `entityStatus`, `lastCommentUpdatedAt`, `start`, `quarter`, `checklistItems`, `issueQueues`, `linkedGoalsCount`
+  - For `portfolio`: `summary`, `description`, `author`, `lead`, `teamUsers`, `clients`, `followers`, `end`, `metricItems`, `tags`, `parentEntity`, `teamAccess`, `entityStatus`, `lastCommentUpdatedAt`, `start`, `quarter`, `checklistItems`, `linkedGoalsCount`
+  - For `goal`: `summary`, `description`, `author`, `lead`, `teamUsers`, `clients`, `followers`, `end`, `metricItems`, `tags`, `parentEntity`, `teamAccess`, `entityStatus`, `lastCommentUpdatedAt`, `keyResultItems`, `progressPercentage`, `linkedProjectsCount`
+- `expand` (string, optional): Additional information to include.
+  - Allowed values: `attachments`
+
+### Output
+
+Returns `EntityOutput`:
+
+- `self` (string)
+- `id` (string)
+- `version` (integer)
+- `short_id` (integer)
+- `entity_type` (string)
+- `created_by` (object, optional): `UserOutput`
+- `created_at` (string, optional)
+- `updated_at` (string, optional)
+- `fields` (object, optional): Entity fields requested through `fields`.
+- `attachments` (array of object, optional): array of `AttachmentOutput`
+
+## tracker_entities_search
+
+Searches Yandex Tracker projects, portfolios, or goals.
+
+### Input
+
+- `entity_type` (string, required): Entity type.
+  - Allowed values: `project`, `portfolio`, `goal`
+- `input` (string, optional): Substring in the entity name.
+- `filter` (object, optional): Field-based filter object with key-value pairs.
+  - Note: the tool requires all filter values to be strings.
+- `order_by` (string, optional): Entity field key used for sorting.
+- `order_asc` (boolean, optional): Sort in ascending order when true.
+- `root_only` (boolean, optional): Return only entities that are not nested when true.
+- `fields` (string, optional): Comma-separated additional entity fields to include.
+  - For `project`: `summary`, `description`, `author`, `lead`, `teamUsers`, `clients`, `followers`, `end`, `metricItems`, `tags`, `parentEntity`, `teamAccess`, `entityStatus`, `lastCommentUpdatedAt`, `start`, `quarter`, `checklistItems`, `issueQueues`, `linkedGoalsCount`
+  - For `portfolio`: `summary`, `description`, `author`, `lead`, `teamUsers`, `clients`, `followers`, `end`, `metricItems`, `tags`, `parentEntity`, `teamAccess`, `entityStatus`, `lastCommentUpdatedAt`, `start`, `quarter`, `checklistItems`, `linkedGoalsCount`
+  - For `goal`: `summary`, `description`, `author`, `lead`, `teamUsers`, `clients`, `followers`, `end`, `metricItems`, `tags`, `parentEntity`, `teamAccess`, `entityStatus`, `lastCommentUpdatedAt`, `keyResultItems`, `progressPercentage`, `linkedProjectsCount`
+- `per_page` (integer, optional): Number of entities per response page.
+  - Tool validation: Valid range: 1-50
+- `page` (integer, optional): Page number.
+  - Tool validation: must be non-negative.
+
+### Output
+
+Returns `SearchEntitiesOutput`:
+
+- `hits` (integer)
+- `pages` (integer)
+- `values` (array of object): array of `EntityOutput`
+- `order_by` (string, optional)
+
+## tracker_attachment_get
+
+Downloads a Yandex Tracker attachment by attachment ID and file name.
+
+Use this tool for attachments returned by `tracker_entity_get` with `expand=attachments`.
+
+### Input
+
+- `attachment_id` (string, required): Attachment ID.
+- `file_name` (string, required): Attachment file name including extension.
+- `save_path` (string, optional): Absolute path to save the attachment.
+  - Required when `get_content` is false.
+  - Cannot be used together with `get_content`.
+  - The same directory and extension restrictions as `tracker_issue_attachment_get` apply.
+- `get_content` (boolean, optional): Return text content inline.
+  - Allowed only for configured inline-view text extensions.
+  - Cannot be used together with `save_path`.
+- `override` (boolean, optional): Overwrite an existing file.
+
+### Output
+
+Returns `AttachmentContentOutput`:
+
+- `file_name` (string, optional)
+- `content_type` (string, optional)
+- `saved_path` (string, optional)
+- `content` (string, optional)
+- `size` (integer)
