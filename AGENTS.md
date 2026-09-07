@@ -10,7 +10,7 @@ THIS IS A NEW PROJECT, NOT IN PRODUCTION YET. NO DATA IN DATABASE YET. FEEL FREE
 2. Yandex Wiki
 
 ## Tech stack
-1. go 1.25.5
+1. go 1.26
 2. `github.com/modelcontextprotocol/go-sdk` for MCP server implementation
 3. `github.com/stretchr/testify` for tests
 4. `go.uber.org/mock` (no custom mocks, `//go:generate` directives in interface files)
@@ -46,9 +46,10 @@ THIS IS A NEW PROJECT, NOT IN PRODUCTION YET. NO DATA IN DATABASE YET. FEEL FREE
 7. Use `t.Context()` instead of `context.Background()` in tests
 
 ## Documentation
-1. Yandex Tracker Tools: `docs/tracker-tools.md`
-2. Yandex Wiki Tools: `docs/wiki-tools.md`
-3. Yandex API reference, golang MCP SDK: `docs/research/`
+1. Write in English
+2. Yandex Tracker Tools: `docs/tracker-tools.md`
+3. Yandex Wiki Tools: `docs/wiki-tools.md`
+4. Yandex API reference, golang MCP SDK: `docs/research/`
 
 ## Environment Variables (.env)
 1. `YANDEX_WIKI_BASE_URL`: Base URL for Yandex Wiki API
