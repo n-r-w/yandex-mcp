@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-//go:generate go run go.uber.org/mock/mockgen@v0.6.0 -source=interfaces.go -destination=mock_interfaces.go -package=apihelpers
+//go:generate go tool mockgen -source=interfaces.go -destination=mock_interfaces.go -package=apihelpers
 
 // ITokenProvider provides IAM tokens for API authentication.
 type ITokenProvider interface {

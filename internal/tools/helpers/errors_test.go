@@ -32,8 +32,10 @@ func TestToSafeError(t *testing.T) {
 			wantContains: "HTTP 500",
 		},
 		{
-			name:         "decode response error",
-			err:          errors.New("decode response: json: cannot unmarshal number into Go struct field Queue.id of type string"),
+			name: "decode response error",
+			err: errors.New(
+				"decode response: json: cannot unmarshal number into Go struct field Queue.id of type string",
+			),
 			serviceName:  domain.ServiceTracker,
 			wantContains: "decode response:",
 		},

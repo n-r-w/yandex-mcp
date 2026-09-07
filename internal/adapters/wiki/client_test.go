@@ -2,7 +2,7 @@
 package wiki
 
 import (
-	"encoding/json"
+	"encoding/json/v2"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -43,7 +43,7 @@ func TestClient_HeaderInjection(t *testing.T) {
 		capturedHeaders = r.Header.Clone()
 		w.Header().Set("Content-Type", "application/json")
 		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode(pageDTO{ID: "1", Title: "Test"})
+		json.MarshalWrite(w, pageDTO{ID: "1", Title: "Test"})
 	}))
 	t.Cleanup(func() {
 		server.Close()
@@ -132,7 +132,7 @@ func TestClient_GetPageBySlug_Fields(t *testing.T) {
 		capturedURL = r.URL.String()
 		w.Header().Set("Content-Type", "application/json")
 		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode(pageDTO{ID: "1", Slug: "test/page"})
+		json.MarshalWrite(w, pageDTO{ID: "1", Slug: "test/page"})
 	}))
 	t.Cleanup(func() {
 		server.Close()
@@ -142,7 +142,11 @@ func TestClient_GetPageBySlug_Fields(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	page, err := client.GetPageBySlug(t.Context(), "test/page", domain.WikiGetPageOpts{Fields: []string{"content", "attributes"}})
+	page, err := client.GetPageBySlug(
+		t.Context(),
+		"test/page",
+		domain.WikiGetPageOpts{Fields: []string{"content", "attributes"}},
+	)
 	require.NoError(t, err)
 
 	assert.Contains(t, capturedURL, "slug=test%2Fpage")
@@ -162,7 +166,7 @@ func TestClient_GetPageBySlug_RaiseOnRedirect(t *testing.T) {
 		capturedURL = r.URL.String()
 		w.Header().Set("Content-Type", "application/json")
 		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode(pageDTO{ID: "1", Slug: "test/page"})
+		json.MarshalWrite(w, pageDTO{ID: "1", Slug: "test/page"})
 	}))
 	t.Cleanup(func() {
 		server.Close()
@@ -195,7 +199,7 @@ func TestClient_ListPageResources_Pagination(t *testing.T) {
 			PrevCursor: "prev-cursor-xyz",
 		}
 		//nolint:errcheck // test helper
-		json.NewEncoder(w).Encode(resp)
+		json.MarshalWrite(w, resp)
 	}))
 	t.Cleanup(func() {
 		server.Close()
@@ -240,7 +244,7 @@ func TestClient_ListPageResources_EnforcesMaxPageSize(t *testing.T) {
 		capturedURL = r.URL.String()
 		w.Header().Set("Content-Type", "application/json")
 		//nolint:errcheck // test helper
-		json.NewEncoder(w).Encode(resourcesResponseDTO{
+		json.MarshalWrite(w, resourcesResponseDTO{
 			Items:      nil,
 			NextCursor: "",
 			PrevCursor: "",
@@ -311,7 +315,7 @@ func TestClient_ListPageResources_ResourceUnionMapping(t *testing.T) {
 			PrevCursor: "",
 		}
 		//nolint:errcheck // test helper
-		json.NewEncoder(w).Encode(resp)
+		json.MarshalWrite(w, resp)
 	}))
 	t.Cleanup(func() {
 		server.Close()
@@ -386,7 +390,7 @@ func TestClient_ListPageGrids_Pagination(t *testing.T) {
 			PrevCursor: "",
 		}
 		//nolint:errcheck // test helper
-		json.NewEncoder(w).Encode(resp)
+		json.MarshalWrite(w, resp)
 	}))
 	t.Cleanup(func() {
 		server.Close()
@@ -425,7 +429,7 @@ func TestClient_GetGridByID_WithOptions(t *testing.T) {
 		capturedURL = r.URL.String()
 		w.Header().Set("Content-Type", "application/json")
 		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode(gridDTO{
+		json.MarshalWrite(w, gridDTO{
 			ID:    "abc-123",
 			Title: "Test Grid",
 		})
@@ -471,7 +475,7 @@ func TestClient_GetPageByID_Success(t *testing.T) {
 		capturedURL = r.URL.String()
 		w.Header().Set("Content-Type", "application/json")
 		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode(pageDTO{
+		json.MarshalWrite(w, pageDTO{
 			ID:       "42",
 			PageType: "page",
 			Slug:     "users/test",
@@ -509,7 +513,7 @@ func TestClient_GetPageByID_RaiseOnRedirect(t *testing.T) {
 		capturedURL = r.URL.String()
 		w.Header().Set("Content-Type", "application/json")
 		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode(pageDTO{ID: "42", Title: "Test Page"})
+		json.MarshalWrite(w, pageDTO{ID: "42", Title: "Test Page"})
 	}))
 	t.Cleanup(func() {
 		server.Close()
@@ -561,7 +565,7 @@ func TestClient_FullConfig(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode(pageDTO{ID: "1", Title: "Test"})
+		json.MarshalWrite(w, pageDTO{ID: "1", Title: "Test"})
 	}))
 	t.Cleanup(func() {
 		server.Close()

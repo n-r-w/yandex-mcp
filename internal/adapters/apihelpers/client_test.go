@@ -102,7 +102,12 @@ func TestResolveRequestURL_Validation(t *testing.T) {
 		wantErr      bool
 		wantURL      string
 	}{
-		{name: "valid relative endpoint", endpointPath: "/v1/pages?x=1", wantErr: false, wantURL: "https://api.example.test/v1/pages?x=1"},
+		{
+			name:         "valid relative endpoint",
+			endpointPath: "/v1/pages?x=1",
+			wantErr:      false,
+			wantURL:      "https://api.example.test/v1/pages?x=1",
+		},
 		{name: "empty endpoint", endpointPath: "", wantErr: true, wantURL: ""},
 		{name: "absolute endpoint", endpointPath: "https://evil.test/p", wantErr: true, wantURL: ""},
 		{name: "host escape endpoint", endpointPath: "//evil.test/p", wantErr: true, wantURL: ""},

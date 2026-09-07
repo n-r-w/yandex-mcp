@@ -1,7 +1,7 @@
 package tracker
 
 import (
-	"encoding/json"
+	"encoding/json/v2"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -43,7 +43,7 @@ func TestClient_HeaderInjection(t *testing.T) {
 		capturedHeaders = r.Header.Clone()
 		w.Header().Set("Content-Type", "application/json")
 		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode(issueDTO{ID: "1", Key: "TEST-1"})
+		json.MarshalWrite(w, issueDTO{ID: "1", Key: "TEST-1"})
 	}))
 	t.Cleanup(func() {
 		server.Close()
@@ -78,7 +78,7 @@ func TestClient_HeaderInjection_POST(t *testing.T) {
 		capturedHeaders = r.Header.Clone()
 		w.Header().Set("Content-Type", "application/json")
 		//nolint:errcheck // test helper
-		json.NewEncoder(w).Encode([]issueDTO{})
+		json.MarshalWrite(w, []issueDTO{})
 	}))
 	t.Cleanup(func() {
 		server.Close()
@@ -172,7 +172,7 @@ func TestClient_GetIssue_WithExpand(t *testing.T) {
 		capturedMethod = r.Method
 		w.Header().Set("Content-Type", "application/json")
 		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode(issueDTO{ID: "42", Key: "TEST-42", Summary: "Test Issue"})
+		json.MarshalWrite(w, issueDTO{ID: "42", Key: "TEST-42", Summary: "Test Issue"})
 	}))
 	t.Cleanup(func() {
 		server.Close()
@@ -205,7 +205,7 @@ func TestClient_GetEntity_WithFieldsAndAttachments(t *testing.T) {
 		capturedMethod = r.Method
 		w.Header().Set("Content-Type", "application/json")
 		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode(entityDTO{
+		json.MarshalWrite(w, entityDTO{
 			Self:       "https://api.tracker.yandex.net/v3/entities/project/entity-1",
 			ID:         "entity-1",
 			Version:    14,
@@ -256,11 +256,11 @@ func TestClient_SearchEntities(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedURL = r.URL.String()
 		capturedMethod = r.Method
-		_ = json.NewDecoder(r.Body).Decode(&capturedBody)
+		_ = json.UnmarshalRead(r.Body, &capturedBody)
 
 		w.Header().Set("Content-Type", "application/json")
 		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode(searchEntitiesResponseDTO{
+		json.MarshalWrite(w, searchEntitiesResponseDTO{
 			Hits:    1,
 			Pages:   1,
 			OrderBy: "entityStatus",
@@ -314,13 +314,13 @@ func TestClient_SearchIssues_StandardPagination(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedURL = r.URL.String()
 		capturedMethod = r.Method
-		_ = json.NewDecoder(r.Body).Decode(&capturedBody)
+		_ = json.UnmarshalRead(r.Body, &capturedBody)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set(headerXTotalCount, "100")
 		w.Header().Set(headerXTotalPages, "5")
 		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode([]issueDTO{
+		json.MarshalWrite(w, []issueDTO{
 			{ID: "1", Key: "TEST-1"},
 			{ID: "2", Key: "TEST-2"},
 		})
@@ -374,7 +374,7 @@ func TestClient_SearchIssues_ScrollPagination(t *testing.T) {
 		w.Header().Set(headerLink, `</v3/issues/_search?scrollId=scroll-id-abc123>; rel="next"`)
 		w.Header().Set(headerXTotalCount, "50000")
 		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode([]issueDTO{{ID: "1", Key: "TEST-1"}})
+		json.MarshalWrite(w, []issueDTO{{ID: "1", Key: "TEST-1"}})
 	}))
 	t.Cleanup(func() {
 		server.Close()
@@ -415,7 +415,7 @@ func TestClient_SearchIssues_ScrollPagination_SubsequentRequest(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set(headerXScrollID, "scroll-id-next")
 		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode([]issueDTO{{ID: "501", Key: "TEST-501"}})
+		json.MarshalWrite(w, []issueDTO{{ID: "501", Key: "TEST-501"}})
 	}))
 	t.Cleanup(func() {
 		server.Close()
@@ -449,7 +449,7 @@ func TestClient_CountIssues_WithFilter(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedURL = r.URL.String()
 		capturedMethod = r.Method
-		_ = json.NewDecoder(r.Body).Decode(&capturedBody)
+		_ = json.UnmarshalRead(r.Body, &capturedBody)
 
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte("5221186"))
@@ -482,7 +482,7 @@ func TestClient_CountIssues_WithQuery(t *testing.T) {
 
 	var capturedBody map[string]any
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_ = json.NewDecoder(r.Body).Decode(&capturedBody)
+		_ = json.UnmarshalRead(r.Body, &capturedBody)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte("42"))
 	}))
@@ -517,7 +517,7 @@ func TestClient_ListIssueTransitions(t *testing.T) {
 		capturedMethod = r.Method
 		w.Header().Set("Content-Type", "application/json")
 		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode([]transitionDTO{
+		json.MarshalWrite(w, []transitionDTO{
 			{
 				ID:      "start_progress",
 				Display: "Start Progress",
@@ -778,7 +778,7 @@ func TestClient_ListIssueComments_WithPagination(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set(headerLink, `</v3/issues/TEST-1/comments?id=123>; rel="next"`)
 		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode([]commentDTO{
+		json.MarshalWrite(w, []commentDTO{
 			{ID: "100", LongID: "long-100", Text: "First comment"},
 			{ID: "101", LongID: "long-101", Text: "Second comment"},
 		})
@@ -1216,7 +1216,7 @@ func TestClient_IssueID_PathEscaping(t *testing.T) {
 		capturedRawURL = r.RequestURI
 		w.Header().Set("Content-Type", "application/json")
 		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode(issueDTO{ID: "1", Key: "TEST-1"})
+		json.MarshalWrite(w, issueDTO{ID: "1", Key: "TEST-1"})
 	}))
 	t.Cleanup(func() {
 		server.Close()
@@ -1242,10 +1242,10 @@ func TestClient_SearchIssues_QueryLanguage(t *testing.T) {
 
 	var capturedBody map[string]any
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_ = json.NewDecoder(r.Body).Decode(&capturedBody)
+		_ = json.UnmarshalRead(r.Body, &capturedBody)
 		w.Header().Set("Content-Type", "application/json")
 		//nolint:errcheck // test helper
-		json.NewEncoder(w).Encode([]issueDTO{})
+		json.MarshalWrite(w, []issueDTO{})
 	}))
 	t.Cleanup(func() {
 		server.Close()

@@ -868,7 +868,10 @@ func (r *Registrator) validateHomeTopLevelDir(
 			return r.logError(ctx, fmt.Errorf("resolve save_path: %w", hiddenErr))
 		}
 		if hidden {
-			return fmt.Errorf("save_path must not be within hidden top-level home directory; allowed paths: %s", allowedPaths)
+			return fmt.Errorf(
+				"save_path must not be within hidden top-level home directory; allowed paths: %s",
+				allowedPaths,
+			)
 		}
 	}
 

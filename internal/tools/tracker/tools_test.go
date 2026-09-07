@@ -28,7 +28,13 @@ func newTrackerToolsTestSetup(t *testing.T) (*Registrator, *MockITrackerAdapter)
 
 	ctrl := gomock.NewController(t)
 	mockAdapter := NewMockITrackerAdapter(ctrl)
-	reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
+	reg := NewRegistrator(
+		mockAdapter,
+		domain.TrackerAllTools(),
+		defaultAttachExtensions,
+		defaultAttachViewExts,
+		defaultAttachDirs,
+	)
 
 	return reg, mockAdapter
 }
@@ -253,7 +259,10 @@ func TestTools_ExpandValidation(t *testing.T) {
 		{
 			name: "list_project_comments",
 			call: func(reg *Registrator) error {
-				_, err := reg.listProjectComments(t.Context(), listProjectCommentsInputDTO{ProjectID: "3", Expand: "transitions"})
+				_, err := reg.listProjectComments(
+					t.Context(),
+					listProjectCommentsInputDTO{ProjectID: "3", Expand: "transitions"},
+				)
 				return err
 			},
 		},
@@ -2075,7 +2084,10 @@ func TestTools_GetGlobalAttachment(t *testing.T) {
 		t.Parallel()
 		reg, _ := newTrackerToolsTestSetup(t)
 
-		_, err := reg.getGlobalAttachment(t.Context(), getGlobalAttachmentInputDTO{FileName: "file.txt", GetContent: true})
+		_, err := reg.getGlobalAttachment(
+			t.Context(),
+			getGlobalAttachmentInputDTO{FileName: "file.txt", GetContent: true},
+		)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "attachment_id is required")
 	})

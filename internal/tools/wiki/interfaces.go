@@ -7,7 +7,7 @@ import (
 	"github.com/n-r-w/yandex-mcp/internal/domain"
 )
 
-//go:generate go run go.uber.org/mock/mockgen@v0.6.0 -source=interfaces.go -destination=mock_interfaces.go -package=wiki
+//go:generate go tool mockgen -source=interfaces.go -destination=mock_interfaces.go -package=wiki
 
 // IWikiAdapter defines the interface for Wiki adapter operations consumed by tools.
 type IWikiAdapter interface {

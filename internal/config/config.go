@@ -58,8 +58,8 @@ type envConfig struct {
 	TrackerBaseURL       string `env:"YANDEX_TRACKER_BASE_URL"`
 	CloudOrgID           string `env:"YANDEX_CLOUD_ORG_ID,required"`
 	CLIProfile           string `env:"YANDEX_CLI_PROFILE"`
-	RefreshPeriodHours   int    `env:"YANDEX_IAM_TOKEN_REFRESH_PERIOD" envDefault:"10"`
-	HTTPTimeoutSeconds   int    `env:"YANDEX_HTTP_TIMEOUT" envDefault:"30"`
+	RefreshPeriodHours   int    `env:"YANDEX_IAM_TOKEN_REFRESH_PERIOD"    envDefault:"10"`
+	HTTPTimeoutSeconds   int    `env:"YANDEX_HTTP_TIMEOUT"                envDefault:"30"`
 	AttachExtensions     string `env:"YANDEX_MCP_ATTACH_EXT"`
 	AttachViewExts       string `env:"YANDEX_MCP_ATTACH_VIEW_EXT"`
 	AttachDirs           string `env:"YANDEX_MCP_ATTACH_DIR"`

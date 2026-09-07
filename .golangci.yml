@@ -15,6 +15,7 @@ output:
 linters:
   default: none
   enable:
+    - modernize
     - godot
     - copyloopvar
     - gocyclo
@@ -32,14 +33,14 @@ linters:
     - errname
     - errorlint
     - exhaustive
-    - exhaustruct
+    - exhaustruct_v5
     - forbidigo
     - gocheckcompilerdirectives
     - gochecknoglobals
     - gochecknoinits
     - gochecksumtype
     - gocognit
-    # - goconst
+    - goconst
     - gocritic
     - gomoddirectives
     - gomodguard_v2
@@ -92,7 +93,7 @@ linters:
     gocyclo:
       min-complexity: 15
     dupl:
-      threshold: 100
+      threshold: 115
     goconst:
       min-len: 2
       min-occurrences: 2
@@ -106,7 +107,6 @@ linters:
     gocritic:
       enabled-tags:
         - diagnostic
-        - experimental
         - opinionated
         - performance
         - style
@@ -114,20 +114,25 @@ linters:
         - dupImport
         - octalLiteral
         - hugeParam
+    exhaustruct_v5:
+      optional-patterns: []
+      allow-empty: true
+      allow-empty-returns: true
+      allow-empty-declarations: true
 
   exclusions:
     generated: lax
+    paths:
+      - ^experiments/
     rules:
       - linters:
           - perfsprint
-          - dupl
           - gochecknoglobals
-          - gocognit
           - goconst
+          - gocognit
           - gocritic
           - gosec
           - govet
-          - lll
           - revive
           - staticcheck
           - unparam
@@ -136,10 +141,6 @@ linters:
           - cyclop
           - prealloc
         path: _test\.go
-      - linters:
-          - gochecknoglobals
-        path: ^cmd/yandex-mcp/main\.go$
-        text: "^(version|commit|date|builtBy) is a global variable"
 
 issues:
   max-issues-per-linter: 0
@@ -151,11 +152,15 @@ severity:
 
 formatters:
   enable:
+    - gofumpt
     - goimports
+    - golines
   settings:
     goimports:
       local-prefixes:
         - github.com/n-r-w/yandex-mcp
+    golines:
+      max-len: 120
   exclusions:
     generated: lax
     paths:
