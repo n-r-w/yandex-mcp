@@ -193,8 +193,6 @@ The agent and MCP run on a trusted Linux server. Token acquisition and browser l
 
 MCP uses stdio. Token exchange uses synchronous JSON over `POST /token` through a reverse SSH tunnel. SSH protects traffic between the machines. There is no HTTP authorization or connection secret. Every process that can access either loopback listener can request a token for an allowed profile. Do not use this mode on a server with untrusted users or processes.
 
-The [remote authentication specification](docs/specs/remote-authentication/requirements.md) defines the behavior. The [technical solution](docs/specs/remote-authentication/solution.md) describes the program changes.
-
 ### Prerequisites
 
 - A workstation with an interactive desktop session, a browser, native Yandex Cloud CLI, and an OpenSSH client. Linux workstations need a graphical desktop. Windows does not require WSL.
