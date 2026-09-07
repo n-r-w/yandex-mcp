@@ -157,40 +157,20 @@ func TestIssueToTrackerIssue_NilNestedObjects(t *testing.T) {
 func TestStatusToTrackerStatus(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name     string
-		input    *statusDTO
-		expected *domain.TrackerStatus
-	}{
-		{
-			name:     "nil status",
-			input:    nil,
-			expected: nil,
-		},
-		{
-			name: "full status",
-			input: &statusDTO{
-				Self:    "https://api.tracker.yandex.net/v2/statuses/1",
-				ID:      "1",
-				Key:     "open",
-				Display: "Open",
-			},
-			expected: &domain.TrackerStatus{
-				Self:    "https://api.tracker.yandex.net/v2/statuses/1",
-				ID:      "1",
-				Key:     "open",
-				Display: "Open",
-			},
-		},
+	assert.Nil(t, statusToTrackerStatus(nil))
+	input := &statusDTO{
+		Self:    "https://api.tracker.yandex.net/v2/statuses/1",
+		ID:      "1",
+		Key:     "open",
+		Display: "Open",
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			result := statusToTrackerStatus(tt.input)
-			assert.Equal(t, tt.expected, result)
-		})
+	expected := &domain.TrackerStatus{
+		Self:    "https://api.tracker.yandex.net/v2/statuses/1",
+		ID:      "1",
+		Key:     "open",
+		Display: "Open",
 	}
+	assert.Equal(t, expected, statusToTrackerStatus(input))
 }
 
 func TestUserToTrackerUser(t *testing.T) {
@@ -805,77 +785,37 @@ func TestListCommentsResultToTrackerCommentsPage(t *testing.T) {
 func TestPrioToTrackerPriority(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name     string
-		input    *prioDTO
-		expected *domain.TrackerPriority
-	}{
-		{
-			name:     "nil priority",
-			input:    nil,
-			expected: nil,
-		},
-		{
-			name: "full priority",
-			input: &prioDTO{
-				Self:    "https://api.tracker.yandex.net/v2/priorities/critical",
-				ID:      "critical-id",
-				Key:     "critical",
-				Display: "Critical",
-			},
-			expected: &domain.TrackerPriority{
-				Self:    "https://api.tracker.yandex.net/v2/priorities/critical",
-				ID:      "critical-id",
-				Key:     "critical",
-				Display: "Critical",
-			},
-		},
+	assert.Nil(t, prioToTrackerPriority(nil))
+	input := &prioDTO{
+		Self:    "https://api.tracker.yandex.net/v2/priorities/critical",
+		ID:      "critical-id",
+		Key:     "critical",
+		Display: "Critical",
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			result := prioToTrackerPriority(tt.input)
-			assert.Equal(t, tt.expected, result)
-		})
+	expected := &domain.TrackerPriority{
+		Self:    "https://api.tracker.yandex.net/v2/priorities/critical",
+		ID:      "critical-id",
+		Key:     "critical",
+		Display: "Critical",
 	}
+	assert.Equal(t, expected, prioToTrackerPriority(input))
 }
 
 func TestTypeToTrackerIssueType(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name     string
-		input    *typeDTO
-		expected *domain.TrackerIssueType
-	}{
-		{
-			name:     "nil type",
-			input:    nil,
-			expected: nil,
-		},
-		{
-			name: "full type",
-			input: &typeDTO{
-				Self:    "https://api.tracker.yandex.net/v2/issuetypes/task",
-				ID:      "task-id",
-				Key:     "task",
-				Display: "Task",
-			},
-			expected: &domain.TrackerIssueType{
-				Self:    "https://api.tracker.yandex.net/v2/issuetypes/task",
-				ID:      "task-id",
-				Key:     "task",
-				Display: "Task",
-			},
-		},
+	assert.Nil(t, typeToTrackerIssueType(nil))
+	input := &typeDTO{
+		Self:    "https://api.tracker.yandex.net/v2/issuetypes/task",
+		ID:      "task-id",
+		Key:     "task",
+		Display: "Task",
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			result := typeToTrackerIssueType(tt.input)
-			assert.Equal(t, tt.expected, result)
-		})
+	expected := &domain.TrackerIssueType{
+		Self:    "https://api.tracker.yandex.net/v2/issuetypes/task",
+		ID:      "task-id",
+		Key:     "task",
+		Display: "Task",
 	}
+	assert.Equal(t, expected, typeToTrackerIssueType(input))
 }

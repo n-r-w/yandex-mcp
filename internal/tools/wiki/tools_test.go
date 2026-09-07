@@ -57,7 +57,10 @@ func TestTools_GetPageBySlug(t *testing.T) {
 		}
 
 		mockAdapter.EXPECT().
-			GetPageBySlug(gomock.Any(), "test/page", domain.WikiGetPageOpts{Fields: []string{"content", "attributes"}, RevisionID: "7"}).
+			GetPageBySlug(gomock.Any(), "test/page", domain.WikiGetPageOpts{
+				Fields:     []string{"content", "attributes"},
+				RevisionID: "7",
+			}).
 			Return(expectedPage, nil)
 
 		input := getPageBySlugInputDTO{

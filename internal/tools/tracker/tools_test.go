@@ -39,6 +39,14 @@ func newTrackerToolsTestSetup(t *testing.T) (*Registrator, *MockITrackerAdapter)
 	return reg, mockAdapter
 }
 
+func assertSafeUpstreamError(t *testing.T, err error, status string) {
+	t.Helper()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), domain.ServiceTracker)
+	assert.Contains(t, err.Error(), status)
+	assert.NotContains(t, err.Error(), "secrets")
+}
+
 func TestTools_GetIssue(t *testing.T) {
 	t.Parallel()
 
@@ -795,11 +803,7 @@ func TestTools_ListAttachments(t *testing.T) {
 		_, err := reg.listAttachments(t.Context(), listAttachmentsInputDTO{
 			IssueID: "TEST-1",
 		})
-		require.Error(t, err)
-		errStr := err.Error()
-		assert.Contains(t, errStr, domain.ServiceTracker)
-		assert.Contains(t, errStr, "HTTP 403")
-		assert.NotContains(t, errStr, "secrets")
+		assertSafeUpstreamError(t, err, "HTTP 403")
 	})
 }
 
@@ -1448,11 +1452,7 @@ func TestTools_GetQueue(t *testing.T) {
 		_, err := reg.getQueue(t.Context(), getQueueInputDTO{
 			QueueID: "NONEXISTENT",
 		})
-		require.Error(t, err)
-		errStr := err.Error()
-		assert.Contains(t, errStr, domain.ServiceTracker)
-		assert.Contains(t, errStr, "HTTP 404")
-		assert.NotContains(t, errStr, "secrets")
+		assertSafeUpstreamError(t, err, "HTTP 404")
 	})
 }
 
@@ -1667,11 +1667,7 @@ func TestTools_GetUser(t *testing.T) {
 		_, err := reg.getUser(t.Context(), getUserInputDTO{
 			UserID: "nonexistent",
 		})
-		require.Error(t, err)
-		errStr := err.Error()
-		assert.Contains(t, errStr, domain.ServiceTracker)
-		assert.Contains(t, errStr, "HTTP 404")
-		assert.NotContains(t, errStr, "secrets")
+		assertSafeUpstreamError(t, err, "HTTP 404")
 	})
 }
 
@@ -1752,11 +1748,7 @@ func TestTools_ListLinks(t *testing.T) {
 		_, err := reg.listLinks(t.Context(), listLinksInputDTO{
 			IssueID: "NONEXISTENT",
 		})
-		require.Error(t, err)
-		errStr := err.Error()
-		assert.Contains(t, errStr, domain.ServiceTracker)
-		assert.Contains(t, errStr, "HTTP 404")
-		assert.NotContains(t, errStr, "secrets")
+		assertSafeUpstreamError(t, err, "HTTP 404")
 	})
 }
 
@@ -1845,11 +1837,7 @@ func TestTools_GetChangelog(t *testing.T) {
 		_, err := reg.getChangelog(t.Context(), getChangelogInputDTO{
 			IssueID: "NONEXISTENT",
 		})
-		require.Error(t, err)
-		errStr := err.Error()
-		assert.Contains(t, errStr, domain.ServiceTracker)
-		assert.Contains(t, errStr, "HTTP 404")
-		assert.NotContains(t, errStr, "secrets")
+		assertSafeUpstreamError(t, err, "HTTP 404")
 	})
 }
 
@@ -1924,11 +1912,7 @@ func TestTools_ListProjectComments(t *testing.T) {
 		_, err := reg.listProjectComments(t.Context(), listProjectCommentsInputDTO{
 			ProjectID: "nonexistent",
 		})
-		require.Error(t, err)
-		errStr := err.Error()
-		assert.Contains(t, errStr, domain.ServiceTracker)
-		assert.Contains(t, errStr, "HTTP 404")
-		assert.NotContains(t, errStr, "secrets")
+		assertSafeUpstreamError(t, err, "HTTP 404")
 	})
 }
 

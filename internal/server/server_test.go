@@ -39,9 +39,17 @@ var (
 )
 
 func newWikiStubRegistrator(ctrl *gomock.Controller) IToolsRegistrator {
+	return newStubRegistrator(ctrl, testWikiTools)
+}
+
+func newStubRegistrator(ctrl *gomock.Controller, tools []struct {
+	name        string
+	description string
+},
+) IToolsRegistrator {
 	mock := NewMockIToolsRegistrator(ctrl)
 	mock.EXPECT().Register(gomock.Any()).DoAndReturn(func(srv *mcp.Server) error {
-		for _, tool := range testWikiTools {
+		for _, tool := range tools {
 			mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
 				Name:        tool.name,
 				Description: tool.description,
@@ -55,19 +63,7 @@ func newWikiStubRegistrator(ctrl *gomock.Controller) IToolsRegistrator {
 }
 
 func newTrackerStubRegistrator(ctrl *gomock.Controller) IToolsRegistrator {
-	mock := NewMockIToolsRegistrator(ctrl)
-	mock.EXPECT().Register(gomock.Any()).DoAndReturn(func(srv *mcp.Server) error {
-		for _, tool := range testTrackerTools {
-			mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
-				Name:        tool.name,
-				Description: tool.description,
-			}, func(_ context.Context, _ *mcp.CallToolRequest, _ any) (*mcp.CallToolResult, any, error) {
-				return nil, map[string]any{"status": "ok"}, nil
-			})
-		}
-		return nil
-	})
-	return mock
+	return newStubRegistrator(ctrl, testTrackerTools)
 }
 
 func TestServer_ToolsRegistered(t *testing.T) {

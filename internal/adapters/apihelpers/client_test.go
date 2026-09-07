@@ -177,12 +177,12 @@ func TestDoGETRaw_RetriesAfterUnauthorized(t *testing.T) {
 	doer := NewMockIHTTPDoer(ctrl)
 	provider := NewMockITokenProvider(ctrl)
 
-	firstResponse := &http.Response{ //nolint:exhaustruct_v5 // optional http.Response fields are irrelevant for this test case
+	firstResponse := &http.Response{ //nolint:exhaustruct_v5 // unused response fields
 		StatusCode: http.StatusUnauthorized,
 		Body:       io.NopCloser(bytes.NewBufferString("unauthorized")),
 		Header:     make(http.Header),
 	}
-	secondResponse := &http.Response{ //nolint:exhaustruct_v5 // optional http.Response fields are irrelevant for this test case
+	secondResponse := &http.Response{ //nolint:exhaustruct_v5 // unused response fields
 		StatusCode: http.StatusOK,
 		Body:       io.NopCloser(bytes.NewBufferString("ok")),
 		Header:     make(http.Header),
@@ -212,7 +212,7 @@ func TestDoGETRaw_DoesNotRetryOnNonAuthStatus(t *testing.T) {
 	doer := NewMockIHTTPDoer(ctrl)
 	provider := NewMockITokenProvider(ctrl)
 
-	errorResponse := &http.Response{ //nolint:exhaustruct_v5 // optional http.Response fields are irrelevant for this test case
+	errorResponse := &http.Response{ //nolint:exhaustruct_v5 // unused response fields
 		StatusCode: http.StatusInternalServerError,
 		Body:       io.NopCloser(bytes.NewBufferString("upstream-error")),
 		Header:     make(http.Header),
@@ -236,12 +236,12 @@ func TestDoGETStream_RetriesAfterForbidden(t *testing.T) {
 	doer := NewMockIHTTPDoer(ctrl)
 	provider := NewMockITokenProvider(ctrl)
 
-	firstResponse := &http.Response{ //nolint:exhaustruct_v5 // optional http.Response fields are irrelevant for this test case
+	firstResponse := &http.Response{ //nolint:exhaustruct_v5 // unused response fields
 		StatusCode: http.StatusForbidden,
 		Body:       io.NopCloser(bytes.NewBufferString("forbidden")),
 		Header:     make(http.Header),
 	}
-	secondResponse := &http.Response{ //nolint:exhaustruct_v5 // optional http.Response fields are irrelevant for this test case
+	secondResponse := &http.Response{ //nolint:exhaustruct_v5 // unused response fields
 		StatusCode: http.StatusOK,
 		Body:       io.NopCloser(bytes.NewBufferString("stream-body")),
 		Header:     make(http.Header),
@@ -278,7 +278,7 @@ func TestDoGETStream_RetryFailureIsWrapped(t *testing.T) {
 	doer := NewMockIHTTPDoer(ctrl)
 	provider := NewMockITokenProvider(ctrl)
 
-	firstResponse := &http.Response{ //nolint:exhaustruct_v5 // optional http.Response fields are irrelevant for this test case
+	firstResponse := &http.Response{ //nolint:exhaustruct_v5 // unused response fields
 		StatusCode: http.StatusUnauthorized,
 		Body:       io.NopCloser(bytes.NewBufferString("unauthorized")),
 		Header:     make(http.Header),

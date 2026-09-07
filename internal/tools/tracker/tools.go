@@ -191,7 +191,7 @@ func normalizeAndValidateCommaSeparatedValues(paramName, value string, allowedVa
 // validateEntityType rejects unsupported Tracker entity types before calling the API.
 func validateEntityType(entityType string) error {
 	switch entityType {
-	case "project", "portfolio", "goal":
+	case entityTypeProject, entityTypePortfolio, entityTypeGoal:
 		return nil
 	default:
 		return errors.New("entity_type must be one of: project, portfolio, goal")
@@ -218,11 +218,11 @@ func entityFieldValues(entityType string) []string {
 	}
 
 	switch entityType {
-	case "project":
+	case entityTypeProject:
 		return append(common, "start", "quarter", "checklistItems", "issueQueues", "linkedGoalsCount")
-	case "portfolio":
+	case entityTypePortfolio:
 		return append(common, "start", "quarter", "checklistItems", "linkedGoalsCount")
-	case "goal":
+	case entityTypeGoal:
 		return append(common, "keyResultItems", "progressPercentage", "linkedProjectsCount")
 	default:
 		return nil

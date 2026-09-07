@@ -16,8 +16,7 @@ func ToSafeError(ctx context.Context, serviceName domain.Service, err error) (er
 		return nil
 	}
 
-	var upstreamErr domain.UpstreamError
-	if errors.As(err, &upstreamErr) {
+	if upstreamErr, ok := errors.AsType[domain.UpstreamError](err); ok {
 		return fmt.Errorf("%s %s: %s (HTTP %d)",
 			upstreamErr.Service,
 			upstreamErr.Operation,
