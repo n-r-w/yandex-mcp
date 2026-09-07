@@ -1,7 +1,5 @@
 package apihelpers
 
-import "time"
-
 // HTTP headers and constants for Yandex API requests.
 const (
 	HeaderAuthorization = "Authorization"
@@ -9,6 +7,4 @@ const (
 	HeaderContentType   = "Content-Type"
 
 	ContentTypeJSON = "application/json"
-
-	DefaultTimeout = 30 * time.Second
 )

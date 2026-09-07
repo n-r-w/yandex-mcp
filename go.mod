@@ -12,7 +12,6 @@ tool (
 require (
 	github.com/caarlos0/env/v11 v11.4.1
 	github.com/modelcontextprotocol/go-sdk v1.6.1
-	github.com/n-r-w/singleflight/v2 v2.0.0
 	github.com/stretchr/testify v1.12.1
 	go.uber.org/mock v0.6.0
 )

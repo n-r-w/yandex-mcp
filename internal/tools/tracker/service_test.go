@@ -2,6 +2,7 @@ package tracker
 
 import (
 	"testing"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
@@ -31,7 +32,7 @@ func TestRegistrator_Register_RegistersOnlyEnabledTrackerTools(t *testing.T) {
 		defaultAttachDirs,
 	)
 
-	srv, err := mcpserver.New("v1.0.0", []mcpserver.IToolsRegistrator{registrator})
+	srv, err := mcpserver.New("v1.0.0", []mcpserver.IToolsRegistrator{registrator}, 300*time.Second)
 	require.NoError(t, err)
 
 	client := mcp.NewClient(

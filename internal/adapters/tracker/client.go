@@ -41,7 +41,6 @@ func NewClient(cfg *config.Config, tokenProvider apihelpers.ITokenProvider) *Cli
 		},
 		ServiceName:         string(domain.ServiceTracker),
 		ParseError:          client.parseError,
-		HTTPTimeout:         cfg.HTTPTimeout,
 		RawResponseMaxBytes: cfg.AttachInlineMaxBytes,
 	})
 

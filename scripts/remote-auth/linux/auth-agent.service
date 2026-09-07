@@ -1,0 +1,15 @@
+[Unit]
+Description=Yandex MCP workstation authentication
+PartOf=graphical-session.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=exec
+EnvironmentFile=%h/.config/yandex-mcp/auth-agent.env
+ExecStart=/usr/bin/env ${YANDEX_MCP_BINARY} auth-agent
+Restart=always
+RestartSec=5
+KillMode=control-group
+
+[Install]
+WantedBy=graphical-session.target

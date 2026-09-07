@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"log/slog"
 	"os"
@@ -11,12 +12,15 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/n-r-w/yandex-mcp/internal/adapters/authremote"
 	"github.com/n-r-w/yandex-mcp/internal/adapters/tracker"
 	"github.com/n-r-w/yandex-mcp/internal/adapters/wiki"
+	"github.com/n-r-w/yandex-mcp/internal/adapters/yc"
 	"github.com/n-r-w/yandex-mcp/internal/adapters/ytoken"
 	"github.com/n-r-w/yandex-mcp/internal/config"
 	"github.com/n-r-w/yandex-mcp/internal/domain"
 	"github.com/n-r-w/yandex-mcp/internal/server"
+	"github.com/n-r-w/yandex-mcp/internal/server/authagent"
 	trackertools "github.com/n-r-w/yandex-mcp/internal/tools/tracker"
 	wikitools "github.com/n-r-w/yandex-mcp/internal/tools/wiki"
 )
@@ -76,28 +80,55 @@ func main() {
 	}))
 	slog.SetDefault(logger)
 
-	if err := run(info.version); err != nil {
+	if err := run(info.version, flag.Args()); err != nil {
 		slog.Error("server failed", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
 }
 
-func run(serverVersion string) error {
+func run(serverVersion string, args []string) error {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
+	if len(args) > 0 {
+		if len(args) != 1 || args[0] != "auth-agent" {
+			return errors.New("usage: yandex-mcp [-version] [auth-agent]")
+		}
+		cfg, err := authagent.LoadConfig()
+		if err != nil {
+			return err
+		}
+		service := authagent.New(yc.New(cfg.YCPath), cfg.Profiles)
+		defer service.Close()
+		slog.InfoContext(ctx, "starting workstation auth-agent", "address", cfg.ListenAddress)
+		return service.Run(ctx, cfg.ListenAddress)
+	}
+	return runMCP(ctx, serverVersion)
+}
 
+func runMCP(ctx context.Context, serverVersion string) error {
 	cfg, err := config.Load()
 	if err != nil {
 		return err
 	}
 
-	slog.Info(
+	slog.InfoContext(ctx,
 		"configuration loaded",
 		slog.String("wiki_base_url", cfg.WikiBaseURL),
 		slog.String("tracker_base_url", cfg.TrackerBaseURL),
 	)
 
-	tokenProvider := ytoken.NewProvider(cfg)
+	var tokenProvider *ytoken.Provider
+	if cfg.TokenSource == "remote" {
+		source, sourceErr := authremote.New(cfg.AuthAgentURL)
+		if sourceErr != nil {
+			return sourceErr
+		}
+		defer source.Close()
+		tokenProvider = ytoken.New(source, cfg.CLIProfile, cfg.IAMTokenRefreshPeriod)
+	} else {
+		tokenProvider = ytoken.New(yc.New("yc"), cfg.CLIProfile, cfg.IAMTokenRefreshPeriod)
+	}
+	defer tokenProvider.Close()
 
 	wikiClient := wiki.NewClient(cfg, tokenProvider)
 	trackerClient := tracker.NewClient(cfg, tokenProvider)
@@ -116,12 +147,12 @@ func run(serverVersion string) error {
 		),
 	}
 
-	srv, err := server.New(serverVersion, registrators)
+	srv, err := server.New(serverVersion, registrators, cfg.ToolTimeout)
 	if err != nil {
 		return err
 	}
 
-	slog.Info("starting MCP server over stdio")
+	slog.InfoContext(ctx, "starting MCP server over stdio")
 
 	transport := &mcp.StdioTransport{}
 	return srv.Run(ctx, transport)

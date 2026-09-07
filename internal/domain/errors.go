@@ -16,6 +16,18 @@ const (
 	maxSanitizedBodySize = 4 * 1024 // 4 KiB
 )
 
+// AuthenticationError carries the original token-source diagnostics to MCP and its logs.
+type AuthenticationError struct {
+	Err error
+}
+
+var _ error = AuthenticationError{}
+
+func (e AuthenticationError) Error() string { return e.Err.Error() }
+
+// Unwrap preserves cancellation and source error identities.
+func (e AuthenticationError) Unwrap() error { return e.Err }
+
 // Service represents the upstream Yandex service.
 type Service string
 

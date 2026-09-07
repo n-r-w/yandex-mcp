@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>net.yandex-mcp.auth-agent</string>
+  <key>ProgramArguments</key><array><string>/replace/yandex-mcp</string><string>auth-agent</string></array>
+  <key>EnvironmentVariables</key><dict>
+    <key>YANDEX_MCP_AUTH_AGENT_LISTEN</key><string>127.0.0.1:18765</string>
+    <key>YANDEX_MCP_AUTH_AGENT_YC_PATH</key><string>/replace/yc</string>
+    <key>YANDEX_MCP_AUTH_AGENT_PROFILES</key><string>work</string>
+  </dict>
+  <key>LimitLoadToSessionType</key><string>Aqua</string>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>10</integer>
+  <key>StandardErrorPath</key><string>/replace/auth-agent.log</string>
+</dict></plist>

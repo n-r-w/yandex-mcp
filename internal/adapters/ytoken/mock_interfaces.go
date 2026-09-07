@@ -16,41 +16,41 @@ import (
 	gomock "go.uber.org/mock/gomock"
 )
 
-// MockICommandExecutor is a mock of ICommandExecutor interface.
-type MockICommandExecutor struct {
+// MockITokenSource is a mock of ITokenSource interface.
+type MockITokenSource struct {
 	ctrl     *gomock.Controller
-	recorder *MockICommandExecutorMockRecorder
+	recorder *MockITokenSourceMockRecorder
 	isgomock struct{}
 }
 
-// MockICommandExecutorMockRecorder is the mock recorder for MockICommandExecutor.
-type MockICommandExecutorMockRecorder struct {
-	mock *MockICommandExecutor
+// MockITokenSourceMockRecorder is the mock recorder for MockITokenSource.
+type MockITokenSourceMockRecorder struct {
+	mock *MockITokenSource
 }
 
-// NewMockICommandExecutor creates a new mock instance.
-func NewMockICommandExecutor(ctrl *gomock.Controller) *MockICommandExecutor {
-	mock := &MockICommandExecutor{ctrl: ctrl}
-	mock.recorder = &MockICommandExecutorMockRecorder{mock}
+// NewMockITokenSource creates a new mock instance.
+func NewMockITokenSource(ctrl *gomock.Controller) *MockITokenSource {
+	mock := &MockITokenSource{ctrl: ctrl}
+	mock.recorder = &MockITokenSourceMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockICommandExecutor) EXPECT() *MockICommandExecutorMockRecorder {
+func (m *MockITokenSource) EXPECT() *MockITokenSourceMockRecorder {
 	return m.recorder
 }
 
-// Execute mocks base method.
-func (m *MockICommandExecutor) Execute(ctx context.Context) ([]byte, error) {
+// Acquire mocks base method.
+func (m *MockITokenSource) Acquire(ctx context.Context, profile string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Execute", ctx)
-	ret0, _ := ret[0].([]byte)
+	ret := m.ctrl.Call(m, "Acquire", ctx, profile)
+	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Execute indicates an expected call of Execute.
-func (mr *MockICommandExecutorMockRecorder) Execute(ctx any) *gomock.Call {
+// Acquire indicates an expected call of Acquire.
+func (mr *MockITokenSourceMockRecorder) Acquire(ctx, profile any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockICommandExecutor)(nil).Execute), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Acquire", reflect.TypeOf((*MockITokenSource)(nil).Acquire), ctx, profile)
 }

@@ -4,8 +4,10 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -36,8 +38,14 @@ type Config struct {
 	// IAMTokenRefreshPeriod is the period after which the IAM token should be refreshed.
 	IAMTokenRefreshPeriod time.Duration
 
-	// HTTPTimeout is the timeout for HTTP requests to Yandex APIs.
-	HTTPTimeout time.Duration
+	// ToolTimeout bounds the complete tools/call operation.
+	ToolTimeout time.Duration
+
+	// TokenSource selects local or remote acquisition.
+	TokenSource string
+
+	// AuthAgentURL is the loopback endpoint used in remote mode.
+	AuthAgentURL string
 
 	// AttachAllowedExtensions is the list of allowed attachment extensions (without dots).
 	AttachAllowedExtensions []string
@@ -59,7 +67,9 @@ type envConfig struct {
 	CloudOrgID           string `env:"YANDEX_CLOUD_ORG_ID,required"`
 	CLIProfile           string `env:"YANDEX_CLI_PROFILE"`
 	RefreshPeriodHours   int    `env:"YANDEX_IAM_TOKEN_REFRESH_PERIOD"    envDefault:"10"`
-	HTTPTimeoutSeconds   int    `env:"YANDEX_HTTP_TIMEOUT"                envDefault:"30"`
+	ToolTimeoutSeconds   int    `env:"YANDEX_MCP_TOOL_TIMEOUT"            envDefault:"300"`
+	TokenSource          string `env:"YANDEX_MCP_TOKEN_SOURCE"            envDefault:"local"`
+	AuthAgentURL         string `env:"YANDEX_MCP_AUTH_AGENT_URL"`
 	AttachExtensions     string `env:"YANDEX_MCP_ATTACH_EXT"`
 	AttachViewExts       string `env:"YANDEX_MCP_ATTACH_VIEW_EXT"`
 	AttachDirs           string `env:"YANDEX_MCP_ATTACH_DIR"`
@@ -95,13 +105,19 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
+	if ec.ToolTimeoutSeconds <= 0 || int64(ec.ToolTimeoutSeconds) > int64((1<<63-1)/time.Second) {
+		return nil, errors.New("YANDEX_MCP_TOOL_TIMEOUT must be positive seconds within time.Duration range")
+	}
+
 	cfg := &Config{
 		WikiBaseURL:             applyDefault(ec.WikiBaseURL, defaultWikiBaseURL),
 		TrackerBaseURL:          applyDefault(ec.TrackerBaseURL, defaultTrackerBaseURL),
 		CloudOrgID:              ec.CloudOrgID,
 		CLIProfile:              ec.CLIProfile,
 		IAMTokenRefreshPeriod:   resolveRefreshPeriod(ec.RefreshPeriodHours),
-		HTTPTimeout:             time.Duration(ec.HTTPTimeoutSeconds) * time.Second,
+		ToolTimeout:             time.Duration(ec.ToolTimeoutSeconds) * time.Second,
+		TokenSource:             ec.TokenSource,
+		AuthAgentURL:            ec.AuthAgentURL,
 		AttachAllowedExtensions: allowedExtensions,
 		AttachViewExtensions:    viewExtensions,
 		AttachAllowedDirs:       allowedDirs,
@@ -265,6 +281,18 @@ func resolveRefreshPeriod(hours int) time.Duration {
 func (c *Config) validate() error {
 	var errs []error
 
+	if c.TokenSource != "local" && c.TokenSource != tokenSourceRemote {
+		errs = append(errs, errors.New("YANDEX_MCP_TOKEN_SOURCE must be local or remote"))
+	}
+	if c.TokenSource == tokenSourceRemote {
+		if strings.TrimSpace(c.CLIProfile) == "" {
+			errs = append(errs, errors.New("YANDEX_CLI_PROFILE is required in remote mode"))
+		}
+		if err := ValidateAuthAgentURL(c.AuthAgentURL); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
 	if err := validateHTTPSURL(c.WikiBaseURL, "YANDEX_WIKI_BASE_URL"); err != nil {
 		errs = append(errs, err)
 	}
@@ -304,4 +332,31 @@ func validateHTTPSURL(rawURL, envName string) error {
 	}
 
 	return nil
+}
+
+// ValidateLoopbackAddress requires an explicit IPv4 loopback host and TCP port.
+func ValidateLoopbackAddress(address string) error {
+	host, port, err := net.SplitHostPort(address)
+	if err != nil || host != "127.0.0.1" {
+		return errors.New("auth-agent address must be 127.0.0.1:<port>")
+	}
+	number, err := strconv.ParseUint(port, 10, 16)
+	if err != nil || number == 0 {
+		return errors.New("auth-agent port must be from 1 to 65535")
+	}
+	return nil
+}
+
+// ValidateAuthAgentURL restricts token requests to a loopback HTTP endpoint.
+func ValidateAuthAgentURL(raw string) error {
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return errors.New("invalid auth-agent URL")
+	}
+	if parsed.Scheme != "http" || parsed.User != nil || parsed.Opaque != "" ||
+		(parsed.Path != "" && parsed.Path != "/") || parsed.RawPath != "" ||
+		parsed.RawQuery != "" || parsed.ForceQuery || parsed.Fragment != "" {
+		return errors.New("auth-agent URL must be http://127.0.0.1:<port> without credentials, query or fragment")
+	}
+	return ValidateLoopbackAddress(parsed.Host)
 }

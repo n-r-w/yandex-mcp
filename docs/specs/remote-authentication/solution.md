@@ -29,7 +29,7 @@ Middleware is added in `internal/server` through `mcp.Server.AddReceivingMiddlew
 - `YANDEX_MCP_TOOL_TIMEOUT` specifies a positive number of seconds, defaulting to `300`.
 - The duration includes tool argument validation, token acquisition, login, API requests, and result processing.
 - Sequential requests and the retry after an authentication error use the remaining time, not another 300 seconds.
-- `YANDEX_HTTP_TIMEOUT` and its associated `http.Client.Timeout` setting are removed without a compatibility alias. Lower layers use the call context.
+- API clients have no independent `http.Client.Timeout`. Lower layers use the call context.
 - When its own timeout expires, MCP returns a tool error. Earlier MCP-client cancellation stops execution, but response delivery to the client that canceled the call is not guaranteed.
 
 The middleware covers all `tools/call` requests, including tools without HTTP requests. Per-tool timeout configuration is therefore unnecessary.
@@ -47,7 +47,7 @@ The middleware covers all `tools/call` requests, including tools without HTTP re
 
 ### D4. Shared waiting and cancellation
 
-The `singleflight` implementation in use passes the first call's context to the shared acquisition. Other calls wait without checking their own cancellation. It is therefore replaced with a small shared mechanism that tracks waiters.
+`internal/adapters/authwait.Group` tracks active acquisitions and their waiters. It owns one cancelable context per active profile, separate from each caller's context.
 
 Both the MCP provider and auth-agent use this mechanism:
 
@@ -62,44 +62,63 @@ Each tool call owns its deadline. A shared acquisition exists only while calls w
 
 ### D5. Token exchange and protection
 
-Auth-agent accepts synchronous `POST /token` requests on `127.0.0.1`. A request contains the protocol version and an explicit profile. A response contains the protocol version and either an IAM token or an error code. The token-exchange protocol version is separate from the MCP version and the binary release version.
+Auth-agent accepts synchronous `POST /token` requests on `127.0.0.1`. A request contains the protocol version and an explicit profile. A response contains the protocol version and either an IAM token or an error code with the original error message. The token-exchange protocol version is separate from the MCP version and the binary release version.
 
-- The connection secret is sent in `Authorization: Bearer`.
-- The secret, protocol version, and profile permission are checked before `yc` can start.
+- Both machines and their local processes are trusted. SSH encrypts traffic between them. There is no HTTP authorization or connection secret.
+- The protocol version and profile permission are checked before `yc` can start.
 - The workstation runs the fixed command `yc iam create-token --profile <profile>` using the native executable. Shell execution and arbitrary arguments are not accepted.
 - The request stays open until completion or cancellation. There are no separate jobs, status polling, or background authentication completion without waiters.
 - Closing the HTTP request ends its wait on the workstation.
 - The remote source contacts only the configured `http://127.0.0.1:<port>` address. Environment HTTP proxies and redirects are disabled.
-- Secret-file validation uses mode `600` on macOS and Linux. On Windows, it checks file ACLs rather than Unix permission bits. Other nonprivileged users must not have read or write access to the secret files.
-- Secret files remain outside Git. MCP does not persist IAM tokens to disk.
-- Tokens, secrets, login URLs, and raw `yc` output do not appear in logs.
+- MCP does not persist IAM tokens to disk. Successful `yc` output is not logged.
+- A failed `yc` process supplies its original execution error and complete `stderr` to auth-agent. These diagnostics are returned to MCP and written to the MCP process's structured `stderr` log without redaction.
 
-The secret grants access to specified profiles. It does not protect against compromise of the server account that can read that secret.
+Any process with access to the workstation listener or the server's forwarded loopback port can request an allowed profile's token. This design is not intended for machines with untrusted users or processes.
 
 ### D6. Errors
 
-Auth-agent returns safe error codes without `yc` output:
+Auth-agent returns error codes and original messages:
 
 - HTTP 400 indicates an invalid request or an incompatible protocol version. These causes have separate codes.
-- HTTP 401 indicates an incorrect connection secret.
 - HTTP 403 indicates a forbidden profile.
 - HTTP 502 indicates that `yc` could not issue a token.
 - HTTP 500 indicates an internal auth-agent error.
 - A connection error indicates that the remote source is unavailable.
-- An unexpected auth-agent response indicates a protocol error. Its body is not passed to the agent.
+- An unexpected auth-agent response indicates a protocol error. A response outside the token protocol is not treated as a token-source diagnostic.
 
-MCP converts these causes into tool errors. Token requests are not automatically retried after these errors. A subsequent tool call can retry token acquisition after the cause is resolved.
+MCP preserves the original `message` in both its tool error and its structured `stderr` log. Authentication diagnostics retain their type through API wrappers so tool error handling does not replace them with `internal error`. The complete `stderr` of a failed `yc` process is included; successful token output is excluded. Token requests are not automatically retried after these errors. A subsequent tool call can retry token acquisition after the cause is resolved.
+
+Protocol version 1 uses `POST /token` with `Content-Type: application/json`:
+
+```json
+{"version":1,"profile":"work"}
+```
+
+Success returns HTTP 200:
+
+```json
+{"version":1,"token":"<IAM-token>"}
+```
+
+A failed `yc` invocation returns HTTP 502:
+
+```json
+{"version":1,"error":"authentication_failed","message":"exit status 1\n<original stderr>"}
+```
+
+The other error codes are `invalid_request`, `incompatible_version`, `forbidden_profile`, and `internal_error`. Requests are limited to 4096 bytes. Error responses are not truncated. Unknown JSON fields and conflicting success/error fields are protocol errors.
 
 ### D7. Configuration boundaries
 
 Configuration loading is separate for the two invocation modes:
 
-- MCP configuration selects `local` or `remote`, defaulting to `local`. Remote mode requires a loopback endpoint, a connection-secret file, and an explicit profile. Local mode can use the active `yc` profile.
-- Auth-agent configuration contains the loopback listen address, the absolute native `yc` executable path, and client secrets with their profile allowlists. It does not load Wiki or Tracker settings and does not require `YANDEX_CLOUD_ORG_ID`.
+- MCP configuration selects `local` or `remote`, defaulting to `local`. Remote mode requires a loopback endpoint and an explicit profile. Local mode can use the active `yc` profile.
+- Auth-agent reads only environment variables: `YANDEX_MCP_AUTH_AGENT_LISTEN`, `YANDEX_MCP_AUTH_AGENT_YC_PATH`, and `YANDEX_MCP_AUTH_AGENT_PROFILES`. These specify the loopback listen address, absolute native `yc` executable path, and comma-separated allowed profiles. It does not load Wiki or Tracker settings and does not require `YANDEX_CLOUD_ORG_ID`.
+- There is no auth-agent configuration-file parser. OS startup entries persist the environment settings for automatic startup.
 
-The entry point loads only the configuration for the selected mode and constructs the required dependencies. This keeps CLI path handling and secret-file access separate from token caching and the HTTP protocol.
+The entry point loads only the configuration for the selected mode and constructs the required dependencies. This keeps CLI path handling separate from token caching and the HTTP protocol.
 
-The [README remote authentication section](../../../README.md#planned-remote-authentication) contains the user-facing settings, installation, automatic startup, SSH configuration, and troubleshooting.
+The [README remote authentication section](../../../README.md#remote-authentication) contains the user-facing settings, installation, automatic startup, SSH configuration, and troubleshooting.
 
 ## Overengineering and overspecification considerations
 
@@ -113,11 +132,17 @@ Implementation verification covers these mechanisms:
 
 - The overall deadline across token acquisition and the subsequent API request, including the retry after HTTP 401 or 403.
 - Cancellation of the first and last waiters at both acquisition-sharing levels, including `yc` termination before the next process for that profile starts.
-- Rejection of an incorrect secret, forbidden profile, and incompatible version before `yc` starts.
+- Rejection of a forbidden profile and incompatible version before `yc` starts.
 - Local-mode operation without auth-agent.
-- Native process cancellation and secret-file access checks on each supported workstation OS.
+- Native process cancellation on macOS, Linux, and Windows.
+- Original error delivery through a separate MCP process with no `yc` in `PATH`, including its tool result and structured log.
+- Inclusion of workstation startup assets in release archives.
 
-Browser login and connection recovery have not been verified end to end. The [README runtime checks](../../../README.md#remote-authentication-runtime-checks) describe the operational acceptance checks for each workstation platform.
+Local macOS and Linux tests include `-race`, native subprocess cancellation, and MCP error delivery. An SSH integration check between a macOS workstation and a test Linux server exercised a reverse tunnel with a test native `yc` executable. It checked token exchange, two separate MCP processes sharing one acquisition, independent cancellation, final-waiter process termination, and original diagnostic delivery to the tool result and MCP log.
+
+A second SSH check used a Linux ARM64 workstation container and the Linux AMD64 test server. It repeated token exchange, shared waiting, cancellation, native process termination, and diagnostic delivery. Docker's restart policy restored the SSH tunnel after its process was terminated. A separate check disconnected the workstation container from its network, waited for OpenSSH to detect the loss and exit, then reconnected the network. Token exchange resumed without another tunnel command. These checks did not exercise the systemd user services.
+
+Browser login, graphical-session startup, recovery after workstation sleep, and native Windows execution have not been verified end to end. Windows native tests are configured in `.github/workflows/ci.yml`; that workflow was not run during local development. The [README runtime checks](../../../README.md#remote-authentication-runtime-checks) describe the remaining operational acceptance checks.
 
 ## Open questions
 
@@ -126,6 +151,6 @@ There are no open design questions.
 ## References
 
 - [MCP server wrapper](../../../internal/server/service.go) and MCP SDK `v1.6.1`, `mcp/server.go`, `Server.AddReceivingMiddleware`: tool registration and middleware support.
-- [Token provider](../../../internal/adapters/ytoken/client.go) and `github.com/n-r-w/singleflight/v2 v2.0.0`, `singleflight.go`, `Group.Do`: caching and shared-acquisition cancellation constraints.
+- [Token provider](../../../internal/adapters/ytoken/client.go) and [shared acquisition group](../../../internal/adapters/authwait/service.go): caching and independent waiter cancellation.
 - [API client](../../../internal/adapters/apihelpers/client.go): token acquisition before HTTP requests and retry after authentication errors.
 - [OpenSSH manual](https://man.openbsd.org/ssh.1): reverse port forwarding.
