@@ -1,4 +1,4 @@
-//nolint:exhaustruct // test file uses partial struct initialization for clarity
+//nolint:exhaustruct_v5 // test file uses partial struct initialization for clarity
 package wiki
 
 import (

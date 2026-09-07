@@ -42,7 +42,7 @@ func newWikiStubRegistrator(ctrl *gomock.Controller) IToolsRegistrator {
 	mock := NewMockIToolsRegistrator(ctrl)
 	mock.EXPECT().Register(gomock.Any()).DoAndReturn(func(srv *mcp.Server) error {
 		for _, tool := range testWikiTools {
-			mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+			mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
 				Name:        tool.name,
 				Description: tool.description,
 			}, func(_ context.Context, _ *mcp.CallToolRequest, _ any) (*mcp.CallToolResult, any, error) {
@@ -58,7 +58,7 @@ func newTrackerStubRegistrator(ctrl *gomock.Controller) IToolsRegistrator {
 	mock := NewMockIToolsRegistrator(ctrl)
 	mock.EXPECT().Register(gomock.Any()).DoAndReturn(func(srv *mcp.Server) error {
 		for _, tool := range testTrackerTools {
-			mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+			mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
 				Name:        tool.name,
 				Description: tool.description,
 			}, func(_ context.Context, _ *mcp.CallToolRequest, _ any) (*mcp.CallToolResult, any, error) {
@@ -86,7 +86,7 @@ func TestServer_ToolsRegistered(t *testing.T) {
 
 	// Connect to server using in-memory transport.
 	client := mcp.NewClient(
-		&mcp.Implementation{ //nolint:exhaustruct // optional fields use defaults
+		&mcp.Implementation{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:    "test-client",
 			Version: "v1.0.0",
 		},

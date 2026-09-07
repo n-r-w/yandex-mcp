@@ -20,7 +20,7 @@ import (
 const testAttachInlineMaxBytes = 10 * 1024 * 1024
 
 func newTestConfig(baseURL, orgID string) *config.Config {
-	return &config.Config{ //nolint:exhaustruct // test helper
+	return &config.Config{ //nolint:exhaustruct_v5 // test helper
 		TrackerBaseURL:       baseURL,
 		CloudOrgID:           orgID,
 		AttachInlineMaxBytes: testAttachInlineMaxBytes,
@@ -53,7 +53,7 @@ func TestClient_HeaderInjection(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, testOrgID), tokenProvider)
 
-	//nolint:exhaustruct // test only checks headers
+	//nolint:exhaustruct_v5 // test only checks headers
 	_, err := client.GetIssue(t.Context(), "TEST-1", domain.TrackerGetIssueOpts{})
 	require.NoError(t, err)
 
@@ -88,7 +88,7 @@ func TestClient_HeaderInjection_POST(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, testOrgID), tokenProvider)
 
-	//nolint:exhaustruct // test only checks headers
+	//nolint:exhaustruct_v5 // test only checks headers
 	_, err := client.SearchIssues(t.Context(), domain.TrackerSearchIssuesOpts{})
 	require.NoError(t, err)
 
@@ -116,7 +116,7 @@ func TestClient_Non2xx_ReturnsUpstreamError_Sanitized(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	//nolint:exhaustruct // test checks error conversion
+	//nolint:exhaustruct_v5 // test checks error conversion
 	_, err := client.GetIssue(t.Context(), "TEST-999", domain.TrackerGetIssueOpts{})
 	require.Error(t, err)
 
@@ -148,7 +148,7 @@ func TestClient_Non2xx_FallbackMessage(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	//nolint:exhaustruct // test checks fallback message
+	//nolint:exhaustruct_v5 // test checks fallback message
 	_, err := client.GetIssue(t.Context(), "TEST-1", domain.TrackerGetIssueOpts{})
 	require.Error(t, err)
 
@@ -333,7 +333,7 @@ func TestClient_SearchIssues_StandardPagination(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	//nolint:exhaustruct // test uses partial opts
+	//nolint:exhaustruct_v5 // test uses partial opts
 	result, err := client.SearchIssues(t.Context(), domain.TrackerSearchIssuesOpts{
 		Filter:  map[string]string{"queue": "TEST"},
 		Order:   "+updated",
@@ -384,7 +384,7 @@ func TestClient_SearchIssues_ScrollPagination(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	//nolint:exhaustruct // test uses scroll pagination opts
+	//nolint:exhaustruct_v5 // test uses scroll pagination opts
 	result, err := client.SearchIssues(t.Context(), domain.TrackerSearchIssuesOpts{
 		Query:           "Queue: TEST",
 		ScrollType:      "sorted",
@@ -425,7 +425,7 @@ func TestClient_SearchIssues_ScrollPagination_SubsequentRequest(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	//nolint:exhaustruct // test uses only scrollID
+	//nolint:exhaustruct_v5 // test uses only scrollID
 	result, err := client.SearchIssues(t.Context(), domain.TrackerSearchIssuesOpts{
 		ScrollID: "scroll-id-abc123",
 	})
@@ -462,7 +462,7 @@ func TestClient_CountIssues_WithFilter(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	//nolint:exhaustruct // test uses only filter
+	//nolint:exhaustruct_v5 // test uses only filter
 	count, err := client.CountIssues(t.Context(), domain.TrackerCountIssuesOpts{
 		Filter: map[string]string{"queue": "JUNE", "assignee": "empty()"},
 	})
@@ -494,7 +494,7 @@ func TestClient_CountIssues_WithQuery(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	//nolint:exhaustruct // test uses only query
+	//nolint:exhaustruct_v5 // test uses only query
 	count, err := client.CountIssues(t.Context(), domain.TrackerCountIssuesOpts{
 		Query: "Queue: TEST Assignee: me()",
 	})
@@ -959,7 +959,7 @@ func TestClient_GetIssueAttachment_EnforcesMaxSize(t *testing.T) {
 
 	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
 
-	cfg := &config.Config{ //nolint:exhaustruct // test uses minimal config
+	cfg := &config.Config{ //nolint:exhaustruct_v5 // test uses minimal config
 		TrackerBaseURL:       server.URL,
 		CloudOrgID:           "org",
 		AttachInlineMaxBytes: 4,
@@ -1054,7 +1054,7 @@ func TestClient_UpstreamError_NoTokenLeak(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	//nolint:exhaustruct // test checks token leak
+	//nolint:exhaustruct_v5 // test checks token leak
 	_, err := client.GetIssue(t.Context(), "TEST-1", domain.TrackerGetIssueOpts{})
 	require.Error(t, err)
 
@@ -1083,7 +1083,7 @@ func TestClient_ErrorCodes_401(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	//nolint:exhaustruct // test checks 401 handling
+	//nolint:exhaustruct_v5 // test checks 401 handling
 	_, err := client.GetIssue(t.Context(), "TEST-1", domain.TrackerGetIssueOpts{})
 	require.Error(t, err)
 
@@ -1111,7 +1111,7 @@ func TestClient_ErrorCodes_403(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	//nolint:exhaustruct // test checks 403 handling
+	//nolint:exhaustruct_v5 // test checks 403 handling
 	_, err := client.GetIssue(t.Context(), "TEST-1", domain.TrackerGetIssueOpts{})
 	require.Error(t, err)
 
@@ -1139,7 +1139,7 @@ func TestClient_ErrorCodes_404(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	//nolint:exhaustruct // test checks 404 handling
+	//nolint:exhaustruct_v5 // test checks 404 handling
 	_, err := client.GetIssue(t.Context(), "TEST-999", domain.TrackerGetIssueOpts{})
 	require.Error(t, err)
 
@@ -1167,7 +1167,7 @@ func TestClient_ErrorCodes_422(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	//nolint:exhaustruct // test checks 422 handling
+	//nolint:exhaustruct_v5 // test checks 422 handling
 	_, err := client.SearchIssues(t.Context(), domain.TrackerSearchIssuesOpts{Query: "invalid"})
 	require.Error(t, err)
 
@@ -1195,7 +1195,7 @@ func TestClient_ErrorCodes_429(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	//nolint:exhaustruct // test checks 429 handling
+	//nolint:exhaustruct_v5 // test checks 429 handling
 	_, err := client.SearchIssues(t.Context(), domain.TrackerSearchIssuesOpts{})
 	require.Error(t, err)
 
@@ -1226,7 +1226,7 @@ func TestClient_IssueID_PathEscaping(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	//nolint:exhaustruct // test checks path escaping
+	//nolint:exhaustruct_v5 // test checks path escaping
 	_, err := client.GetIssue(t.Context(), "TEST/SPECIAL-1", domain.TrackerGetIssueOpts{})
 	require.NoError(t, err)
 
@@ -1255,7 +1255,7 @@ func TestClient_SearchIssues_QueryLanguage(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	//nolint:exhaustruct // test checks query language
+	//nolint:exhaustruct_v5 // test checks query language
 	_, err := client.SearchIssues(t.Context(), domain.TrackerSearchIssuesOpts{
 		Query: `epic: notEmpty() Queue: TREK "Sort by": Updated DESC`,
 	})
@@ -1282,7 +1282,7 @@ func TestClient_ErrorResponse_WithErrorsArray(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	//nolint:exhaustruct // test checks error array
+	//nolint:exhaustruct_v5 // test checks error array
 	_, err := client.GetIssue(t.Context(), "TEST-1", domain.TrackerGetIssueOpts{})
 	require.Error(t, err)
 

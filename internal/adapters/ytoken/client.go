@@ -36,7 +36,7 @@ var _ apihelpers.ITokenProvider = (*Provider)(nil)
 
 // NewProvider creates a new token provider.
 func NewProvider(cfg *config.Config) *Provider {
-	//nolint:exhaustruct // cache and sync fields intentionally start with zero values
+	//nolint:exhaustruct_v5 // cache and sync fields intentionally start with zero values
 	return &Provider{
 		executor:      newCommandExecutor(cfg.CLIProfile),
 		refreshPeriod: cfg.IAMTokenRefreshPeriod,

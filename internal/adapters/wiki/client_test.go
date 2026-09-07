@@ -1,4 +1,4 @@
-//nolint:exhaustruct // test file uses partial struct initialization for clarity
+//nolint:exhaustruct_v5 // test file uses partial struct initialization for clarity
 package wiki
 
 import (
@@ -20,7 +20,7 @@ import (
 const testAttachInlineMaxBytes = 10 * 1024 * 1024
 
 func newTestConfig(baseURL, orgID string) *config.Config {
-	return &config.Config{ //nolint:exhaustruct // test helper
+	return &config.Config{ //nolint:exhaustruct_v5 // test helper
 		WikiBaseURL:          baseURL,
 		CloudOrgID:           orgID,
 		AttachInlineMaxBytes: testAttachInlineMaxBytes,

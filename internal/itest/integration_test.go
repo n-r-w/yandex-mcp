@@ -26,7 +26,7 @@ func listToolNames(t *testing.T, srv *server.Server) []string {
 	ctx := t.Context()
 
 	client := mcp.NewClient(
-		&mcp.Implementation{ //nolint:exhaustruct // optional fields use defaults
+		&mcp.Implementation{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:    "test-client",
 			Version: "1.0.0",
 		},

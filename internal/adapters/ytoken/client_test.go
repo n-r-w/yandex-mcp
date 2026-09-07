@@ -17,7 +17,7 @@ import (
 )
 
 func testConfig(refreshPeriod time.Duration) *config.Config {
-	//nolint:exhaustruct // only IAMTokenRefreshPeriod relevant for token tests
+	//nolint:exhaustruct_v5 // only IAMTokenRefreshPeriod relevant for token tests
 	return &config.Config{IAMTokenRefreshPeriod: refreshPeriod}
 }
 

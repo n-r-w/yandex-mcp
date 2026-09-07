@@ -23,7 +23,7 @@ import (
 
 // build-time variables that can be set via ldflags
 //
-//nolint:nolintlint // gochecknoglobals is excluded for this file via .golangci.yml
+//nolint:gochecknoglobals // global variables are used for build-time information
 var (
 	version = "dev"
 	commit  = "unknown"
@@ -56,11 +56,12 @@ func main() {
 	info := getBuildInfo()
 
 	if *showVersion {
-		//nolint:exhaustruct // stdlib struct with optional fields
+		//nolint:exhaustruct_v5 // stdlib struct with optional fields
 		logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 			Level: slog.LevelInfo,
 		}))
-		logger.Info("yandex-mcp version info",
+		logger.Info(
+			"yandex-mcp version info",
 			"version", info.version,
 			"commit", info.commit,
 			"built", info.date,
@@ -69,7 +70,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	//nolint:exhaustruct // SDK struct with optional fields
+	//nolint:exhaustruct_v5 // SDK struct with optional fields
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
 	}))
@@ -90,7 +91,8 @@ func run(serverVersion string) error {
 		return err
 	}
 
-	slog.Info("configuration loaded",
+	slog.Info(
+		"configuration loaded",
 		slog.String("wiki_base_url", cfg.WikiBaseURL),
 		slog.String("tracker_base_url", cfg.TrackerBaseURL),
 	)

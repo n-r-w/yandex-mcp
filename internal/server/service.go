@@ -15,12 +15,12 @@ type Server struct {
 // New initializes an MCP server with the given registrators.
 func New(serverVersion string, registrators []IToolsRegistrator) (*Server, error) {
 	mcpServer := mcp.NewServer(
-		&mcp.Implementation{ //nolint:exhaustruct // optional fields use defaults
+		&mcp.Implementation{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:    serverName,
 			Version: serverVersion,
 			Title:   serverTitle,
 		},
-		//nolint:exhaustruct // optional fields use defaults
+		//nolint:exhaustruct_v5 // optional fields use defaults
 		&mcp.ServerOptions{
 			Instructions: systemPrompt,
 		},

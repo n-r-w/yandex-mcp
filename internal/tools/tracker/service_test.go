@@ -35,7 +35,7 @@ func TestRegistrator_Register_RegistersOnlyEnabledTrackerTools(t *testing.T) {
 	require.NoError(t, err)
 
 	client := mcp.NewClient(
-		&mcp.Implementation{ //nolint:exhaustruct // test helper uses only required metadata
+		&mcp.Implementation{ //nolint:exhaustruct_v5 // test helper uses only required metadata
 			Name:    "test-client",
 			Version: "v1.0.0",
 		},

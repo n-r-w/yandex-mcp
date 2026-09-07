@@ -53,7 +53,7 @@ func NewAPIClient(cfg APIClientConfig) *APIClient {
 		if timeout == 0 {
 			timeout = DefaultTimeout
 		}
-		httpClient = &http.Client{ //nolint:exhaustruct // optional fields use defaults
+		httpClient = &http.Client{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Timeout: timeout,
 		}
 	}
