@@ -53,10 +53,10 @@ Exact JSON schemas (including validation rules) are also available via MCP tool 
 
 Pre-compiled binaries are available for multiple platforms:
 
-- **Linux (AMD64)**: `yandex-mcp-v*-linux-amd64.tar.gz`
-- **macOS (Intel)**: `yandex-mcp-v*-darwin-amd64.tar.gz`
-- **macOS (Apple Silicon)**: `yandex-mcp-v*-darwin-arm64.tar.gz`
-- **Windows (AMD64)**: `yandex-mcp-v*-windows-amd64.zip`
+- **Linux (AMD64)**: `yandex-mcp-*-linux-amd64.tar.gz`
+- **macOS (Intel)**: `yandex-mcp-*-darwin-amd64.tar.gz`
+- **macOS (Apple Silicon)**: `yandex-mcp-*-darwin-arm64.tar.gz`
+- **Windows (AMD64)**: `yandex-mcp-*-windows-amd64.tar.gz`
 
 Download the latest release from [GitHub Releases](https://github.com/n-r-w/yandex-mcp/releases).
 
@@ -72,6 +72,14 @@ You can also tap first and install by formula name:
 brew tap n-r-w/tap
 brew install yandex-mcp
 ```
+
+### Go install
+
+```bash
+go install github.com/n-r-w/yandex-mcp/cmd/yandex-mcp@latest
+```
+
+The binary is installed into `GOBIN` or `$GOPATH/bin`.
 
 ### Build from Source
 
@@ -136,8 +144,8 @@ After these steps, the executable will be permanently allowed to run on your sys
   * The server caches the token and refreshes it when the cached token is older than this period.
   * IAM tokens are valid for **no more than 12 hours**; this refresh period should not exceed `12`.
 
-- `YANDEX_HTTP_TIMEOUT` (optional, default: `30`)
-  * HTTP timeout for Yandex API requests in **seconds**.
+- `YANDEX_MCP_TOOL_TIMEOUT`, optional, default `300`
+  * Positive seconds for the complete tool call, including authentication and API retries.
 
 - `YANDEX_MCP_ATTACH_EXT` (optional)
   * Comma-separated list of allowed attachment extensions **without dots**.
@@ -160,13 +168,13 @@ After these steps, the executable will be permanently allowed to run on your sys
 
 ## Authentication
 
-The project supports IAM token authentication via the Yandex Cloud CLI (`yc`) only.
+The project obtains IAM tokens through Yandex Cloud CLI `yc`. Local mode runs `yc` on the MCP machine. [Remote mode](#remote-authentication) runs it on the workstation.
 
 **IAM token acquisition (`yc` prerequisites)**
 
 Installation: https://yandex.cloud/en/docs/cli/operations/install-cli
 
-This server obtains IAM tokens by running:
+In local mode, the server obtains IAM tokens by running:
 - `yc iam create-token` when `YANDEX_CLI_PROFILE` is empty.
 - `yc iam create-token --profile <YANDEX_CLI_PROFILE>` when `YANDEX_CLI_PROFILE` is set.
 
@@ -186,6 +194,58 @@ Official references:
 
 - Tracker IAM token auth + lifetime: https://yandex.ru/support/tracker/en/concepts/access#iam-token
 - Wiki IAM token auth + lifetime: https://yandex.ru/support/wiki/en/api-ref/access#iam-token
+
+## Remote authentication
+
+MCP runs on the Linux server; `yc` and browser login run on your workstation. Install `yandex-mcp` on both machines and prepare a workstation `yc` profile. Server-side `yc` is not needed. Use only trusted machines and users.
+
+### Server MCP client
+
+Add this entry to the MCP client running on the server:
+
+```json
+{
+  "mcpServers": {
+    "yandex": {
+      "command": "/absolute/server/path/to/yandex-mcp",
+      "env": {
+        "YANDEX_MCP_TOKEN_SOURCE": "remote",
+        "YANDEX_MCP_AUTH_AGENT_PORT": "18765",
+        "YANDEX_CLI_PROFILE": "work",
+        "YANDEX_CLOUD_ORG_ID": "your-organization-id"
+      }
+    }
+  }
+}
+```
+
+Replace the executable path, `work` with your workstation profile, and the organization ID.
+
+### Workstation setup
+
+Install native `yc` and OpenSSH, with `yc` available through `PATH`. Verify the server's SSH host key and configure SSH-key access without password prompts. The server must permit loopback-only reverse forwarding.
+
+From the extracted release archive or repository, run in your graphical desktop session:
+
+```sh
+export YANDEX_MCP_BINARY=/absolute/workstation/path/to/yandex-mcp
+export YANDEX_MCP_SSH_TARGET=user@server.example
+sh scripts/remote-auth/macos/install.sh
+```
+
+On a systemd-integrated Linux desktop, replace `macos` with `linux`. On Windows, use PowerShell:
+
+```powershell
+$env:YANDEX_MCP_BINARY = 'C:\Tools\yandex-mcp.exe'
+$env:YANDEX_MCP_SSH_TARGET = 'user@server.example'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\remote-auth\windows\install.ps1
+```
+
+Replace the workstation executable path and SSH destination. The installer configures one auth-agent startup entry. Auth-agent starts and reconnects SSH. The executable path overrides are optional when `yandex-mcp` and `yc` are in `PATH`; use `YANDEX_MCP_AUTH_AGENT_YC_PATH` to override the `yc` path.
+
+Use the same `YANDEX_MCP_AUTH_AGENT_PORT` on both machines, default `18765`.
+
+Restart the MCP connection and call a Wiki or Tracker tool. Complete login in the workstation browser when prompted. Keep the workstation awake and connected when a new token is needed. The tool timeout defaults to 300 seconds; change `YANDEX_MCP_TOOL_TIMEOUT` in the server configuration if needed.
 
 ## Client configuration examples
 

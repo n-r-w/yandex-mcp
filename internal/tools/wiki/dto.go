@@ -5,64 +5,64 @@ package wiki
 
 // getPageBySlugInputDTO is the input for wiki_page_get tool.
 type getPageBySlugInputDTO struct {
-	Slug            string   `json:"slug" jsonschema:"Page slug (URL path). Required"`
-	Fields          []string `json:"fields,omitempty" jsonschema:"Additional fields to include in the response. Allowed values: attributes, breadcrumbs, content, redirect"`
-	RevisionID      string   `json:"revision_id,omitempty" jsonschema:"Fetch specific page revision by ID (string)"`
+	Slug            string   `json:"slug"                        jsonschema:"Page slug (URL path). Required"`
+	Fields          []string `json:"fields,omitempty"            jsonschema:"Additional fields to include in the response. Allowed values: attributes, breadcrumbs, content, redirect"`
+	RevisionID      string   `json:"revision_id,omitempty"       jsonschema:"Fetch specific page revision by ID (string)"`
 	RaiseOnRedirect bool     `json:"raise_on_redirect,omitempty" jsonschema:"Return error if page redirects instead of following redirect"`
 }
 
 // getPageByIDInputDTO is the input for wiki_page_get_by_id tool.
 type getPageByIDInputDTO struct {
-	PageID          string   `json:"page_id" jsonschema:"Page ID (string). Required"`
-	Fields          []string `json:"fields,omitempty" jsonschema:"Additional fields to include in the response. Allowed values: attributes, breadcrumbs, content, redirect"`
-	RevisionID      string   `json:"revision_id,omitempty" jsonschema:"Fetch specific page revision by ID (string)"`
+	PageID          string   `json:"page_id"                     jsonschema:"Page ID (string). Required"`
+	Fields          []string `json:"fields,omitempty"            jsonschema:"Additional fields to include in the response. Allowed values: attributes, breadcrumbs, content, redirect"`
+	RevisionID      string   `json:"revision_id,omitempty"       jsonschema:"Fetch specific page revision by ID (string)"`
 	RaiseOnRedirect bool     `json:"raise_on_redirect,omitempty" jsonschema:"Return error if page redirects instead of following redirect"`
 }
 
 // listResourcesInputDTO is the input for wiki_page_resources_list tool.
 type listResourcesInputDTO struct {
-	PageID         string `json:"page_id" jsonschema:"Page ID (string) to list resources for. Required"`
-	Cursor         string `json:"cursor,omitempty" jsonschema:"Pagination cursor for subsequent requests"`
-	PageSize       int    `json:"page_size,omitempty" jsonschema:"Number of items per page. Valid range: 1-50. Default: 25"`
-	OrderBy        string `json:"order_by,omitempty" jsonschema:"Field to order by. Possible values: name_title, created_at"`
+	PageID         string `json:"page_id"                   jsonschema:"Page ID (string) to list resources for. Required"`
+	Cursor         string `json:"cursor,omitempty"          jsonschema:"Pagination cursor for subsequent requests"`
+	PageSize       int    `json:"page_size,omitempty"       jsonschema:"Number of items per page. Valid range: 1-50. Default: 25"`
+	OrderBy        string `json:"order_by,omitempty"        jsonschema:"Field to order by. Possible values: name_title, created_at"`
 	OrderDirection string `json:"order_direction,omitempty" jsonschema:"Order direction. Possible values: asc, desc. Default: asc"`
-	Q              string `json:"q,omitempty" jsonschema:"Filter resources by title. Maximum: 255 chars"`
-	Types          string `json:"types,omitempty" jsonschema:"Resource types filter. Possible values: attachment, sharepoint_resource, grid. Can be comma-separated for multiple types"`
+	Q              string `json:"q,omitempty"               jsonschema:"Filter resources by title. Maximum: 255 chars"`
+	Types          string `json:"types,omitempty"           jsonschema:"Resource types filter. Possible values: attachment, sharepoint_resource, grid. Can be comma-separated for multiple types"`
 }
 
 // listGridsInputDTO is the input for wiki_page_grids_list tool.
 type listGridsInputDTO struct {
-	PageID         string `json:"page_id" jsonschema:"Page ID (string) to list grids for. Required"`
-	Cursor         string `json:"cursor,omitempty" jsonschema:"Pagination cursor for subsequent requests"`
-	PageSize       int    `json:"page_size,omitempty" jsonschema:"Number of items per page. Valid range: 1-50. Default: 25"`
-	OrderBy        string `json:"order_by,omitempty" jsonschema:"Field to order by. Possible values: title, created_at"`
+	PageID         string `json:"page_id"                   jsonschema:"Page ID (string) to list grids for. Required"`
+	Cursor         string `json:"cursor,omitempty"          jsonschema:"Pagination cursor for subsequent requests"`
+	PageSize       int    `json:"page_size,omitempty"       jsonschema:"Number of items per page. Valid range: 1-50. Default: 25"`
+	OrderBy        string `json:"order_by,omitempty"        jsonschema:"Field to order by. Possible values: title, created_at"`
 	OrderDirection string `json:"order_direction,omitempty" jsonschema:"Order direction. Possible values: asc, desc. Default: asc"`
 }
 
 // getGridInputDTO is the input for wiki_grid_get tool.
 type getGridInputDTO struct {
-	GridID   string   `json:"grid_id" jsonschema:"Grid ID (UUID string). Required"`
-	Fields   []string `json:"fields,omitempty" jsonschema:"Additional fields to include in the response. Allowed values: attributes, user_permissions"`
-	Filter   string   `json:"filter,omitempty" jsonschema:"Row filter expression to filter grid rows. Syntax: [column_slug] operator value. Operators: ~ (contains), <, >, <=, >=, =, !. Logical: AND, OR, (). Example: [slug] ~ wiki AND [slug2]<32"`
+	GridID   string   `json:"grid_id"             jsonschema:"Grid ID (UUID string). Required"`
+	Fields   []string `json:"fields,omitempty"    jsonschema:"Additional fields to include in the response. Allowed values: attributes, user_permissions"`
+	Filter   string   `json:"filter,omitempty"    jsonschema:"Row filter expression to filter grid rows. Syntax: [column_slug] operator value. Operators: ~ (contains), <, >, <=, >=, =, !. Logical: AND, OR, (). Example: [slug] ~ wiki AND [slug2]<32"`
 	OnlyCols string   `json:"only_cols,omitempty" jsonschema:"Return only specified columns (comma-separated column slugs)"`
 	OnlyRows string   `json:"only_rows,omitempty" jsonschema:"Return only specified rows (comma-separated row IDs)"`
-	Revision string   `json:"revision,omitempty" jsonschema:"Grid revision number for optimistic locking and historical versions"`
-	Sort     string   `json:"sort,omitempty" jsonschema:"Sort expression to order rows by column"`
+	Revision string   `json:"revision,omitempty"  jsonschema:"Grid revision number for optimistic locking and historical versions"`
+	Sort     string   `json:"sort,omitempty"      jsonschema:"Sort expression to order rows by column"`
 }
 
 // listDescendantsInputDTO is the input for wiki_page_descendants tool.
 type listDescendantsInputDTO struct {
-	Slug      string `json:"slug" jsonschema:"Page slug (URL path). Use empty string to list all pages from the root."`
+	Slug      string `json:"slug"                jsonschema:"Page slug (URL path). Use empty string to list all pages from the root."`
 	Actuality string `json:"actuality,omitempty" jsonschema:"Filter by page status. Possible values: actual, obsolete"`
-	Cursor    string `json:"cursor,omitempty" jsonschema:"Pagination cursor for subsequent requests"`
+	Cursor    string `json:"cursor,omitempty"    jsonschema:"Pagination cursor for subsequent requests"`
 	PageSize  int    `json:"page_size,omitempty" jsonschema:"Number of items per page. Valid range: 1-100. Default: 50"`
 }
 
 // listDescendantsByIDInputDTO is the input for wiki_page_descendants_by_id tool.
 type listDescendantsByIDInputDTO struct {
-	PageID    string `json:"page_id" jsonschema:"Page ID (string). Required"`
+	PageID    string `json:"page_id"             jsonschema:"Page ID (string). Required"`
 	Actuality string `json:"actuality,omitempty" jsonschema:"Filter by page status. Possible values: actual, obsolete"`
-	Cursor    string `json:"cursor,omitempty" jsonschema:"Pagination cursor for subsequent requests"`
+	Cursor    string `json:"cursor,omitempty"    jsonschema:"Pagination cursor for subsequent requests"`
 	PageSize  int    `json:"page_size,omitempty" jsonschema:"Number of items per page. Valid range: 1-100. Default: 50"`
 }
 

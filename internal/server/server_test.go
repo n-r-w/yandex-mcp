@@ -4,6 +4,7 @@ import (
 	"context"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
@@ -39,10 +40,18 @@ var (
 )
 
 func newWikiStubRegistrator(ctrl *gomock.Controller) IToolsRegistrator {
+	return newStubRegistrator(ctrl, testWikiTools)
+}
+
+func newStubRegistrator(ctrl *gomock.Controller, tools []struct {
+	name        string
+	description string
+},
+) IToolsRegistrator {
 	mock := NewMockIToolsRegistrator(ctrl)
 	mock.EXPECT().Register(gomock.Any()).DoAndReturn(func(srv *mcp.Server) error {
-		for _, tool := range testWikiTools {
-			mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		for _, tool := range tools {
+			mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
 				Name:        tool.name,
 				Description: tool.description,
 			}, func(_ context.Context, _ *mcp.CallToolRequest, _ any) (*mcp.CallToolResult, any, error) {
@@ -55,19 +64,7 @@ func newWikiStubRegistrator(ctrl *gomock.Controller) IToolsRegistrator {
 }
 
 func newTrackerStubRegistrator(ctrl *gomock.Controller) IToolsRegistrator {
-	mock := NewMockIToolsRegistrator(ctrl)
-	mock.EXPECT().Register(gomock.Any()).DoAndReturn(func(srv *mcp.Server) error {
-		for _, tool := range testTrackerTools {
-			mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
-				Name:        tool.name,
-				Description: tool.description,
-			}, func(_ context.Context, _ *mcp.CallToolRequest, _ any) (*mcp.CallToolResult, any, error) {
-				return nil, map[string]any{"status": "ok"}, nil
-			})
-		}
-		return nil
-	})
-	return mock
+	return newStubRegistrator(ctrl, testTrackerTools)
 }
 
 func TestServer_ToolsRegistered(t *testing.T) {
@@ -79,14 +76,14 @@ func TestServer_ToolsRegistered(t *testing.T) {
 		newTrackerStubRegistrator(ctrl),
 	}
 
-	srv, err := New("v1.0.0", registrators)
+	srv, err := New("v1.0.0", registrators, 300*time.Second)
 	require.NoError(t, err)
 
 	ctx := t.Context()
 
 	// Connect to server using in-memory transport.
 	client := mcp.NewClient(
-		&mcp.Implementation{ //nolint:exhaustruct // optional fields use defaults
+		&mcp.Implementation{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:    "test-client",
 			Version: "v1.0.0",
 		},
@@ -128,7 +125,7 @@ func TestServerCreation(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
-	srv, err := New("v1.0.0", []IToolsRegistrator{newWikiStubRegistrator(ctrl)})
+	srv, err := New("v1.0.0", []IToolsRegistrator{newWikiStubRegistrator(ctrl)}, 300*time.Second)
 	require.NoError(t, err)
 	assert.NotNil(t, srv)
 }
@@ -136,7 +133,7 @@ func TestServerCreation(t *testing.T) {
 func TestServerCreation_EmptyRegistrators(t *testing.T) {
 	t.Parallel()
 
-	srv, err := New("v1.0.0", nil)
+	srv, err := New("v1.0.0", nil, 300*time.Second)
 	require.NoError(t, err)
 	assert.NotNil(t, srv)
 }
@@ -144,7 +141,7 @@ func TestServerCreation_EmptyRegistrators(t *testing.T) {
 func TestServerCreation_NoRegistrators(t *testing.T) {
 	t.Parallel()
 
-	srv, err := New("v1.0.0", []IToolsRegistrator{})
+	srv, err := New("v1.0.0", []IToolsRegistrator{}, 300*time.Second)
 	require.NoError(t, err)
 	assert.NotNil(t, srv)
 }
@@ -156,7 +153,7 @@ func TestServer_RegistrationError(t *testing.T) {
 	mockReg := NewMockIToolsRegistrator(ctrl)
 	mockReg.EXPECT().Register(gomock.Any()).Return(assert.AnError)
 
-	_, err := New("v1.0.0", []IToolsRegistrator{mockReg})
+	_, err := New("v1.0.0", []IToolsRegistrator{mockReg}, 300*time.Second)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, assert.AnError)
 }

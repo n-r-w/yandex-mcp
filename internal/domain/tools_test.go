@@ -20,14 +20,18 @@ func TestWikiToolLists_Complete(t *testing.T) {
 		assert.False(t, seen[tool], "WikiAllTools should not contain duplicates")
 		seen[tool] = true
 	}
-
 }
 
 func TestTrackerToolLists_Complete(t *testing.T) {
 	t.Parallel()
 
 	// TrackerAllTools length should equal TrackerToolCount
-	assert.Len(t, domain.TrackerAllTools(), int(domain.TrackerToolCount), "TrackerAllTools should contain all tracker tools")
+	assert.Len(
+		t,
+		domain.TrackerAllTools(),
+		int(domain.TrackerToolCount),
+		"TrackerAllTools should contain all tracker tools",
+	)
 
 	// Check for duplicates in TrackerAllTools
 	seen := make(map[domain.TrackerTool]bool)
@@ -35,7 +39,6 @@ func TestTrackerToolLists_Complete(t *testing.T) {
 		assert.False(t, seen[tool], "TrackerAllTools should not contain duplicates")
 		seen[tool] = true
 	}
-
 }
 
 func TestTrackerTool_String_AllToolsHaveNames(t *testing.T) {

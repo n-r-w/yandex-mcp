@@ -1,7 +1,7 @@
 package tracker
 
 import (
-	"encoding/json"
+	"encoding/json/v2"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -20,7 +20,7 @@ import (
 const testAttachInlineMaxBytes = 10 * 1024 * 1024
 
 func newTestConfig(baseURL, orgID string) *config.Config {
-	return &config.Config{ //nolint:exhaustruct // test helper
+	return &config.Config{ //nolint:exhaustruct_v5 // test helper
 		TrackerBaseURL:       baseURL,
 		CloudOrgID:           orgID,
 		AttachInlineMaxBytes: testAttachInlineMaxBytes,
@@ -42,8 +42,8 @@ func TestClient_HeaderInjection(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedHeaders = r.Header.Clone()
 		w.Header().Set("Content-Type", "application/json")
-		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode(issueDTO{ID: "1", Key: "TEST-1"})
+		//nolint:errcheck,exhaustruct_v5 // test helper
+		json.MarshalWrite(w, issueDTO{ID: "1", Key: "TEST-1"})
 	}))
 	t.Cleanup(func() {
 		server.Close()
@@ -53,7 +53,6 @@ func TestClient_HeaderInjection(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, testOrgID), tokenProvider)
 
-	//nolint:exhaustruct // test only checks headers
 	_, err := client.GetIssue(t.Context(), "TEST-1", domain.TrackerGetIssueOpts{})
 	require.NoError(t, err)
 
@@ -78,7 +77,7 @@ func TestClient_HeaderInjection_POST(t *testing.T) {
 		capturedHeaders = r.Header.Clone()
 		w.Header().Set("Content-Type", "application/json")
 		//nolint:errcheck // test helper
-		json.NewEncoder(w).Encode([]issueDTO{})
+		json.MarshalWrite(w, []issueDTO{})
 	}))
 	t.Cleanup(func() {
 		server.Close()
@@ -88,7 +87,6 @@ func TestClient_HeaderInjection_POST(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, testOrgID), tokenProvider)
 
-	//nolint:exhaustruct // test only checks headers
 	_, err := client.SearchIssues(t.Context(), domain.TrackerSearchIssuesOpts{})
 	require.NoError(t, err)
 
@@ -116,7 +114,6 @@ func TestClient_Non2xx_ReturnsUpstreamError_Sanitized(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	//nolint:exhaustruct // test checks error conversion
 	_, err := client.GetIssue(t.Context(), "TEST-999", domain.TrackerGetIssueOpts{})
 	require.Error(t, err)
 
@@ -130,33 +127,44 @@ func TestClient_Non2xx_ReturnsUpstreamError_Sanitized(t *testing.T) {
 	assert.NotContains(t, upstreamErr.Details, "Authorization")
 }
 
-func TestClient_Non2xx_FallbackMessage(t *testing.T) {
+func TestClient_Non2xx_Message(t *testing.T) {
 	t.Parallel()
 
-	ctrl := gomock.NewController(t)
-	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-		_, _ = w.Write([]byte("Internal error"))
-	}))
-	t.Cleanup(func() {
-		server.Close()
-	})
-
-	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
-
-	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
-
-	//nolint:exhaustruct // test checks fallback message
-	_, err := client.GetIssue(t.Context(), "TEST-1", domain.TrackerGetIssueOpts{})
-	require.Error(t, err)
-
-	var upstreamErr domain.UpstreamError
-	require.ErrorAs(t, err, &upstreamErr)
-
-	assert.Equal(t, http.StatusInternalServerError, upstreamErr.HTTPStatus)
-	assert.Equal(t, "Internal Server Error", upstreamErr.Message)
+	for _, tt := range []struct {
+		name    string
+		status  int
+		body    string
+		issueID string
+		message string
+	}{
+		{
+			name: "fallback message", status: http.StatusInternalServerError,
+			body: "Internal error", issueID: "TEST-1", message: "Internal Server Error",
+		},
+		{
+			name: "404 message", status: http.StatusNotFound,
+			body: `{"errorMessages":["Issue not found"]}`, issueID: "TEST-999", message: "Issue not found",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(tt.status)
+				_, _ = w.Write([]byte(tt.body))
+			}))
+			t.Cleanup(server.Close)
+			tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
+			client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
+			_, err := client.GetIssue(t.Context(), tt.issueID, domain.TrackerGetIssueOpts{})
+			require.Error(t, err)
+			var upstreamErr domain.UpstreamError
+			require.ErrorAs(t, err, &upstreamErr)
+			assert.Equal(t, tt.status, upstreamErr.HTTPStatus)
+			assert.Equal(t, tt.message, upstreamErr.Message)
+		})
+	}
 }
 
 func TestClient_GetIssue_WithExpand(t *testing.T) {
@@ -171,8 +179,8 @@ func TestClient_GetIssue_WithExpand(t *testing.T) {
 		capturedURL = r.URL.String()
 		capturedMethod = r.Method
 		w.Header().Set("Content-Type", "application/json")
-		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode(issueDTO{ID: "42", Key: "TEST-42", Summary: "Test Issue"})
+		//nolint:errcheck,exhaustruct_v5 // test helper
+		json.MarshalWrite(w, issueDTO{ID: "42", Key: "TEST-42", Summary: "Test Issue"})
 	}))
 	t.Cleanup(func() {
 		server.Close()
@@ -204,8 +212,8 @@ func TestClient_GetEntity_WithFieldsAndAttachments(t *testing.T) {
 		capturedURL = r.URL.String()
 		capturedMethod = r.Method
 		w.Header().Set("Content-Type", "application/json")
-		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode(entityDTO{
+		//nolint:errcheck,exhaustruct_v5 // test helper
+		json.MarshalWrite(w, entityDTO{
 			Self:       "https://api.tracker.yandex.net/v3/entities/project/entity-1",
 			ID:         "entity-1",
 			Version:    14,
@@ -256,11 +264,11 @@ func TestClient_SearchEntities(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedURL = r.URL.String()
 		capturedMethod = r.Method
-		_ = json.NewDecoder(r.Body).Decode(&capturedBody)
+		_ = json.UnmarshalRead(r.Body, &capturedBody)
 
 		w.Header().Set("Content-Type", "application/json")
-		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode(searchEntitiesResponseDTO{
+		//nolint:errcheck,exhaustruct_v5 // test helper
+		json.MarshalWrite(w, searchEntitiesResponseDTO{
 			Hits:    1,
 			Pages:   1,
 			OrderBy: "entityStatus",
@@ -314,13 +322,13 @@ func TestClient_SearchIssues_StandardPagination(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedURL = r.URL.String()
 		capturedMethod = r.Method
-		_ = json.NewDecoder(r.Body).Decode(&capturedBody)
+		_ = json.UnmarshalRead(r.Body, &capturedBody)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set(headerXTotalCount, "100")
 		w.Header().Set(headerXTotalPages, "5")
-		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode([]issueDTO{
+		//nolint:errcheck,exhaustruct_v5 // test helper
+		json.MarshalWrite(w, []issueDTO{
 			{ID: "1", Key: "TEST-1"},
 			{ID: "2", Key: "TEST-2"},
 		})
@@ -333,7 +341,7 @@ func TestClient_SearchIssues_StandardPagination(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	//nolint:exhaustruct // test uses partial opts
+	//nolint:exhaustruct_v5 // test uses partial opts
 	result, err := client.SearchIssues(t.Context(), domain.TrackerSearchIssuesOpts{
 		Filter:  map[string]string{"queue": "TEST"},
 		Order:   "+updated",
@@ -373,8 +381,8 @@ func TestClient_SearchIssues_ScrollPagination(t *testing.T) {
 		w.Header().Set(headerXScrollToken, "scroll-token-xyz")
 		w.Header().Set(headerLink, `</v3/issues/_search?scrollId=scroll-id-abc123>; rel="next"`)
 		w.Header().Set(headerXTotalCount, "50000")
-		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode([]issueDTO{{ID: "1", Key: "TEST-1"}})
+		//nolint:errcheck,exhaustruct_v5 // test helper
+		json.MarshalWrite(w, []issueDTO{{ID: "1", Key: "TEST-1"}})
 	}))
 	t.Cleanup(func() {
 		server.Close()
@@ -384,7 +392,7 @@ func TestClient_SearchIssues_ScrollPagination(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	//nolint:exhaustruct // test uses scroll pagination opts
+	//nolint:exhaustruct_v5 // test uses scroll pagination opts
 	result, err := client.SearchIssues(t.Context(), domain.TrackerSearchIssuesOpts{
 		Query:           "Queue: TEST",
 		ScrollType:      "sorted",
@@ -414,8 +422,8 @@ func TestClient_SearchIssues_ScrollPagination_SubsequentRequest(t *testing.T) {
 		capturedURL = r.URL.String()
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set(headerXScrollID, "scroll-id-next")
-		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode([]issueDTO{{ID: "501", Key: "TEST-501"}})
+		//nolint:errcheck,exhaustruct_v5 // test helper
+		json.MarshalWrite(w, []issueDTO{{ID: "501", Key: "TEST-501"}})
 	}))
 	t.Cleanup(func() {
 		server.Close()
@@ -425,7 +433,7 @@ func TestClient_SearchIssues_ScrollPagination_SubsequentRequest(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	//nolint:exhaustruct // test uses only scrollID
+	//nolint:exhaustruct_v5 // test uses only scrollID
 	result, err := client.SearchIssues(t.Context(), domain.TrackerSearchIssuesOpts{
 		ScrollID: "scroll-id-abc123",
 	})
@@ -449,7 +457,7 @@ func TestClient_CountIssues_WithFilter(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedURL = r.URL.String()
 		capturedMethod = r.Method
-		_ = json.NewDecoder(r.Body).Decode(&capturedBody)
+		_ = json.UnmarshalRead(r.Body, &capturedBody)
 
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte("5221186"))
@@ -462,7 +470,7 @@ func TestClient_CountIssues_WithFilter(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	//nolint:exhaustruct // test uses only filter
+	//nolint:exhaustruct_v5 // test uses only filter
 	count, err := client.CountIssues(t.Context(), domain.TrackerCountIssuesOpts{
 		Filter: map[string]string{"queue": "JUNE", "assignee": "empty()"},
 	})
@@ -482,7 +490,7 @@ func TestClient_CountIssues_WithQuery(t *testing.T) {
 
 	var capturedBody map[string]any
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_ = json.NewDecoder(r.Body).Decode(&capturedBody)
+		_ = json.UnmarshalRead(r.Body, &capturedBody)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte("42"))
 	}))
@@ -494,7 +502,7 @@ func TestClient_CountIssues_WithQuery(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	//nolint:exhaustruct // test uses only query
+	//nolint:exhaustruct_v5 // test uses only query
 	count, err := client.CountIssues(t.Context(), domain.TrackerCountIssuesOpts{
 		Query: "Queue: TEST Assignee: me()",
 	})
@@ -516,8 +524,8 @@ func TestClient_ListIssueTransitions(t *testing.T) {
 		capturedURL = r.URL.String()
 		capturedMethod = r.Method
 		w.Header().Set("Content-Type", "application/json")
-		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode([]transitionDTO{
+		//nolint:errcheck,exhaustruct_v5 // test helper
+		json.MarshalWrite(w, []transitionDTO{
 			{
 				ID:      "start_progress",
 				Display: "Start Progress",
@@ -777,8 +785,8 @@ func TestClient_ListIssueComments_WithPagination(t *testing.T) {
 		capturedMethod = r.Method
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set(headerLink, `</v3/issues/TEST-1/comments?id=123>; rel="next"`)
-		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode([]commentDTO{
+		//nolint:errcheck,exhaustruct_v5 // test helper
+		json.MarshalWrite(w, []commentDTO{
 			{ID: "100", LongID: "long-100", Text: "First comment"},
 			{ID: "101", LongID: "long-101", Text: "Second comment"},
 		})
@@ -959,7 +967,7 @@ func TestClient_GetIssueAttachment_EnforcesMaxSize(t *testing.T) {
 
 	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
 
-	cfg := &config.Config{ //nolint:exhaustruct // test uses minimal config
+	cfg := &config.Config{ //nolint:exhaustruct_v5 // test uses minimal config
 		TrackerBaseURL:       server.URL,
 		CloudOrgID:           "org",
 		AttachInlineMaxBytes: 4,
@@ -1054,7 +1062,6 @@ func TestClient_UpstreamError_NoTokenLeak(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	//nolint:exhaustruct // test checks token leak
 	_, err := client.GetIssue(t.Context(), "TEST-1", domain.TrackerGetIssueOpts{})
 	require.Error(t, err)
 
@@ -1083,7 +1090,6 @@ func TestClient_ErrorCodes_401(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	//nolint:exhaustruct // test checks 401 handling
 	_, err := client.GetIssue(t.Context(), "TEST-1", domain.TrackerGetIssueOpts{})
 	require.Error(t, err)
 
@@ -1111,7 +1117,6 @@ func TestClient_ErrorCodes_403(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	//nolint:exhaustruct // test checks 403 handling
 	_, err := client.GetIssue(t.Context(), "TEST-1", domain.TrackerGetIssueOpts{})
 	require.Error(t, err)
 
@@ -1119,34 +1124,6 @@ func TestClient_ErrorCodes_403(t *testing.T) {
 	require.ErrorAs(t, err, &upstreamErr)
 	assert.Equal(t, http.StatusForbidden, upstreamErr.HTTPStatus)
 	assert.Equal(t, "Access denied", upstreamErr.Message)
-}
-
-func TestClient_ErrorCodes_404(t *testing.T) {
-	t.Parallel()
-
-	ctrl := gomock.NewController(t)
-	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
-		_, _ = w.Write([]byte(`{"errorMessages":["Issue not found"]}`))
-	}))
-	t.Cleanup(func() {
-		server.Close()
-	})
-
-	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return("token", nil)
-
-	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
-
-	//nolint:exhaustruct // test checks 404 handling
-	_, err := client.GetIssue(t.Context(), "TEST-999", domain.TrackerGetIssueOpts{})
-	require.Error(t, err)
-
-	var upstreamErr domain.UpstreamError
-	require.ErrorAs(t, err, &upstreamErr)
-	assert.Equal(t, http.StatusNotFound, upstreamErr.HTTPStatus)
-	assert.Equal(t, "Issue not found", upstreamErr.Message)
 }
 
 func TestClient_ErrorCodes_422(t *testing.T) {
@@ -1167,7 +1144,7 @@ func TestClient_ErrorCodes_422(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	//nolint:exhaustruct // test checks 422 handling
+	//nolint:exhaustruct_v5 // test checks 422 handling
 	_, err := client.SearchIssues(t.Context(), domain.TrackerSearchIssuesOpts{Query: "invalid"})
 	require.Error(t, err)
 
@@ -1195,7 +1172,6 @@ func TestClient_ErrorCodes_429(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	//nolint:exhaustruct // test checks 429 handling
 	_, err := client.SearchIssues(t.Context(), domain.TrackerSearchIssuesOpts{})
 	require.Error(t, err)
 
@@ -1215,8 +1191,8 @@ func TestClient_IssueID_PathEscaping(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedRawURL = r.RequestURI
 		w.Header().Set("Content-Type", "application/json")
-		//nolint:errcheck,exhaustruct // test helper
-		json.NewEncoder(w).Encode(issueDTO{ID: "1", Key: "TEST-1"})
+		//nolint:errcheck,exhaustruct_v5 // test helper
+		json.MarshalWrite(w, issueDTO{ID: "1", Key: "TEST-1"})
 	}))
 	t.Cleanup(func() {
 		server.Close()
@@ -1226,7 +1202,6 @@ func TestClient_IssueID_PathEscaping(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	//nolint:exhaustruct // test checks path escaping
 	_, err := client.GetIssue(t.Context(), "TEST/SPECIAL-1", domain.TrackerGetIssueOpts{})
 	require.NoError(t, err)
 
@@ -1242,10 +1217,10 @@ func TestClient_SearchIssues_QueryLanguage(t *testing.T) {
 
 	var capturedBody map[string]any
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_ = json.NewDecoder(r.Body).Decode(&capturedBody)
+		_ = json.UnmarshalRead(r.Body, &capturedBody)
 		w.Header().Set("Content-Type", "application/json")
 		//nolint:errcheck // test helper
-		json.NewEncoder(w).Encode([]issueDTO{})
+		json.MarshalWrite(w, []issueDTO{})
 	}))
 	t.Cleanup(func() {
 		server.Close()
@@ -1255,7 +1230,7 @@ func TestClient_SearchIssues_QueryLanguage(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	//nolint:exhaustruct // test checks query language
+	//nolint:exhaustruct_v5 // test checks query language
 	_, err := client.SearchIssues(t.Context(), domain.TrackerSearchIssuesOpts{
 		Query: `epic: notEmpty() Queue: TREK "Sort by": Updated DESC`,
 	})
@@ -1282,7 +1257,6 @@ func TestClient_ErrorResponse_WithErrorsArray(t *testing.T) {
 
 	client := NewClient(newTestConfig(server.URL, "org"), tokenProvider)
 
-	//nolint:exhaustruct // test checks error array
 	_, err := client.GetIssue(t.Context(), "TEST-1", domain.TrackerGetIssueOpts{})
 	require.Error(t, err)
 

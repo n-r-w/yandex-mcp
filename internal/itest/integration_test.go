@@ -2,6 +2,7 @@ package itest
 
 import (
 	"testing"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
@@ -26,7 +27,7 @@ func listToolNames(t *testing.T, srv *server.Server) []string {
 	ctx := t.Context()
 
 	client := mcp.NewClient(
-		&mcp.Implementation{ //nolint:exhaustruct // optional fields use defaults
+		&mcp.Implementation{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:    "test-client",
 			Version: "1.0.0",
 		},
@@ -69,7 +70,7 @@ func TestServerIntegration_ReadOnlyToolsRegistered(t *testing.T) {
 		),
 	}
 
-	srv, err := server.New("v1.0.0", registrators)
+	srv, err := server.New("v1.0.0", registrators, 300*time.Second)
 	require.NoError(t, err)
 
 	toolNames := listToolNames(t, srv)
@@ -106,7 +107,7 @@ func TestServerIntegration_AllowlistGating_ReducedList(t *testing.T) {
 		),
 	}
 
-	srv, err := server.New("v1.0.0", registrators)
+	srv, err := server.New("v1.0.0", registrators, 300*time.Second)
 	require.NoError(t, err)
 
 	toolNames := listToolNames(t, srv)
@@ -138,7 +139,7 @@ func TestServerIntegration_EmptyAllowlist_NoToolsRegistered(t *testing.T) {
 		),
 	}
 
-	srv, err := server.New("v1.0.0", registrators)
+	srv, err := server.New("v1.0.0", registrators, 300*time.Second)
 	require.NoError(t, err)
 
 	toolNames := listToolNames(t, srv)

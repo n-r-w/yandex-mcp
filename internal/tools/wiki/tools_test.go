@@ -1,4 +1,4 @@
-//nolint:exhaustruct // test file uses partial struct initialization for clarity
+//nolint:exhaustruct_v5 // test file uses partial struct initialization for clarity
 package wiki
 
 import (
@@ -57,7 +57,10 @@ func TestTools_GetPageBySlug(t *testing.T) {
 		}
 
 		mockAdapter.EXPECT().
-			GetPageBySlug(gomock.Any(), "test/page", domain.WikiGetPageOpts{Fields: []string{"content", "attributes"}, RevisionID: "7"}).
+			GetPageBySlug(gomock.Any(), "test/page", domain.WikiGetPageOpts{
+				Fields:     []string{"content", "attributes"},
+				RevisionID: "7",
+			}).
 			Return(expectedPage, nil)
 
 		input := getPageBySlugInputDTO{

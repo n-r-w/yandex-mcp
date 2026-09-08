@@ -3,7 +3,7 @@ package apihelpers
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/n-r-w/yandex-mcp/internal/domain"
 )
@@ -41,7 +40,6 @@ type APIClientConfig struct {
 	ExtraHeaders        map[string]string
 	ServiceName         string
 	ParseError          ErrorParseFunc
-	HTTPTimeout         time.Duration
 	RawResponseMaxBytes int64
 }
 
@@ -49,13 +47,7 @@ type APIClientConfig struct {
 func NewAPIClient(cfg APIClientConfig) *APIClient {
 	httpClient := cfg.HTTPClient
 	if httpClient == nil {
-		timeout := cfg.HTTPTimeout
-		if timeout == 0 {
-			timeout = DefaultTimeout
-		}
-		httpClient = &http.Client{ //nolint:exhaustruct // optional fields use defaults
-			Timeout: timeout,
-		}
+		httpClient = &http.Client{}
 	}
 
 	parsedBaseURL, baseURLParseErr := parseBaseURL(cfg.BaseURL)

@@ -1,4 +1,4 @@
-//nolint:exhaustruct // test file uses partial struct initialization for clarity
+//nolint:exhaustruct_v5 // test file uses partial struct initialization for clarity
 package tracker
 
 import (
@@ -28,9 +28,23 @@ func newTrackerToolsTestSetup(t *testing.T) (*Registrator, *MockITrackerAdapter)
 
 	ctrl := gomock.NewController(t)
 	mockAdapter := NewMockITrackerAdapter(ctrl)
-	reg := NewRegistrator(mockAdapter, domain.TrackerAllTools(), defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs)
+	reg := NewRegistrator(
+		mockAdapter,
+		domain.TrackerAllTools(),
+		defaultAttachExtensions,
+		defaultAttachViewExts,
+		defaultAttachDirs,
+	)
 
 	return reg, mockAdapter
+}
+
+func assertSafeUpstreamError(t *testing.T, err error, status string) {
+	t.Helper()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), domain.ServiceTracker)
+	assert.Contains(t, err.Error(), status)
+	assert.NotContains(t, err.Error(), "secrets")
 }
 
 func TestTools_GetIssue(t *testing.T) {
@@ -253,7 +267,10 @@ func TestTools_ExpandValidation(t *testing.T) {
 		{
 			name: "list_project_comments",
 			call: func(reg *Registrator) error {
-				_, err := reg.listProjectComments(t.Context(), listProjectCommentsInputDTO{ProjectID: "3", Expand: "transitions"})
+				_, err := reg.listProjectComments(
+					t.Context(),
+					listProjectCommentsInputDTO{ProjectID: "3", Expand: "transitions"},
+				)
 				return err
 			},
 		},
@@ -786,11 +803,7 @@ func TestTools_ListAttachments(t *testing.T) {
 		_, err := reg.listAttachments(t.Context(), listAttachmentsInputDTO{
 			IssueID: "TEST-1",
 		})
-		require.Error(t, err)
-		errStr := err.Error()
-		assert.Contains(t, errStr, domain.ServiceTracker)
-		assert.Contains(t, errStr, "HTTP 403")
-		assert.NotContains(t, errStr, "secrets")
+		assertSafeUpstreamError(t, err, "HTTP 403")
 	})
 }
 
@@ -1439,11 +1452,7 @@ func TestTools_GetQueue(t *testing.T) {
 		_, err := reg.getQueue(t.Context(), getQueueInputDTO{
 			QueueID: "NONEXISTENT",
 		})
-		require.Error(t, err)
-		errStr := err.Error()
-		assert.Contains(t, errStr, domain.ServiceTracker)
-		assert.Contains(t, errStr, "HTTP 404")
-		assert.NotContains(t, errStr, "secrets")
+		assertSafeUpstreamError(t, err, "HTTP 404")
 	})
 }
 
@@ -1658,11 +1667,7 @@ func TestTools_GetUser(t *testing.T) {
 		_, err := reg.getUser(t.Context(), getUserInputDTO{
 			UserID: "nonexistent",
 		})
-		require.Error(t, err)
-		errStr := err.Error()
-		assert.Contains(t, errStr, domain.ServiceTracker)
-		assert.Contains(t, errStr, "HTTP 404")
-		assert.NotContains(t, errStr, "secrets")
+		assertSafeUpstreamError(t, err, "HTTP 404")
 	})
 }
 
@@ -1743,11 +1748,7 @@ func TestTools_ListLinks(t *testing.T) {
 		_, err := reg.listLinks(t.Context(), listLinksInputDTO{
 			IssueID: "NONEXISTENT",
 		})
-		require.Error(t, err)
-		errStr := err.Error()
-		assert.Contains(t, errStr, domain.ServiceTracker)
-		assert.Contains(t, errStr, "HTTP 404")
-		assert.NotContains(t, errStr, "secrets")
+		assertSafeUpstreamError(t, err, "HTTP 404")
 	})
 }
 
@@ -1836,11 +1837,7 @@ func TestTools_GetChangelog(t *testing.T) {
 		_, err := reg.getChangelog(t.Context(), getChangelogInputDTO{
 			IssueID: "NONEXISTENT",
 		})
-		require.Error(t, err)
-		errStr := err.Error()
-		assert.Contains(t, errStr, domain.ServiceTracker)
-		assert.Contains(t, errStr, "HTTP 404")
-		assert.NotContains(t, errStr, "secrets")
+		assertSafeUpstreamError(t, err, "HTTP 404")
 	})
 }
 
@@ -1915,11 +1912,7 @@ func TestTools_ListProjectComments(t *testing.T) {
 		_, err := reg.listProjectComments(t.Context(), listProjectCommentsInputDTO{
 			ProjectID: "nonexistent",
 		})
-		require.Error(t, err)
-		errStr := err.Error()
-		assert.Contains(t, errStr, domain.ServiceTracker)
-		assert.Contains(t, errStr, "HTTP 404")
-		assert.NotContains(t, errStr, "secrets")
+		assertSafeUpstreamError(t, err, "HTTP 404")
 	})
 }
 
@@ -2075,7 +2068,10 @@ func TestTools_GetGlobalAttachment(t *testing.T) {
 		t.Parallel()
 		reg, _ := newTrackerToolsTestSetup(t)
 
-		_, err := reg.getGlobalAttachment(t.Context(), getGlobalAttachmentInputDTO{FileName: "file.txt", GetContent: true})
+		_, err := reg.getGlobalAttachment(
+			t.Context(),
+			getGlobalAttachmentInputDTO{FileName: "file.txt", GetContent: true},
+		)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "attachment_id is required")
 	})

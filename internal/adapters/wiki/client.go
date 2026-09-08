@@ -3,7 +3,7 @@ package wiki
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -38,7 +38,6 @@ func NewClient(cfg *config.Config, tokenProvider apihelpers.ITokenProvider) *Cli
 		ExtraHeaders:        nil,
 		ServiceName:         string(domain.ServiceWiki),
 		ParseError:          client.parseError,
-		HTTPTimeout:         cfg.HTTPTimeout,
 		RawResponseMaxBytes: cfg.AttachInlineMaxBytes,
 	})
 
@@ -113,10 +112,7 @@ func (c *Client) ListPageResources(
 		q.Set("cursor", opts.Cursor)
 	}
 	if opts.PageSize > 0 {
-		pageSize := opts.PageSize
-		if pageSize > maxResourcesSize {
-			pageSize = maxResourcesSize
-		}
+		pageSize := min(opts.PageSize, maxResourcesSize)
 		q.Set("page_size", strconv.Itoa(pageSize))
 	}
 	if opts.OrderBy != "" {
@@ -162,10 +158,7 @@ func (c *Client) ListPageGrids(
 		q.Set("cursor", opts.Cursor)
 	}
 	if opts.PageSize > 0 {
-		pageSize := opts.PageSize
-		if pageSize > maxGridsSize {
-			pageSize = maxGridsSize
-		}
+		pageSize := min(opts.PageSize, maxGridsSize)
 		q.Set("page_size", strconv.Itoa(pageSize))
 	}
 	if opts.OrderBy != "" {
@@ -237,10 +230,7 @@ func applyDescendantsOptsQuery(query url.Values, opts domain.WikiListDescendants
 		query.Set("cursor", opts.Cursor)
 	}
 	if opts.PageSize > 0 {
-		pageSize := opts.PageSize
-		if pageSize > maxDescendantsSize {
-			pageSize = maxDescendantsSize
-		}
+		pageSize := min(opts.PageSize, maxDescendantsSize)
 		query.Set("page_size", strconv.Itoa(pageSize))
 	}
 }

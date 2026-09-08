@@ -3,7 +3,7 @@ package tracker
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"io"
 	"net/http"
@@ -41,7 +41,6 @@ func NewClient(cfg *config.Config, tokenProvider apihelpers.ITokenProvider) *Cli
 		},
 		ServiceName:         string(domain.ServiceTracker),
 		ParseError:          client.parseError,
-		HTTPTimeout:         cfg.HTTPTimeout,
 		RawResponseMaxBytes: cfg.AttachInlineMaxBytes,
 	})
 

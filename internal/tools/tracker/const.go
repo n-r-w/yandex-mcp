@@ -1,6 +1,9 @@
 package tracker
 
 const (
+	entityTypeGoal      = "goal"
+	entityTypePortfolio = "portfolio"
+	entityTypeProject   = "project"
 	maxPerScroll        = 1000
 	maxEntitiesPerPage  = 50
 	attachmentDirPerm   = 0o750

@@ -2,7 +2,9 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -13,18 +15,23 @@ type Server struct {
 }
 
 // New initializes an MCP server with the given registrators.
-func New(serverVersion string, registrators []IToolsRegistrator) (*Server, error) {
+func New(serverVersion string, registrators []IToolsRegistrator, timeout time.Duration) (*Server, error) {
+	if timeout <= 0 {
+		return nil, errors.New("tool timeout must be positive")
+	}
 	mcpServer := mcp.NewServer(
-		&mcp.Implementation{ //nolint:exhaustruct // optional fields use defaults
+		&mcp.Implementation{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:    serverName,
 			Version: serverVersion,
 			Title:   serverTitle,
 		},
-		//nolint:exhaustruct // optional fields use defaults
+		//nolint:exhaustruct_v5 // optional fields use defaults
 		&mcp.ServerOptions{
 			Instructions: systemPrompt,
 		},
 	)
+
+	mcpServer.AddReceivingMiddleware(toolTimeout(timeout))
 
 	for _, r := range registrators {
 		if err := r.Register(mcpServer); err != nil {

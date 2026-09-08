@@ -62,7 +62,7 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 	registerTool(
 		r.enabledTools[domain.TrackerToolIssueGet],
 		srv,
-		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		&mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:        domain.TrackerToolIssueGet.String(),
 			Description: "Retrieves a Yandex Tracker issue by its ID or key",
 		},
@@ -71,7 +71,7 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 	registerTool(
 		r.enabledTools[domain.TrackerToolIssueSearch],
 		srv,
-		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		&mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:        domain.TrackerToolIssueSearch.String(),
 			Description: "Searches Yandex Tracker issues using filter or query",
 		},
@@ -80,7 +80,7 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 	registerTool(
 		r.enabledTools[domain.TrackerToolIssueCount],
 		srv,
-		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		&mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:        domain.TrackerToolIssueCount.String(),
 			Description: "Counts Yandex Tracker issues matching filter or query",
 		},
@@ -89,7 +89,7 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 	registerTool(
 		r.enabledTools[domain.TrackerToolTransitionsList],
 		srv,
-		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		&mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:        domain.TrackerToolTransitionsList.String(),
 			Description: "Lists available status transitions for a Yandex Tracker issue",
 		},
@@ -98,7 +98,7 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 	registerTool(
 		r.enabledTools[domain.TrackerToolQueuesList],
 		srv,
-		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		&mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:        domain.TrackerToolQueuesList.String(),
 			Description: "Lists Yandex Tracker queues",
 		},
@@ -107,7 +107,7 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 	registerTool(
 		r.enabledTools[domain.TrackerToolBoardsList],
 		srv,
-		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		&mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:        domain.TrackerToolBoardsList.String(),
 			Description: "Lists Yandex Tracker boards",
 			InputSchema: emptyObjectInputSchema(),
@@ -117,7 +117,7 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 	registerTool(
 		r.enabledTools[domain.TrackerToolBoardSprintsList],
 		srv,
-		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		&mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:        domain.TrackerToolBoardSprintsList.String(),
 			Description: "Lists sprints for a Yandex Tracker board",
 		},
@@ -126,7 +126,7 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 	registerTool(
 		r.enabledTools[domain.TrackerToolCommentsList],
 		srv,
-		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		&mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:        domain.TrackerToolCommentsList.String(),
 			Description: "Lists comments for a Yandex Tracker issue",
 		},
@@ -135,7 +135,7 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 	registerTool(
 		r.enabledTools[domain.TrackerToolAttachmentsList],
 		srv,
-		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		&mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:        domain.TrackerToolAttachmentsList.String(),
 			Description: "Lists attachments for a Yandex Tracker issue",
 		},
@@ -144,7 +144,7 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 	registerTool(
 		r.enabledTools[domain.TrackerToolAttachmentGet],
 		srv,
-		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		&mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:        domain.TrackerToolAttachmentGet.String(),
 			Description: "Downloads a file attached to a Yandex Tracker issue; requires exactly one of save_path or get_content",
 		},
@@ -153,7 +153,7 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 	registerTool(
 		r.enabledTools[domain.TrackerToolAttachmentPreviewGet],
 		srv,
-		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		&mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:        domain.TrackerToolAttachmentPreviewGet.String(),
 			Description: "Downloads a thumbnail for a Yandex Tracker issue attachment",
 		},
@@ -162,7 +162,7 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 	registerTool(
 		r.enabledTools[domain.TrackerToolQueueGet],
 		srv,
-		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		&mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:        domain.TrackerToolQueueGet.String(),
 			Description: "Gets a Yandex Tracker queue by ID or key",
 		},
@@ -171,7 +171,7 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 	registerTool(
 		r.enabledTools[domain.TrackerToolUserCurrent],
 		srv,
-		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		&mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:        domain.TrackerToolUserCurrent.String(),
 			Description: "Gets the current authenticated Yandex Tracker user",
 			InputSchema: emptyObjectInputSchema(),
@@ -181,7 +181,7 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 	registerTool(
 		r.enabledTools[domain.TrackerToolUsersList],
 		srv,
-		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		&mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:        domain.TrackerToolUsersList.String(),
 			Description: "Lists Yandex Tracker users",
 		},
@@ -190,7 +190,7 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 	registerTool(
 		r.enabledTools[domain.TrackerToolUserGet],
 		srv,
-		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		&mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:        domain.TrackerToolUserGet.String(),
 			Description: "Gets a Yandex Tracker user by ID or login",
 		},
@@ -199,7 +199,7 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 	registerTool(
 		r.enabledTools[domain.TrackerToolLinksList],
 		srv,
-		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		&mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:        domain.TrackerToolLinksList.String(),
 			Description: "Lists all links for a Yandex Tracker issue",
 		},
@@ -208,7 +208,7 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 	registerTool(
 		r.enabledTools[domain.TrackerToolChangelog],
 		srv,
-		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		&mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:        domain.TrackerToolChangelog.String(),
 			Description: "Gets the changelog for a Yandex Tracker issue",
 		},
@@ -217,7 +217,7 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 	registerTool(
 		r.enabledTools[domain.TrackerToolProjectCommentsList],
 		srv,
-		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		&mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:        domain.TrackerToolProjectCommentsList.String(),
 			Description: "Lists comments for a Yandex Tracker project entity",
 		},
@@ -226,7 +226,7 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 	registerTool(
 		r.enabledTools[domain.TrackerToolEntityGet],
 		srv,
-		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		&mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:        domain.TrackerToolEntityGet.String(),
 			Description: "Gets a Yandex Tracker project, portfolio, or goal by ID or short ID",
 		},
@@ -235,7 +235,7 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 	registerTool(
 		r.enabledTools[domain.TrackerToolEntitiesSearch],
 		srv,
-		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		&mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:        domain.TrackerToolEntitiesSearch.String(),
 			Description: "Searches Yandex Tracker projects, portfolios, or goals",
 		},
@@ -244,7 +244,7 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 	registerTool(
 		r.enabledTools[domain.TrackerToolAttachmentGlobalGet],
 		srv,
-		&mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		&mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:        domain.TrackerToolAttachmentGlobalGet.String(),
 			Description: "Downloads a Yandex Tracker attachment by attachment ID and file name",
 		},

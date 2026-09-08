@@ -1,136 +1,68 @@
-// Package ytoken provides IAM token acquisition using the yc CLI.
+// Package ytoken caches IAM tokens obtained from an injected source.
 package ytoken
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"regexp"
 	"sync"
 	"time"
 
-	"github.com/n-r-w/singleflight/v2"
-
 	"github.com/n-r-w/yandex-mcp/internal/adapters/apihelpers"
-	"github.com/n-r-w/yandex-mcp/internal/config"
+	"github.com/n-r-w/yandex-mcp/internal/adapters/authwait"
 )
 
-// Provider implements ITokenProvider with caching and single-flight behavior.
+// Provider caches tokens and shares active acquisitions within one MCP process.
 type Provider struct {
-	executor      ICommandExecutor
+	source        ITokenSource
+	profile       string
 	refreshPeriod time.Duration
 	nowFunc       func() time.Time
-
-	mu          sync.RWMutex
-	cachedToken string
-	refreshedAt time.Time
-
-	// single-flight group for token refresh operations
-	sf singleflight.Group[string, string]
-
-	tokenRegex *regexp.Regexp
+	mu            sync.RWMutex
+	cachedToken   string
+	refreshedAt   time.Time
+	acquisitions  authwait.Group
 }
 
-// Compile-time interface assertions.
 var _ apihelpers.ITokenProvider = (*Provider)(nil)
 
-// NewProvider creates a new token provider.
-func NewProvider(cfg *config.Config) *Provider {
-	//nolint:exhaustruct // cache and sync fields intentionally start with zero values
-	return &Provider{
-		executor:      newCommandExecutor(cfg.CLIProfile),
-		refreshPeriod: cfg.IAMTokenRefreshPeriod,
-		nowFunc:       time.Now,
-		tokenRegex:    regexp.MustCompile(tokenRegexPattern),
-	}
+// New constructs a provider. The caller must Close it during shutdown.
+func New(source ITokenSource, profile string, refreshPeriod time.Duration) *Provider {
+	//nolint:exhaustruct_v5 // synchronization and cache start with zero values
+	return &Provider{source: source, profile: profile, refreshPeriod: refreshPeriod, nowFunc: time.Now}
 }
 
-// setNowFunc sets the time function for testing. Not thread-safe; call before use.
-func (p *Provider) setNowFunc(fn func() time.Time) {
-	p.nowFunc = fn
-}
-
-// setExecutor sets the command executor for testing. Not thread-safe; call before use.
-func (p *Provider) setExecutor(exec ICommandExecutor) {
-	p.executor = exec
-}
-
-// Token returns a cached IAM token or fetches a new one if cache is stale.
+// Token returns a cached token or waits for a fresh token.
 func (p *Provider) Token(ctx context.Context, forceRefresh bool) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
 	if !forceRefresh {
-		// Fast path: check if cached token is still valid
 		if token, ok := p.getCachedToken(); ok {
 			return token, nil
 		}
 	}
-
-	return p.refreshToken(ctx)
+	return p.acquisitions.Do(ctx, p.profile, func(shared context.Context) (string, error) {
+		// A prior acquisition can finish between the fast path and joining the group.
+		if !forceRefresh {
+			if token, ok := p.getCachedToken(); ok {
+				return token, nil
+			}
+		}
+		token, err := p.source.Acquire(shared, p.profile)
+		if err != nil {
+			return "", err
+		}
+		p.mu.Lock()
+		p.cachedToken, p.refreshedAt = token, p.nowFunc()
+		p.mu.Unlock()
+		return token, nil
+	})
 }
 
-// getCachedToken returns the cached token if it exists and is not expired.
 func (p *Provider) getCachedToken() (string, bool) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
-
-	if p.cachedToken == "" {
-		return "", false
-	}
-
-	tokenExpired := p.nowFunc().Sub(p.refreshedAt) >= p.refreshPeriod
-	if tokenExpired {
-		return "", false
-	}
-
-	return p.cachedToken, true
+	return p.cachedToken, p.cachedToken != "" && p.nowFunc().Sub(p.refreshedAt) < p.refreshPeriod
 }
 
-// refreshToken fetches a new token from yc CLI with single-flight coordination.
-func (p *Provider) refreshToken(ctx context.Context) (string, error) {
-	// Use singleflight to ensure only one refresh happens at a time
-	result, _, err := p.sf.Do(ctx, tokenRefreshRequestKey, p.doRefresh)
-	if err != nil {
-		return "", err
-	}
-
-	return result, nil
-}
-
-// doRefresh performs the actual token refresh.
-func (p *Provider) doRefresh(ctx context.Context) (string, error) {
-	token, err := p.executeYC(ctx)
-	if err != nil {
-		return "", err
-	}
-
-	// Update cache
-	p.mu.Lock()
-	p.cachedToken = token
-	p.refreshedAt = p.nowFunc()
-	p.mu.Unlock()
-
-	return token, nil
-}
-
-// executeYC runs the yc CLI command and extracts the IAM token using regex.
-func (p *Provider) executeYC(ctx context.Context) (string, error) {
-	output, err := p.executor.Execute(ctx)
-	if err != nil {
-		// Check context errors before sanitizing (sanitizeError breaks error chain)
-		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-			return "", fmt.Errorf("token fetch canceled or timed out: %w", err)
-		}
-
-		return "", p.logError(ctx, fmt.Errorf("%w: %s", errTokenFetchFailed, p.sanitizeError(err).Error()))
-	}
-
-	if len(output) == 0 {
-		return "", p.logError(ctx, errEmptyToken)
-	}
-
-	match := p.tokenRegex.Find(output)
-	if match == nil {
-		return "", p.logError(ctx, errTokenNotFound)
-	}
-
-	return string(match), nil
-}
+// Close cancels owned acquisitions and waits for source cleanup.
+func (p *Provider) Close() { p.acquisitions.Close() }

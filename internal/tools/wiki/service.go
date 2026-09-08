@@ -32,49 +32,49 @@ func NewRegistrator(adapter IWikiAdapter, enabledTools []domain.WikiTool) *Regis
 // Register registers all wiki tools with the MCP server.
 func (r *Registrator) Register(srv *mcp.Server) error {
 	if r.enabledTools[domain.WikiToolPageGetBySlug] {
-		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:        domain.WikiToolPageGetBySlug.String(),
 			Description: "Retrieves a Yandex Wiki page by its slug (URL path)",
 		}, server.MakeHandler(r.getPageBySlug))
 	}
 
 	if r.enabledTools[domain.WikiToolPageGetByID] {
-		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:        domain.WikiToolPageGetByID.String(),
 			Description: "Retrieves a Yandex Wiki page by its numeric ID",
 		}, server.MakeHandler(r.getPageByID))
 	}
 
 	if r.enabledTools[domain.WikiToolResourcesList] {
-		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:        domain.WikiToolResourcesList.String(),
 			Description: "Lists resources (attachments, grids) for a Yandex Wiki page",
 		}, server.MakeHandler(r.listResources))
 	}
 
 	if r.enabledTools[domain.WikiToolGridsList] {
-		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:        domain.WikiToolGridsList.String(),
 			Description: "Lists dynamic tables (grids) for a Yandex Wiki page",
 		}, server.MakeHandler(r.listGrids))
 	}
 
 	if r.enabledTools[domain.WikiToolGridGet] {
-		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:        domain.WikiToolGridGet.String(),
 			Description: "Retrieves a Yandex Wiki dynamic table (grid) by its ID",
 		}, server.MakeHandler(r.getGrid))
 	}
 
 	if r.enabledTools[domain.WikiToolPageDescendants] {
-		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:        domain.WikiToolPageDescendants.String(),
 			Description: "Lists subpages of a Yandex Wiki page by slug. Use empty slug for root.",
 		}, server.MakeHandler(r.listDescendants))
 	}
 
 	if r.enabledTools[domain.WikiToolPageDescendantsByID] {
-		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct // optional fields use defaults
+		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
 			Name:        domain.WikiToolPageDescendantsByID.String(),
 			Description: "Lists subpages (descendants) of a Yandex Wiki page by its numeric ID",
 		}, server.MakeHandler(r.listDescendantsByID))

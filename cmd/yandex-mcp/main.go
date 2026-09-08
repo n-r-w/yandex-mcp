@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"log/slog"
 	"os"
@@ -11,19 +12,22 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/n-r-w/yandex-mcp/internal/adapters/authremote"
 	"github.com/n-r-w/yandex-mcp/internal/adapters/tracker"
 	"github.com/n-r-w/yandex-mcp/internal/adapters/wiki"
+	"github.com/n-r-w/yandex-mcp/internal/adapters/yc"
 	"github.com/n-r-w/yandex-mcp/internal/adapters/ytoken"
 	"github.com/n-r-w/yandex-mcp/internal/config"
 	"github.com/n-r-w/yandex-mcp/internal/domain"
 	"github.com/n-r-w/yandex-mcp/internal/server"
+	"github.com/n-r-w/yandex-mcp/internal/server/authagent"
 	trackertools "github.com/n-r-w/yandex-mcp/internal/tools/tracker"
 	wikitools "github.com/n-r-w/yandex-mcp/internal/tools/wiki"
 )
 
 // build-time variables that can be set via ldflags
 //
-//nolint:nolintlint // gochecknoglobals is excluded for this file via .golangci.yml
+//nolint:gochecknoglobals // global variables are used for build-time information
 var (
 	version = "dev"
 	commit  = "unknown"
@@ -56,11 +60,12 @@ func main() {
 	info := getBuildInfo()
 
 	if *showVersion {
-		//nolint:exhaustruct // stdlib struct with optional fields
+		//nolint:exhaustruct_v5 // stdlib struct with optional fields
 		logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 			Level: slog.LevelInfo,
 		}))
-		logger.Info("yandex-mcp version info",
+		logger.Info(
+			"yandex-mcp version info",
 			"version", info.version,
 			"commit", info.commit,
 			"built", info.date,
@@ -69,33 +74,61 @@ func main() {
 		os.Exit(0)
 	}
 
-	//nolint:exhaustruct // SDK struct with optional fields
+	//nolint:exhaustruct_v5 // SDK struct with optional fields
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
 	}))
 	slog.SetDefault(logger)
 
-	if err := run(info.version); err != nil {
+	if err := run(info.version, flag.Args()); err != nil {
 		slog.Error("server failed", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
 }
 
-func run(serverVersion string) error {
+func run(serverVersion string, args []string) error {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
+	if len(args) > 0 {
+		if len(args) != 1 || args[0] != "auth-agent" {
+			return errors.New("usage: yandex-mcp [-version] [auth-agent]")
+		}
+		cfg, err := authagent.LoadConfig()
+		if err != nil {
+			return err
+		}
+		service := authagent.New(yc.New(cfg.YCPath))
+		defer service.Close()
+		slog.InfoContext(ctx, "starting workstation auth-agent", "port", cfg.Port)
+		return service.Run(ctx, cfg.Port, cfg.SSHTarget)
+	}
+	return runMCP(ctx, serverVersion)
+}
 
+func runMCP(ctx context.Context, serverVersion string) error {
 	cfg, err := config.Load()
 	if err != nil {
 		return err
 	}
 
-	slog.Info("configuration loaded",
+	slog.InfoContext(ctx,
+		"configuration loaded",
 		slog.String("wiki_base_url", cfg.WikiBaseURL),
 		slog.String("tracker_base_url", cfg.TrackerBaseURL),
 	)
 
-	tokenProvider := ytoken.NewProvider(cfg)
+	var tokenProvider *ytoken.Provider
+	if cfg.TokenSource == "remote" {
+		source, sourceErr := authremote.New(cfg.AuthAgentPort)
+		if sourceErr != nil {
+			return sourceErr
+		}
+		defer source.Close()
+		tokenProvider = ytoken.New(source, cfg.CLIProfile, cfg.IAMTokenRefreshPeriod)
+	} else {
+		tokenProvider = ytoken.New(yc.New("yc"), cfg.CLIProfile, cfg.IAMTokenRefreshPeriod)
+	}
+	defer tokenProvider.Close()
 
 	wikiClient := wiki.NewClient(cfg, tokenProvider)
 	trackerClient := tracker.NewClient(cfg, tokenProvider)
@@ -114,12 +147,12 @@ func run(serverVersion string) error {
 		),
 	}
 
-	srv, err := server.New(serverVersion, registrators)
+	srv, err := server.New(serverVersion, registrators, cfg.ToolTimeout)
 	if err != nil {
 		return err
 	}
 
-	slog.Info("starting MCP server over stdio")
+	slog.InfoContext(ctx, "starting MCP server over stdio")
 
 	transport := &mcp.StdioTransport{}
 	return srv.Run(ctx, transport)
