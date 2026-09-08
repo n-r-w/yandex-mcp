@@ -11,7 +11,7 @@ tool (
 
 require (
 	github.com/caarlos0/env/v11 v11.4.1
-	github.com/modelcontextprotocol/go-sdk v1.6.1
+	github.com/modelcontextprotocol/go-sdk v1.7.0
 	github.com/stretchr/testify v1.12.1
 	go.uber.org/mock v0.6.0
 )
@@ -226,6 +226,7 @@ require (
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/telemetry v0.0.0-20260811182544-a038080d80e5 // indirect
 	golang.org/x/text v0.40.0 // indirect
+	golang.org/x/time v0.15.0 // indirect
 	golang.org/x/tools v0.49.0 // indirect
 	golang.org/x/vuln v1.7.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect

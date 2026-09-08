@@ -73,6 +73,14 @@ brew tap n-r-w/tap
 brew install yandex-mcp
 ```
 
+### Go install
+
+```bash
+go install github.com/n-r-w/yandex-mcp/cmd/yandex-mcp@latest
+```
+
+The binary is installed into `GOBIN` or `$GOPATH/bin`.
+
 ### Build from Source
 
 ```bash
