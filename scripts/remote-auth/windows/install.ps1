@@ -36,7 +36,9 @@ $settings = New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew -Execution
 $action = New-ScheduledTaskAction -Execute "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe" `
     -Argument "-NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$script`""
 $taskName = 'Yandex MCP auth-agent'
-if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) { Stop-ScheduledTask -TaskName $taskName }
-Register-ScheduledTask -TaskName $taskName -Action $action -Trigger @($logon, $retry) `
+$taskPath = '\'
+$existingTask = Get-ScheduledTask | Where-Object { $_.TaskName -eq $taskName -and $_.TaskPath -eq $taskPath }
+if ($existingTask) { $existingTask | Stop-ScheduledTask }
+Register-ScheduledTask -TaskName $taskName -TaskPath $taskPath -Action $action -Trigger @($logon, $retry) `
     -Settings $settings -Principal $principal -Force | Out-Null
-Start-ScheduledTask -TaskName $taskName
+Start-ScheduledTask -TaskName $taskName -TaskPath $taskPath
