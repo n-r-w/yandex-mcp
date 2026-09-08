@@ -27,5 +27,9 @@ plutil -replace EnvironmentVariables.YANDEX_MCP_SSH_TARGET -string "$YANDEX_MCP_
 plutil -replace EnvironmentVariables.PATH -string "$PATH" "$agent"
 plutil -replace StandardErrorPath -string "$log_dir/auth-agent.log" "$agent"
 plutil -lint "$agent"
-launchctl bootout "gui/$(id -u)/net.yandex-mcp.auth-agent" 2>/dev/null || true
+loaded_agents=$(launchctl list)
+loaded_agent=$(printf '%s\n' "$loaded_agents" | awk '$3 == "net.yandex-mcp.auth-agent" { print $3 }')
+if [ -n "$loaded_agent" ]; then
+  launchctl bootout "gui/$(id -u)/net.yandex-mcp.auth-agent"
+fi
 launchctl bootstrap "gui/$(id -u)" "$agent"
