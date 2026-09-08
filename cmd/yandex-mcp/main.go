@@ -97,10 +97,10 @@ func run(serverVersion string, args []string) error {
 		if err != nil {
 			return err
 		}
-		service := authagent.New(yc.New(cfg.YCPath), cfg.Profiles)
+		service := authagent.New(yc.New(cfg.YCPath))
 		defer service.Close()
-		slog.InfoContext(ctx, "starting workstation auth-agent", "address", cfg.ListenAddress)
-		return service.Run(ctx, cfg.ListenAddress)
+		slog.InfoContext(ctx, "starting workstation auth-agent", "port", cfg.Port)
+		return service.Run(ctx, cfg.Port, cfg.SSHTarget)
 	}
 	return runMCP(ctx, serverVersion)
 }
@@ -119,7 +119,7 @@ func runMCP(ctx context.Context, serverVersion string) error {
 
 	var tokenProvider *ytoken.Provider
 	if cfg.TokenSource == "remote" {
-		source, sourceErr := authremote.New(cfg.AuthAgentURL)
+		source, sourceErr := authremote.New(cfg.AuthAgentPort)
 		if sourceErr != nil {
 			return sourceErr
 		}

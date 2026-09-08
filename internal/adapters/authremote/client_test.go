@@ -2,7 +2,9 @@ package authremote
 
 import (
 	"context"
+	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -12,8 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Protocol contract with a real loopback server. Inputs cover success, all safe
-// error codes, incompatible/malformed replies, and redirects. Replies must not leak.
+// TestAcquire checks token exchange, original diagnostics, and malformed responses.
 func TestAcquire(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -21,50 +22,19 @@ func TestAcquire(t *testing.T) {
 		status     int
 		body, want string
 	}{
-		{"success", 200, `{"version":1,"token":"token"}`, ""},
-		{
-			"forbidden",
-			403,
-			`{"version":1,"error":"forbidden_profile","message":"profile access denied"}`,
-			"profile access denied",
-		},
+		{"success", 200, `{"token":"token"}`, ""},
 		{
 			"authentication",
 			502,
-			`{"version":1,"error":"authentication_failed","message":"exit status 1: diagnostic text"}`,
-			"exit status 1: diagnostic text",
+			`{"message":"exit status 1: original command diagnostic"}`,
+			"exit status 1: original command diagnostic",
 		},
-		{
-			"version",
-			400,
-			`{"version":1,"error":"incompatible_version","message":"version not supported"}`,
-			"incompatible auth-agent protocol",
-		},
-		{
-			"invalid",
-			400,
-			`{"version":1,"error":"invalid_request","message":"profile missing"}`,
-			"invalid token request",
-		},
-		{
-			"internal",
-			500,
-			`{"version":1,"error":"internal_error","message":"internal failure"}`,
-			"auth-agent internal error",
-		},
-		{"malformed", 200, `private-login-url`, "invalid character"},
-		{"unknown", 200, `{"version":1,"token":"token","other":"private-login-url"}`, "invalid auth-agent response"},
-		{"empty", 200, `{"version":1}`, "invalid auth-agent response"},
-		{"contradictory", 200, `{"version":1,"token":"token","error":"internal_error"}`, "invalid auth-agent response"},
-		{"wrongVersion", 200, `{"version":2,"token":"token"}`, "incompatible auth-agent protocol"},
-		{"wrongStatus", 200, `{"version":1,"error":"authentication_failed"}`, "invalid auth-agent response"},
-		{
-			"longError",
-			502,
-			`{"version":1,"error":"authentication_failed","message":"` + strings.Repeat("x", 5000) + `"}`,
-			strings.Repeat("x", 5000),
-		},
-		{"redirect", 302, `private-login-url`, "invalid auth-agent response"},
+		{"other HTTP error", 503, `{"message":"source unavailable"}`, "source unavailable"},
+		{"long diagnostic", 502, `{"message":"` + strings.Repeat("x", 5000) + `"}`, strings.Repeat("x", 5000)},
+		{"malformed", 200, `not JSON`, "invalid character"},
+		{"empty token", 200, `{}`, "invalid auth-agent response"},
+		{"conflicting fields", 200, `{"token":"token","message":"failed"}`, "invalid auth-agent response"},
+		{"redirect", 302, `{}`, "invalid auth-agent response"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -74,14 +44,14 @@ func TestAcquire(t *testing.T) {
 				assert.Equal(t, "/token", r.URL.Path)
 				body, err := io.ReadAll(r.Body)
 				assert.NoError(t, err)
-				assert.JSONEq(t, `{"version":1,"profile":"work"}`, string(body))
+				assert.JSONEq(t, `{"profile":"work"}`, string(body))
 				w.Header().Set("Content-Type", "application/json")
-				w.Header().Set("Location", "http://127.0.0.1:1/private-login-url")
+				w.Header().Set("Location", "http://127.0.0.1:1/redirect-target")
 				w.WriteHeader(tt.status)
 				_, _ = io.WriteString(w, tt.body)
 			}))
 			defer srv.Close()
-			source, err := New(srv.URL)
+			source, err := New(srv.Listener.Addr().(*net.TCPAddr).Port)
 			require.NoError(t, err)
 			defer source.Close()
 			token, err := source.Acquire(t.Context(), "work")
@@ -91,26 +61,24 @@ func TestAcquire(t *testing.T) {
 			} else {
 				require.ErrorContains(t, err, tt.want)
 				require.Empty(t, token)
-				require.NotContains(t, err.Error(), "private-login-url")
+				if tt.status >= 400 {
+					require.ErrorContains(t, err, fmt.Sprintf("HTTP %d", tt.status))
+				}
 			}
 		})
 	}
 }
 
-// Only explicit loopback HTTP endpoints are valid, with no credentials or query.
-func TestEndpointValidation(t *testing.T) {
+// TestPortValidation rejects ports outside the TCP range.
+func TestPortValidation(t *testing.T) {
 	t.Parallel()
-	for _, endpoint := range []string{
-		"https://127.0.0.1:18765", "http://localhost:18765", "http://127.0.0.1",
-		"http://127.0.0.1:0", "http://127.0.0.1:99999", "http://user@127.0.0.1:1",
-		"http://127.0.0.1:1/path", "http://127.0.0.1:1?query", "http://127.0.0.1:1#fragment",
-	} {
-		_, err := New(endpoint)
-		require.Error(t, err, endpoint)
+	for _, port := range []int{0, -1, 65536} {
+		_, err := New(port)
+		require.ErrorContains(t, err, "YANDEX_MCP_AUTH_AGENT_PORT")
 	}
 }
 
-// Closing the caller's wait cancels the HTTP request on the workstation.
+// TestCancellation verifies that leaving a request cancels the workstation wait.
 func TestCancellation(t *testing.T) {
 	t.Parallel()
 	started := make(chan struct{})
@@ -122,13 +90,13 @@ func TestCancellation(t *testing.T) {
 		close(stopped)
 	}))
 	defer srv.Close()
-	source, err := New(srv.URL)
+	source, err := New(srv.Listener.Addr().(*net.TCPAddr).Port)
 	require.NoError(t, err)
 	defer source.Close()
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	result := make(chan error, 1)
-	go func() { _, requestErr := source.Acquire(ctx, "work"); result <- requestErr }()
+	go func() { _, err := source.Acquire(ctx, "work"); result <- err }()
 	<-started
 	cancel()
 	require.ErrorIs(t, <-result, context.Canceled)

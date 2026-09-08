@@ -36,7 +36,6 @@ archives:
       - LICENSE
       - .env.example
       - scripts/remote-auth/**
-      - docs/specs/remote-authentication/**
 
 checksum:
   name_template: "SHA256SUMS"

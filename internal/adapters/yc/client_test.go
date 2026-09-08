@@ -5,12 +5,32 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 )
+
+// TestAcquireFromPATH verifies native command lookup with the active yc profile.
+func TestAcquireFromPATH(t *testing.T) {
+	executable, err := os.Executable()
+	require.NoError(t, err)
+	binary, err := os.ReadFile(executable)
+	require.NoError(t, err)
+	directory := t.TempDir()
+	name := "yc"
+	if runtime.GOOS == "windows" {
+		name += ".exe"
+	}
+	require.NoError(t, os.WriteFile(filepath.Join(directory, name), binary, 0o700))
+	t.Setenv("PATH", directory)
+	t.Setenv("YANDEX_MCP_TEST_YC", "1")
+	token, err := New("yc").Acquire(t.Context(), "")
+	require.NoError(t, err)
+	require.Equal(t, "t1.prefix."+strings.Repeat("a", 86), token)
+}
 
 // TestMain makes the native test executable act as yc in child processes.
 func TestMain(m *testing.M) {

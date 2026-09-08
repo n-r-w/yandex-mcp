@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"errors"
 	"log/slog"
+	"net"
 	"net/http/httptest"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -42,11 +44,11 @@ func TestRemoteMCPPreservesErrorAndLogs(t *testing.T) {
 	diagnostic := "original yc error " + strings.Repeat("diagnostic-", 600)
 	source := authagent.NewMockITokenSource(gomock.NewController(t))
 	source.EXPECT().Acquire(gomock.Any(), "work").Return("", errors.New(diagnostic))
-	service := authagent.New(source, []string{"work"})
+	service := authagent.New(source)
 	defer service.Close()
 	endpoint := httptest.NewServer(service)
 	defer endpoint.Close()
-	t.Setenv("YANDEX_MCP_AUTH_AGENT_URL", endpoint.URL)
+	t.Setenv("YANDEX_MCP_AUTH_AGENT_PORT", strconv.Itoa(endpoint.Listener.Addr().(*net.TCPAddr).Port))
 	executable, err := os.Executable()
 	require.NoError(t, err)
 	command := exec.CommandContext(t.Context(), executable)

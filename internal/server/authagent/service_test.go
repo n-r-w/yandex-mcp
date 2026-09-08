@@ -25,17 +25,16 @@ func TestTokenProtocol(t *testing.T) {
 		invoke     bool
 		failure    bool
 	}{
-		{"success", `{"version":1,"profile":"work"}`, 200, `"token":"token"`, true, false},
-		{"failure", `{"version":1,"profile":"work"}`, 502, `"error":"authentication_failed"`, true, true},
-		{"version", `{"version":2,"profile":"work"}`, 400, `"error":"incompatible_version"`, false, false},
-		{"profile", `{"version":1,"profile":"other"}`, 403, `"error":"forbidden_profile"`, false, false},
-		{"missing", `{"version":1}`, 400, `"error":"invalid_request"`, false, false},
-		{"json", `{`, 400, `"error":"invalid_request"`, false, false},
+		{"success", `{"profile":"work"}`, 200, `"token":"token"`, true, false},
+		{"failure", `{"profile":"work"}`, 502, `"message":"private-login-url"`, true, true},
+		{"profile", `{"profile":"other"}`, 200, `"token":"token"`, true, false},
+		{"missing", `{}`, 400, `"message":"profile is required"`, false, false},
+		{"json", `{`, 400, `"message":`, false, false},
 		{
 			"unknown",
-			`{"version":1,"profile":"work","command":"anything"}`,
+			`{"profile":"work","command":"anything"}`,
 			400,
-			`"error":"invalid_request"`,
+			`"message":`,
 			false,
 			false,
 		},
@@ -48,10 +47,14 @@ func TestTokenProtocol(t *testing.T) {
 				if tt.failure {
 					source.EXPECT().Acquire(gomock.Any(), "work").Return("", errors.New("private-login-url"))
 				} else {
-					source.EXPECT().Acquire(gomock.Any(), "work").Return("token", nil)
+					profile := "work"
+					if tt.name == "profile" {
+						profile = "other"
+					}
+					source.EXPECT().Acquire(gomock.Any(), profile).Return("token", nil)
 				}
 			}
-			service := New(source, []string{"work"})
+			service := New(source)
 			defer service.Close()
 			response := httptest.NewRecorder()
 			service.ServeHTTP(
@@ -79,7 +82,7 @@ func TestRequestCancellation(t *testing.T) {
 			stopped = true
 			return "", ctx.Err()
 		})
-		service := New(source, []string{"work"})
+		service := New(source)
 		defer service.Close()
 		first, cancelFirst := context.WithCancel(t.Context())
 		defer cancelFirst()
@@ -92,7 +95,7 @@ func TestRequestCancellation(t *testing.T) {
 					ctx,
 					http.MethodPost,
 					"/token",
-					strings.NewReader(`{"version":1,"profile":"work"}`),
+					strings.NewReader(`{"profile":"work"}`),
 				),
 			)
 		}

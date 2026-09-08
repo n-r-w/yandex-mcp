@@ -4,9 +4,10 @@
   <key>Label</key><string>net.yandex-mcp.auth-agent</string>
   <key>ProgramArguments</key><array><string>/replace/yandex-mcp</string><string>auth-agent</string></array>
   <key>EnvironmentVariables</key><dict>
-    <key>YANDEX_MCP_AUTH_AGENT_LISTEN</key><string>127.0.0.1:18765</string>
+    <key>YANDEX_MCP_AUTH_AGENT_PORT</key><string>18765</string>
     <key>YANDEX_MCP_AUTH_AGENT_YC_PATH</key><string>/replace/yc</string>
-    <key>YANDEX_MCP_AUTH_AGENT_PROFILES</key><string>work</string>
+    <key>YANDEX_MCP_SSH_TARGET</key><string>replace-server</string>
+    <key>PATH</key><string>/usr/bin:/bin:/usr/sbin:/sbin</string>
   </dict>
   <key>LimitLoadToSessionType</key><string>Aqua</string>
   <key>RunAtLoad</key><true/>

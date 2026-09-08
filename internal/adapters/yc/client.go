@@ -7,18 +7,16 @@ import (
 	"fmt"
 	"os/exec"
 	"regexp"
-	"sync"
 
 	"github.com/n-r-w/yandex-mcp/internal/adapters/ytoken"
 	"github.com/n-r-w/yandex-mcp/internal/domain"
 	"github.com/n-r-w/yandex-mcp/internal/server/authagent"
 )
 
-// Source runs yc on this machine. Each profile has at most one active process.
+// Source runs native yc. Callers coordinate shared acquisitions by profile.
 type Source struct {
 	path    string
 	pattern *regexp.Regexp
-	gates   sync.Map
 }
 
 var (
@@ -28,20 +26,11 @@ var (
 
 // New constructs a source for an executable path or local command name.
 func New(path string) *Source {
-	//nolint:exhaustruct_v5 // gates are initialized lazily
 	return &Source{path: path, pattern: regexp.MustCompile(tokenRegexPattern)}
 }
 
 // Acquire runs the native executable and waits for its exit before releasing the profile.
 func (s *Source) Acquire(ctx context.Context, profile string) (string, error) {
-	value, _ := s.gates.LoadOrStore(profile, make(chan struct{}, 1))
-	gate := value.(chan struct{}) // Only this method writes gates.
-	select {
-	case gate <- struct{}{}:
-	case <-ctx.Done():
-		return "", ctx.Err()
-	}
-	defer func() { <-gate }()
 	args := []string{"iam", "create-token"}
 	if profile != "" {
 		args = append(args, "--profile", profile)

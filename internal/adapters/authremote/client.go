@@ -29,8 +29,9 @@ var (
 )
 
 // New constructs a remote source with proxies and redirects disabled.
-func New(endpoint string) (*Source, error) {
-	if err := config.ValidateAuthAgentURL(endpoint); err != nil {
+func New(port int) (*Source, error) {
+	address, err := config.AuthAgentAddress(port)
+	if err != nil {
 		return nil, err
 	}
 	//nolint:exhaustruct_v5 // no proxy and no independent request timeout
@@ -38,7 +39,7 @@ func New(endpoint string) (*Source, error) {
 		Transport:     &http.Transport{},
 		CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse },
 	}
-	return &Source{endpoint: strings.TrimSuffix(endpoint, "/") + "/token", client: client}, nil
+	return &Source{endpoint: "http://" + address + "/token", client: client}, nil
 }
 
 // Acquire waits once for a token. Only the caller's context limits the wait.
@@ -54,7 +55,7 @@ func (s *Source) request(ctx context.Context, profile string) (string, error) {
 	if strings.TrimSpace(profile) == "" {
 		return "", errInvalidRequest
 	}
-	body, err := json.Marshal(tokenRequest{Version: protocolVersion, Profile: profile})
+	body, err := json.Marshal(tokenRequest{Profile: profile})
 	if err != nil {
 		return "", fmt.Errorf("%w: %w", errInvalidRequest, err)
 	}

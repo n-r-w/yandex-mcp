@@ -4,7 +4,6 @@ package config
 import (
 	"errors"
 	"fmt"
-	"net"
 	"net/url"
 	"path/filepath"
 	"strconv"
@@ -44,8 +43,8 @@ type Config struct {
 	// TokenSource selects local or remote acquisition.
 	TokenSource string
 
-	// AuthAgentURL is the loopback endpoint used in remote mode.
-	AuthAgentURL string
+	// AuthAgentPort is the server-side tunnel port used in remote mode.
+	AuthAgentPort int
 
 	// AttachAllowedExtensions is the list of allowed attachment extensions (without dots).
 	AttachAllowedExtensions []string
@@ -69,7 +68,7 @@ type envConfig struct {
 	RefreshPeriodHours   int    `env:"YANDEX_IAM_TOKEN_REFRESH_PERIOD"    envDefault:"10"`
 	ToolTimeoutSeconds   int    `env:"YANDEX_MCP_TOOL_TIMEOUT"            envDefault:"300"`
 	TokenSource          string `env:"YANDEX_MCP_TOKEN_SOURCE"            envDefault:"local"`
-	AuthAgentURL         string `env:"YANDEX_MCP_AUTH_AGENT_URL"`
+	AuthAgentPort        int    `env:"YANDEX_MCP_AUTH_AGENT_PORT"         envDefault:"18765"`
 	AttachExtensions     string `env:"YANDEX_MCP_ATTACH_EXT"`
 	AttachViewExts       string `env:"YANDEX_MCP_ATTACH_VIEW_EXT"`
 	AttachDirs           string `env:"YANDEX_MCP_ATTACH_DIR"`
@@ -117,7 +116,7 @@ func Load() (*Config, error) {
 		IAMTokenRefreshPeriod:   resolveRefreshPeriod(ec.RefreshPeriodHours),
 		ToolTimeout:             time.Duration(ec.ToolTimeoutSeconds) * time.Second,
 		TokenSource:             ec.TokenSource,
-		AuthAgentURL:            ec.AuthAgentURL,
+		AuthAgentPort:           ec.AuthAgentPort,
 		AttachAllowedExtensions: allowedExtensions,
 		AttachViewExtensions:    viewExtensions,
 		AttachAllowedDirs:       allowedDirs,
@@ -288,7 +287,7 @@ func (c *Config) validate() error {
 		if strings.TrimSpace(c.CLIProfile) == "" {
 			errs = append(errs, errors.New("YANDEX_CLI_PROFILE is required in remote mode"))
 		}
-		if err := ValidateAuthAgentURL(c.AuthAgentURL); err != nil {
+		if _, err := AuthAgentAddress(c.AuthAgentPort); err != nil {
 			errs = append(errs, err)
 		}
 	}
@@ -334,29 +333,10 @@ func validateHTTPSURL(rawURL, envName string) error {
 	return nil
 }
 
-// ValidateLoopbackAddress requires an explicit IPv4 loopback host and TCP port.
-func ValidateLoopbackAddress(address string) error {
-	host, port, err := net.SplitHostPort(address)
-	if err != nil || host != "127.0.0.1" {
-		return errors.New("auth-agent address must be 127.0.0.1:<port>")
+// AuthAgentAddress fixes token exchange to IPv4 loopback on both machines.
+func AuthAgentAddress(port int) (string, error) {
+	if port < 1 || port > 65535 {
+		return "", errors.New("YANDEX_MCP_AUTH_AGENT_PORT must be from 1 to 65535")
 	}
-	number, err := strconv.ParseUint(port, 10, 16)
-	if err != nil || number == 0 {
-		return errors.New("auth-agent port must be from 1 to 65535")
-	}
-	return nil
-}
-
-// ValidateAuthAgentURL restricts token requests to a loopback HTTP endpoint.
-func ValidateAuthAgentURL(raw string) error {
-	parsed, err := url.Parse(raw)
-	if err != nil {
-		return errors.New("invalid auth-agent URL")
-	}
-	if parsed.Scheme != "http" || parsed.User != nil || parsed.Opaque != "" ||
-		(parsed.Path != "" && parsed.Path != "/") || parsed.RawPath != "" ||
-		parsed.RawQuery != "" || parsed.ForceQuery || parsed.Fragment != "" {
-		return errors.New("auth-agent URL must be http://127.0.0.1:<port> without credentials, query or fragment")
-	}
-	return ValidateLoopbackAddress(parsed.Host)
+	return "127.0.0.1:" + strconv.Itoa(port), nil
 }

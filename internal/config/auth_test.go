@@ -7,36 +7,41 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Environment-only configuration: local defaults, explicit remote profile,
-// positive overall timeout and strict loopback URL. No external dependencies.
+// TestAuthenticationConfig covers the tool deadline and remote port/profile settings.
 func TestAuthenticationConfig(t *testing.T) {
 	t.Setenv("YANDEX_CLOUD_ORG_ID", "org")
 	t.Setenv("YANDEX_MCP_TOKEN_SOURCE", "local")
 	t.Setenv("YANDEX_MCP_TOOL_TIMEOUT", "300")
+	t.Setenv("YANDEX_MCP_AUTH_AGENT_PORT", "")
 	cfg, err := Load()
 	require.NoError(t, err)
 	require.Equal(t, 300*time.Second, cfg.ToolTimeout)
+	require.Equal(t, 18765, cfg.AuthAgentPort)
 	tests := []struct {
-		name, source, endpoint, profile, timeout string
-		valid                                    bool
+		name, source, port, profile, timeout string
+		valid                                bool
 	}{
-		{"remote", "remote", "http://127.0.0.1:18765", "work", "300", true},
-		{"source", "other", "", "", "300", false},
-		{"profile", "remote", "http://127.0.0.1:18765", "", "300", false},
-		{"endpoint", "remote", "http://example.com:18765", "work", "300", false},
-		{"zero", "local", "", "", "0", false},
-		{"negative", "local", "", "", "-1", false},
-		{"overflow", "local", "", "", "9223372036854775807", false},
+		{"remote", "remote", "28765", "work", "300", true},
+		{"source", "other", "18765", "", "300", false},
+		{"profile", "remote", "18765", "", "300", false},
+		{"zero port", "remote", "0", "work", "300", false},
+		{"negative port", "remote", "-1", "work", "300", false},
+		{"large port", "remote", "65536", "work", "300", false},
+		{"invalid port", "remote", "word", "work", "300", false},
+		{"zero timeout", "local", "18765", "", "0", false},
+		{"negative timeout", "local", "18765", "", "-1", false},
+		{"overflow timeout", "local", "18765", "", "9223372036854775807", false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("YANDEX_MCP_TOKEN_SOURCE", tt.source)
-			t.Setenv("YANDEX_MCP_AUTH_AGENT_URL", tt.endpoint)
+			t.Setenv("YANDEX_MCP_AUTH_AGENT_PORT", tt.port)
 			t.Setenv("YANDEX_CLI_PROFILE", tt.profile)
 			t.Setenv("YANDEX_MCP_TOOL_TIMEOUT", tt.timeout)
-			_, err := Load()
+			cfg, err := Load()
 			if tt.valid {
 				require.NoError(t, err)
+				require.Equal(t, 28765, cfg.AuthAgentPort)
 			} else {
 				require.Error(t, err)
 			}

@@ -13,23 +13,18 @@ import (
 // Service shares active acquisitions between remote MCP processes.
 type Service struct {
 	source       ITokenSource
-	profiles     map[string]struct{}
 	acquisitions authwait.Group
 }
 
 var _ http.Handler = (*Service)(nil)
 
-// New constructs a handler for explicitly allowed profiles.
-func New(source ITokenSource, profiles []string) *Service {
-	allowed := make(map[string]struct{}, len(profiles))
-	for _, profile := range profiles {
-		allowed[profile] = struct{}{}
-	}
+// New constructs the workstation token handler.
+func New(source ITokenSource) *Service {
 	//nolint:exhaustruct_v5 // acquisitions start empty
-	return &Service{source: source, profiles: allowed}
+	return &Service{source: source}
 }
 
-// ServeHTTP implements the synchronous token protocol on the trusted SSH tunnel.
+// ServeHTTP waits for the requested profile's token or request cancellation.
 func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/token" {
 		http.NotFound(w, r)
@@ -37,33 +32,25 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
-		s.respond(w, http.StatusMethodNotAllowed, "", "invalid_request", "POST /token is required")
+		s.respond(w, http.StatusMethodNotAllowed, "", "POST /token is required")
 		return
 	}
 	body, err := io.ReadAll(io.LimitReader(r.Body, maxRequestBytes+1))
-	var input tokenRequest
 	if err != nil {
-		s.respond(w, http.StatusBadRequest, "", "invalid_request", err.Error())
+		s.respond(w, http.StatusBadRequest, "", err.Error())
 		return
 	}
 	if len(body) > maxRequestBytes {
-		s.respond(w, http.StatusBadRequest, "", "invalid_request", "token request exceeds 4096 bytes")
+		s.respond(w, http.StatusBadRequest, "", "token request exceeds 4096 bytes")
 		return
 	}
+	var input tokenRequest
 	if err = json.Unmarshal(body, &input, json.RejectUnknownMembers(true)); err != nil {
-		s.respond(w, http.StatusBadRequest, "", "invalid_request", err.Error())
+		s.respond(w, http.StatusBadRequest, "", err.Error())
 		return
 	}
 	if input.Profile == "" {
-		s.respond(w, http.StatusBadRequest, "", "invalid_request", "profile is required")
-		return
-	}
-	if input.Version != protocolVersion {
-		s.respond(w, http.StatusBadRequest, "", "incompatible_version", "incompatible auth-agent protocol version")
-		return
-	}
-	if _, ok := s.profiles[input.Profile]; !ok {
-		s.respond(w, http.StatusForbidden, "", "forbidden_profile", "profile access denied")
+		s.respond(w, http.StatusBadRequest, "", "profile is required")
 		return
 	}
 	token, err := s.acquisitions.Do(
@@ -75,23 +62,24 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		s.respond(w, http.StatusBadGateway, "", "authentication_failed", err.Error())
+		s.respond(w, http.StatusBadGateway, "", err.Error())
 		return
 	}
 	if token == "" {
-		s.respond(w, http.StatusInternalServerError, "", "internal_error", "token source returned an empty token")
+		s.respond(w, http.StatusInternalServerError, "", "token source returned an empty token")
 		return
 	}
-	s.respond(w, http.StatusOK, token, "", "")
+	s.respond(w, http.StatusOK, token, "")
 }
 
-func (s *Service) respond(w http.ResponseWriter, status int, token, code, message string) {
+// respond preserves diagnostics without logging successful token output.
+func (s *Service) respond(w http.ResponseWriter, status int, token, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(status)
 	// A disconnected client needs no response retry. Never log the payload.
-	_ = json.MarshalWrite(w, tokenResponse{Version: protocolVersion, Token: token, Error: code, Message: message})
+	_ = json.MarshalWrite(w, tokenResponse{Token: token, Message: message})
 }
 
-// Close cancels owned acquisitions and waits for native process cleanup.
+// Close cancels acquisitions and waits for native process cleanup.
 func (s *Service) Close() { s.acquisitions.Close() }

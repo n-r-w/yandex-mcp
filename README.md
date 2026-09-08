@@ -189,135 +189,55 @@ Official references:
 
 ## Remote authentication
 
-The agent and MCP run on a trusted Linux server. Token acquisition and browser login run on the user's macOS, Linux, or Windows workstation. The workstation must be available when MCP needs a new token. This does not automate passwords or MFA.
+MCP runs on the Linux server; `yc` and browser login run on your workstation. Install `yandex-mcp` on both machines and prepare a workstation `yc` profile. Server-side `yc` is not needed. Use only trusted machines and users.
 
-MCP uses stdio. Token exchange uses synchronous JSON over `POST /token` through a reverse SSH tunnel. SSH protects traffic between the machines. There is no HTTP authorization or connection secret. Every process that can access either loopback listener can request a token for an allowed profile. Do not use this mode on a server with untrusted users or processes.
+### Server MCP client
 
-### Prerequisites
+Add this entry to the MCP client running on the server:
 
-- A workstation with an interactive desktop session, a browser, native Yandex Cloud CLI, and an OpenSSH client. Linux workstations need a graphical desktop. Windows does not require WSL.
-- A Linux server running the agent and MCP, with SSH access that permits loopback-only reverse forwarding. Remote-mode MCP does not require server-side `yc` installation.
-- Prepared federated `yc` profiles on the workstation and an organization ID for the server's MCP configuration.
-
-Yandex provides [CLI installation instructions](https://yandex.cloud/en/docs/cli/operations/install-cli) for macOS, Linux, and Windows. Microsoft documents [OpenSSH Client availability on Windows](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh-overview).
-
-### Configuration
-
-For the server's MCP process:
-
-- `YANDEX_MCP_TOKEN_SOURCE`: `local` or `remote`, defaulting to `local`. Select `remote` for workstation token acquisition.
-- `YANDEX_MCP_AUTH_AGENT_URL`: the source address through the server's loopback port, for example `http://127.0.0.1:18765`.
-- `YANDEX_CLI_PROFILE`: the explicit workstation profile to request. Remote mode does not select the workstation's active profile implicitly.
-- `YANDEX_CLOUD_ORG_ID`: the organization used for Wiki and Tracker API requests. Obtain this value on the workstation; no server-side CLI is needed.
-- `YANDEX_MCP_TOOL_TIMEOUT`: positive seconds for the full tool call, defaulting to `300`. Authentication, API requests, and the retry after HTTP 401 or 403 share this deadline.
-
-The refresh period remains controlled by `YANDEX_IAM_TOKEN_REFRESH_PERIOD`.
-
-The workstation's `yandex-mcp auth-agent` uses only environment variables. It does not load organization or API settings:
-
-- `YANDEX_MCP_AUTH_AGENT_LISTEN`: IPv4 loopback address and port, default `127.0.0.1:18765`.
-- `YANDEX_MCP_AUTH_AGENT_YC_PATH`: required absolute path to the native `yc` executable.
-- `YANDEX_MCP_AUTH_AGENT_PROFILES`: required comma-separated list of allowed profiles, for example `work,personal`.
-
-Example for macOS or Linux:
-
-```sh
-YANDEX_MCP_AUTH_AGENT_YC_PATH=/absolute/path/to/yc \
-YANDEX_MCP_AUTH_AGENT_PROFILES=work \
-/absolute/path/to/yandex-mcp auth-agent
+```json
+{
+  "mcpServers": {
+    "yandex": {
+      "command": "/absolute/server/path/to/yandex-mcp",
+      "env": {
+        "YANDEX_MCP_TOKEN_SOURCE": "remote",
+        "YANDEX_MCP_AUTH_AGENT_PORT": "18765",
+        "YANDEX_CLI_PROFILE": "work",
+        "YANDEX_CLOUD_ORG_ID": "your-organization-id"
+      }
+    }
+  }
+}
 ```
 
-Each MCP process caches its token in memory. Auth-agent shares active acquisitions by profile but does not cache tokens.
+Replace the executable path, `work` with your workstation profile, and the organization ID.
 
-### Initial setup
+### Workstation setup
 
-1. Install the matching MCP binaries on the Linux server and workstation. Release archives include `scripts/remote-auth`.
-2. Prepare the required federated `yc` profiles on the workstation.
-3. Verify and trust the SSH server's host key. Make SSH-key authentication available to background processes without password or passphrase prompts.
-4. Set the server MCP environment to `YANDEX_MCP_TOKEN_SOURCE=remote`, its loopback endpoint, an explicit profile, and the organization ID. Set these in the MCP client's process configuration.
-5. Configure workstation startup as described below. Use absolute executable paths.
-6. Call a Wiki or Tracker tool. If `yc` needs authentication, complete login in the workstation browser. The original call continues within its remaining timeout.
+Install native `yc` and OpenSSH, with `yc` available through `PATH`. Verify the server's SSH host key and configure SSH-key access without password prompts. The server must permit loopback-only reverse forwarding.
 
-### Reverse SSH tunnel
-
-The workstation initiates the tunnel. Inbound SSH access to the workstation is not required.
-
-For port `18765`, the OpenSSH command is:
+From the extracted release archive or repository, run in your graphical desktop session:
 
 ```sh
-ssh -NT -R 127.0.0.1:18765:127.0.0.1:18765 -o BatchMode=yes -o ExitOnForwardFailure=yes -o StrictHostKeyChecking=yes -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o ConnectTimeout=10 user@server.example
-```
-
-Replace the SSH destination and ports with the configured values. The first address and port identify the Linux server listener. The second address and port identify auth-agent on the workstation. These are not browser callback ports.
-
-Verify that the effective server listener is loopback-only. The SSH server's forwarding policy must not expose it to the network. The [OpenSSH manual](https://man.openbsd.org/ssh.1) describes reverse forwarding and the effect of server policy on the bind address.
-
-`BatchMode=yes` prevents interactive credential prompts. `ExitOnForwardFailure=yes` stops SSH when it cannot establish forwarding. The `ServerAlive` settings let SSH detect a lost connection so the workstation's startup mechanism can restart it.
-
-### Workstation automatic startup
-
-Run auth-agent and the SSH tunnel in the user's graphical session. The installation scripts configure the OS startup mechanism; they do not install binaries or change SSH server policy.
-
-Set these installation-only environment variables alongside the auth-agent settings:
-
-- `YANDEX_MCP_BINARY`: absolute workstation path to `yandex-mcp`.
-- `YANDEX_MCP_SSH_TARGET`: SSH host alias or `user@host`.
-- `YANDEX_MCP_REMOTE_PORT`: Linux server port, default `18765`.
-
-On macOS or a systemd-integrated Linux desktop:
-
-```sh
-export YANDEX_MCP_BINARY=/absolute/path/to/yandex-mcp
-export YANDEX_MCP_AUTH_AGENT_YC_PATH=/absolute/path/to/yc
-export YANDEX_MCP_AUTH_AGENT_PROFILES=work
+export YANDEX_MCP_BINARY=/absolute/workstation/path/to/yandex-mcp
 export YANDEX_MCP_SSH_TARGET=user@server.example
 sh scripts/remote-auth/macos/install.sh
-# On a Linux workstation, use scripts/remote-auth/linux/install.sh instead.
 ```
 
-On Windows, run in PowerShell as the desktop user:
+On a systemd-integrated Linux desktop, replace `macos` with `linux`. On Windows, use PowerShell:
 
 ```powershell
 $env:YANDEX_MCP_BINARY = 'C:\Tools\yandex-mcp.exe'
-$env:YANDEX_MCP_AUTH_AGENT_YC_PATH = 'C:\Tools\yc.exe'
-$env:YANDEX_MCP_AUTH_AGENT_PROFILES = 'work'
 $env:YANDEX_MCP_SSH_TARGET = 'user@server.example'
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\remote-auth\windows\install.ps1
 ```
 
-The installers store environment settings in LaunchAgent entries on macOS, an EnvironmentFile on Linux, and task launcher scripts on Windows. Auth-agent itself reads no configuration file. Rerun the installer after changing its environment settings.
+Replace the workstation executable path and SSH destination. The installer configures one auth-agent startup entry. Auth-agent starts and reconnects SSH. The executable path overrides are optional when `yandex-mcp` and `yc` are in `PATH`; use `YANDEX_MCP_AUTH_AGENT_YC_PATH` to override the `yc` path.
 
-- **macOS:** use two user LaunchAgents, one for auth-agent and one for OpenSSH. Auth-agent runs in the logged-in user's graphical session. See [Apple's launchd documentation](https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html).
-- **Linux:** on desktops integrated with systemd, use two user services associated with the graphical session. Auth-agent needs the desktop environment required to open the browser; an SSH-only session or system service is not equivalent. See [systemd's graphical session documentation](https://www.freedesktop.org/software/systemd/man/latest/systemd.special.html).
-- **Windows:** use Task Scheduler tasks triggered at user logon, configured to run in that user's interactive session. Use native `yc.exe` and `ssh.exe`. A repeating one-minute trigger retries stopped tasks indefinitely. Running instances are not duplicated. See [Microsoft's task security contexts](https://learn.microsoft.com/en-us/windows/win32/taskschd/security-contexts-for-running-tasks). Do not run auth-agent as a Windows service, because [services cannot directly interact with the user](https://learn.microsoft.com/en-us/windows/win32/services/interactive-services).
+Use the same `YANDEX_MCP_AUTH_AGENT_PORT` on both machines, default `18765`.
 
-Auth-agent is unavailable before the user logs in and while the workstation sleeps. After wake and network recovery, the startup mechanism and OpenSSH restore the tunnel without a new manual tunnel command.
-
-### Use and troubleshooting
-
-- With an active federated session, token refresh does not need user interaction. During reauthentication, complete login in the workstation browser. The original tool call continues when login finishes within its remaining timeout.
-- A cached token can still be used while the workstation is unavailable. Workstation availability is needed when the next token acquisition occurs.
-- An unavailable-source error means the workstation, auth-agent, or tunnel cannot be reached. Check those processes and the SSH connection.
-- A forbidden-profile error requires adding the requested profile to `YANDEX_MCP_AUTH_AGENT_PROFILES` or correcting `YANDEX_CLI_PROFILE`.
-- A protocol error requires compatible MCP and auth-agent versions and the correct endpoint. There is no automatic switch to server-side `yc`.
-- A tool timeout ends that call's wait. The last waiter leaving also cancels token acquisition. A later tool call can try again.
-- Closing a browser tab is not a reliable cancellation signal. Waiting ends when `yc` exits, the call is canceled, or the tool timeout expires.
-
-Auth-agent returns original errors, including the complete `stderr` of a failed `yc` process. MCP includes these diagnostics in its tool error and structured `stderr` log. Successful token output is not logged. Failed-command diagnostics are not redacted and can contain login URLs or account details; inspect them before sharing logs.
-
-Workstation startup logs are in `~/Library/Logs/yandex-mcp` on macOS, the user journal on Linux, and `%LOCALAPPDATA%\YandexMCP` on Windows. On Linux, use `journalctl --user -u yandex-mcp-auth-agent -u yandex-mcp-ssh-tunnel`.
-
-### Remote authentication runtime checks
-
-Run these operational checks on each workstation platform. Unit and subprocess tests do not establish browser behavior or recovery after a real workstation sleep.
-
-- Start through the configured user-session mechanism and complete initial login and reauthentication. Confirm that the browser is usable and the original Linux tool call finishes within its deadline.
-- Request one profile from multiple MCP processes. Confirm that only one `yc` acquisition is active. Cancel one call, then all remaining calls, and check process cleanup.
-- Test workstation sleep and a separate SSH interruption. After restoring the session and network, confirm that a new tool call succeeds without manual tunnel creation.
-- Inspect the server listener. Confirm loopback-only forwarding and rejection of forbidden profiles.
-- Cause `yc` to fail. Confirm that the original diagnostic reaches both the tool result and MCP's `stderr` log.
-
-Development checks use `task fmt`, `task test`, `task lint`, and `task build`.
+Restart the MCP connection and call a Wiki or Tracker tool. Complete login in the workstation browser when prompted. Keep the workstation awake and connected when a new token is needed. The tool timeout defaults to 300 seconds; change `YANDEX_MCP_TOOL_TIMEOUT` in the server configuration if needed.
 
 ## Client configuration examples
 
