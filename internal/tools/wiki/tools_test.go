@@ -883,23 +883,18 @@ func TestTools_ErrorShaping(t *testing.T) {
 		assert.NotContains(t, errStr, "xyz123")
 	})
 
-	t.Run("non-upstream error is shaped safely", func(t *testing.T) {
+	t.Run("non-upstream error is returned", func(t *testing.T) {
 		t.Parallel()
 		reg, mockAdapter := newWikiToolsTestSetup(t)
 
-		// Simulate an error that contains sensitive data
-		sensitiveErr := errors.New("connection failed: Authorization header: Bearer secret-token-123")
+		originalErr := errors.New("connection failed: Authorization header: Bearer secret-token-123")
 
 		mockAdapter.EXPECT().
 			GetPageBySlug(gomock.Any(), "test", domain.WikiGetPageOpts{}).
-			Return(nil, sensitiveErr)
+			Return(nil, originalErr)
 
 		_, err := reg.getPageBySlug(t.Context(), getPageBySlugInputDTO{Slug: "test"})
-		require.Error(t, err)
-		errStr := err.Error()
-		// Non-upstream errors should return a generic safe message
-		assert.Equal(t, "wiki: internal error", errStr)
-		assert.NotContains(t, errStr, "Bearer")
-		assert.NotContains(t, errStr, "secret-token-123")
+		require.EqualError(t, err, "wiki: "+originalErr.Error())
+		require.ErrorIs(t, err, originalErr)
 	})
 }
