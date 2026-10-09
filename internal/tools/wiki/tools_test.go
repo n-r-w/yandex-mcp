@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -21,6 +22,39 @@ func newWikiToolsTestSetup(t *testing.T) (*Registrator, *MockIWikiAdapter) {
 	reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
 
 	return reg, mockAdapter
+}
+
+// registeredToolDescription returns the description that an MCP client receives for one registered tool.
+func registeredToolDescription(t *testing.T, reg *Registrator, name string) string {
+	t.Helper()
+
+	srv := mcp.NewServer(&mcp.Implementation{Name: "test-server", Version: "v1.0.0"}, nil)
+	require.NoError(t, reg.Register(srv))
+	client := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "v1.0.0"}, nil)
+	serverTransport, clientTransport := mcp.NewInMemoryTransports()
+	_, err := srv.Connect(t.Context(), serverTransport, nil)
+	require.NoError(t, err)
+	session, err := client.Connect(t.Context(), clientTransport, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = session.Close() })
+
+	for tool, err := range session.Tools(t.Context(), nil) {
+		require.NoError(t, err)
+		if tool.Name == name {
+			return tool.Description
+		}
+	}
+	t.Fatalf("tool %q is not registered", name)
+
+	return ""
+}
+
+func TestRegister_PageGetDescriptionRoutesWikiURLs(t *testing.T) {
+	t.Parallel()
+	reg, _ := newWikiToolsTestSetup(t)
+
+	description := registeredToolDescription(t, reg, domain.WikiToolPageGetBySlug.String())
+	assert.Contains(t, description, "wiki.yandex.")
 }
 
 func TestTools_GetPageBySlug(t *testing.T) {

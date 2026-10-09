@@ -701,11 +701,15 @@ func formatAllowedDirs(allowedDirs []string) string {
 	return strings.Join(normalized, ", ")
 }
 
-func formatHomeAllowedPaths(homeDir string) string {
+func formatDefaultAllowedPaths(homeDir string) string {
+	tempDir := filepath.Clean(os.TempDir())
 	if homeDir == "" {
-		return "within the home directory (excluding home root and hidden top-level directories)"
+		return "within the home directory (excluding home root and hidden top-level directories), or within " + tempDir
 	}
-	return fmt.Sprintf("within %s (excluding %s and hidden top-level directories)", homeDir, homeDir)
+	return fmt.Sprintf(
+		"within %s (excluding %s and hidden top-level directories), or within %s",
+		homeDir, homeDir, tempDir,
+	)
 }
 
 func (r *Registrator) allowedPathsSummary() string {
@@ -714,10 +718,10 @@ func (r *Registrator) allowedPathsSummary() string {
 	}
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return formatHomeAllowedPaths("")
+		return formatDefaultAllowedPaths("")
 	}
 	homeDir = filepath.Clean(homeDir)
-	return formatHomeAllowedPaths(homeDir)
+	return formatDefaultAllowedPaths(homeDir)
 }
 
 // prepareSavePath validates the destination path and checks overwrite rules.
@@ -796,6 +800,14 @@ func (r *Registrator) validateAttachmentDirectory(ctx context.Context, cleanPath
 		return r.validateWithinAllowedDirs(ctx, cleanPath, resolvedPath)
 	}
 
+	withinTempDir, err := isWithinTempDir(resolvedPath)
+	if err != nil {
+		return r.logError(ctx, fmt.Errorf("resolve temporary directory: %w", err))
+	}
+	if withinTempDir {
+		return nil
+	}
+
 	return r.validateWithinHomeDir(ctx, resolvedPath)
 }
 
@@ -828,7 +840,7 @@ func (r *Registrator) validateWithinHomeDir(ctx context.Context, resolvedPath st
 		return r.logError(ctx, fmt.Errorf("resolve home directory: %w", err))
 	}
 	homeDir = filepath.Clean(homeDir)
-	allowedPaths := formatHomeAllowedPaths(homeDir)
+	allowedPaths := formatDefaultAllowedPaths(homeDir)
 	resolvedHomeDir, err := resolvePathForContainment(homeDir)
 	if err != nil {
 		return r.logError(ctx, fmt.Errorf("resolve home directory: %w", err))
@@ -968,6 +980,18 @@ func buildResolvedPath(existingPath, absPath string) (string, error) {
 		return "", err
 	}
 	return filepath.Join(resolvedCurrent, rel), nil
+}
+
+// isWithinTempDir reports whether resolved save path is inside system temporary directory.
+func isWithinTempDir(resolvedPath string) (bool, error) {
+	resolvedTempDir, err := resolvePathForContainment(os.TempDir())
+	if err != nil {
+		return false, err
+	}
+	if resolvedPath == resolvedTempDir {
+		return false, nil
+	}
+	return isWithinResolvedRoot(resolvedPath, resolvedTempDir)
 }
 
 // isWithinResolvedRoot checks if resolvedPath is inside resolvedRoot.

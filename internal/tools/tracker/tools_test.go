@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -37,6 +38,39 @@ func newTrackerToolsTestSetup(t *testing.T) (*Registrator, *MockITrackerAdapter)
 	)
 
 	return reg, mockAdapter
+}
+
+// registeredToolDescription returns the description that an MCP client receives for one registered tool.
+func registeredToolDescription(t *testing.T, reg *Registrator, name string) string {
+	t.Helper()
+
+	srv := mcp.NewServer(&mcp.Implementation{Name: "test-server", Version: "v1.0.0"}, nil)
+	require.NoError(t, reg.Register(srv))
+	client := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "v1.0.0"}, nil)
+	serverTransport, clientTransport := mcp.NewInMemoryTransports()
+	_, err := srv.Connect(t.Context(), serverTransport, nil)
+	require.NoError(t, err)
+	session, err := client.Connect(t.Context(), clientTransport, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = session.Close() })
+
+	for tool, err := range session.Tools(t.Context(), nil) {
+		require.NoError(t, err)
+		if tool.Name == name {
+			return tool.Description
+		}
+	}
+	t.Fatalf("tool %q is not registered", name)
+
+	return ""
+}
+
+func TestRegister_IssueGetDescriptionRoutesTrackerURLs(t *testing.T) {
+	t.Parallel()
+	reg, _ := newTrackerToolsTestSetup(t)
+
+	description := registeredToolDescription(t, reg, domain.TrackerToolIssueGet.String())
+	assert.Contains(t, description, "tracker.yandex.")
 }
 
 func assertSafeUpstreamError(t *testing.T, err error, status string) {
@@ -1071,6 +1105,34 @@ func TestTools_GetAttachment(t *testing.T) {
 		assert.Contains(t, err.Error(), "save_path must not be within hidden top-level home directory")
 		assert.Contains(t, err.Error(), "allowed paths")
 		assert.Contains(t, err.Error(), homeDir)
+	})
+
+	t.Run("adapter/save_path_temp_dir", func(t *testing.T) {
+		t.Parallel()
+		reg, mockAdapter := newTrackerToolsTestSetup(t)
+		savePath := filepath.Join(t.TempDir(), "scratchpad", "attachment.png")
+
+		payload := []byte("image")
+		mockAdapter.EXPECT().
+			GetIssueAttachmentStream(gomock.Any(), "TEST-1", "4159", "attachment.png").
+			Return(&domain.TrackerAttachmentStream{
+				FileName:    "attachment.png",
+				ContentType: "image/png",
+				Stream:      io.NopCloser(bytes.NewReader(payload)),
+			}, nil)
+
+		result, err := reg.getAttachment(t.Context(), getAttachmentInputDTO{
+			IssueID:      "TEST-1",
+			AttachmentID: "4159",
+			FileName:     "attachment.png",
+			SavePath:     savePath,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, savePath, result.SavedPath)
+
+		stored, err := os.ReadFile(savePath)
+		require.NoError(t, err)
+		assert.Equal(t, payload, stored)
 	})
 
 	t.Run("adapter/call_and_returns_content", func(t *testing.T) {

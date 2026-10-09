@@ -25,10 +25,7 @@ func New(serverVersion string, registrators []IToolsRegistrator, timeout time.Du
 			Version: serverVersion,
 			Title:   serverTitle,
 		},
-		//nolint:exhaustruct_v5 // optional fields use defaults
-		&mcp.ServerOptions{
-			Instructions: systemPrompt,
-		},
+		nil,
 	)
 
 	mcpServer.AddReceivingMiddleware(toolTimeout(timeout))
