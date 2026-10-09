@@ -164,7 +164,7 @@ After these steps, the executable will be permanently allowed to run on your sys
 - `YANDEX_MCP_ATTACH_DIR` (optional)
   * Comma-separated list of **absolute** directories allowed for saving attachments.
   * Fully replaces the default directory rules. When set, only the provided directories (and their subdirectories) are allowed.
-  * Default rule: `save_path` must be inside the user home directory, must not point to the home root, and must not be within a hidden top-level home subdirectory (for example, `~/.ssh`).
+  * Default rule: `save_path` must be inside the system temporary directory (`os.TempDir()`, for example `/tmp`), or inside the user home directory. In the home directory, `save_path` must not point to the home root and must not be within a hidden top-level home subdirectory (for example, `~/.ssh`).
 
 ## Authentication
 

@@ -33,8 +33,9 @@ func NewRegistrator(adapter IWikiAdapter, enabledTools []domain.WikiTool) *Regis
 func (r *Registrator) Register(srv *mcp.Server) error {
 	if r.enabledTools[domain.WikiToolPageGetBySlug] {
 		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
-			Name:        domain.WikiToolPageGetBySlug.String(),
-			Description: "Retrieves a Yandex Wiki page by its slug (URL path)",
+			Name: domain.WikiToolPageGetBySlug.String(),
+			Description: "Retrieves a Yandex Wiki page by its slug (URL path). " +
+				"Load each page of wiki.yandex.* with this tool: https://wiki.yandex.com/homepage/xxx/ -> slug homepage/xxx",
 		}, server.MakeHandler(r.getPageBySlug))
 	}
 
