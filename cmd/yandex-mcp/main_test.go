@@ -20,8 +20,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
-	"github.com/n-r-w/yandex-mcp/internal/adapters/oauthfile"
-	"github.com/n-r-w/yandex-mcp/internal/adapters/yc"
 	"github.com/n-r-w/yandex-mcp/internal/config"
 	"github.com/n-r-w/yandex-mcp/internal/server/authagent"
 )
@@ -143,6 +141,7 @@ func TestOAuthMCPReadsConfiguredTokenFile(t *testing.T) {
 // obtained on this machine for local acquisition and through a real auth-agent handler for
 // remote acquisition. IAM profile "work" and OAuth profile "work" resolve to different tokens,
 // OAuth profiles select different files, and a failing source is never replaced by another one.
+// The auth-agent is built by newAuthAgent, the composition that the auth-agent command of run uses.
 func TestTokenProviderCombinations(t *testing.T) {
 	executable, err := os.Executable()
 	require.NoError(t, err)
@@ -164,7 +163,7 @@ func TestTokenProviderCombinations(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(agentDir, "work"), []byte("agent-work-token"), 0o600))
 	require.NoError(t, os.WriteFile(filepath.Join(agentDir, "personal"), []byte("agent-personal-token"), 0o600))
 
-	agent := authagent.New(yc.New(ycPath), oauthfile.NewProfiles(agentDir))
+	agent := newAuthAgent(&authagent.Config{Port: 0, YCPath: ycPath, SSHTarget: "", OAuthDir: agentDir})
 	defer agent.Close()
 	endpoint := httptest.NewServer(agent)
 	defer endpoint.Close()

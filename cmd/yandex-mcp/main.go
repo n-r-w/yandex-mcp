@@ -98,12 +98,17 @@ func run(serverVersion string, args []string) error {
 		if err != nil {
 			return err
 		}
-		service := authagent.New(yc.New(cfg.YCPath), oauthfile.NewProfiles(cfg.OAuthDir))
+		service := newAuthAgent(cfg)
 		defer service.Close()
 		slog.InfoContext(ctx, "starting workstation auth-agent", "port", cfg.Port, "oauth_dir", cfg.OAuthDir)
 		return service.Run(ctx, cfg.Port, cfg.SSHTarget)
 	}
 	return runMCP(ctx, serverVersion)
+}
+
+// newAuthAgent composes the workstation auth-agent with yc for IAM tokens and token files for OAuth tokens.
+func newAuthAgent(cfg *authagent.Config) *authagent.Service {
+	return authagent.New(yc.New(cfg.YCPath), oauthfile.NewProfiles(cfg.OAuthDir))
 }
 
 // newTokenProvider selects the acquisition location and the token type independently.
