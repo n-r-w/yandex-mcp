@@ -150,8 +150,8 @@ Token acquisition has two independent settings: where the token is acquired and 
 
 - `YANDEX_CLI_PROFILE` (optional for local IAM, required for remote IAM)
   * yc CLI profile used to retrieve IAM tokens.
-  * When empty, yc uses the active profile.
-  * When set, the server runs `yc iam create-token --profile <YANDEX_CLI_PROFILE>`.
+  * In local mode, an empty value makes yc use the active profile.
+  * When set, `yc iam create-token --profile <YANDEX_CLI_PROFILE>` runs on the MCP machine in local mode and on the workstation in remote mode.
 
 - `YANDEX_OAUTH_TOKEN_FILE` (required for local OAuth)
   * Absolute path to a file on the MCP machine that contains one Yandex OAuth token.
@@ -170,7 +170,7 @@ Token acquisition has two independent settings: where the token is acquired and 
   * Must be an `https://` URL.
 
 - `YANDEX_IAM_TOKEN_REFRESH_PERIOD` (optional, default: `10`)
-  * IAM token refresh period in **hours**.
+  * Token refresh period in **hours**, for both token types.
   * The server caches the token and refreshes it when the cached token is older than this period.
   * IAM tokens are valid for **no more than 12 hours**; this refresh period should not exceed `12`.
 
@@ -287,11 +287,11 @@ Add this entry to the MCP client running on the server:
 }
 ```
 
-Replace the executable path, `work` with your workstation profile, and the organization ID.
+Replace the executable path, `work` with your workstation yc profile, and the organization ID. This entry requests an IAM token; [Remote OAuth tokens](#remote-oauth-tokens) shows the entry for an OAuth token.
 
 ### Workstation setup
 
-Install native `yc` and OpenSSH, with `yc` available through `PATH`. Verify the server's SSH host key and configure SSH-key access without password prompts. The server must permit loopback-only reverse forwarding.
+Install OpenSSH with `ssh` available through `PATH`. Install native `yc` with `yc` available through `PATH` only when you use IAM tokens. Verify the server's SSH host key and configure SSH-key access without password prompts. The server must permit loopback-only reverse forwarding.
 
 From the extracted release archive or repository, run in your graphical desktop session:
 
@@ -309,11 +309,13 @@ $env:YANDEX_MCP_SSH_TARGET = 'user@server.example'
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\remote-auth\windows\install.ps1
 ```
 
-Replace the workstation executable path and SSH destination. The installer configures one auth-agent startup entry. Auth-agent starts and reconnects SSH. The executable path overrides are optional when `yandex-mcp` and `yc` are in `PATH`; use `YANDEX_MCP_AUTH_AGENT_YC_PATH` to override the `yc` path.
+Replace the workstation executable path and SSH destination. The installer configures one auth-agent startup entry. Auth-agent starts and reconnects SSH. `YANDEX_MCP_BINARY` is optional when `yandex-mcp` is in `PATH`.
+
+When `yc` is not in `PATH`, the installer completes with a warning. Auth-agent then serves OAuth tokens, and IAM requests fail until `yc` is installed in a directory of the `PATH` that the installer saved. To use another `yc` executable, set `YANDEX_MCP_AUTH_AGENT_YC_PATH` before you run the installer; the installer stops when this value does not resolve to an executable.
 
 Use the same `YANDEX_MCP_AUTH_AGENT_PORT` on both machines, default `18765`.
 
-Restart the MCP connection and call a Wiki or Tracker tool. Complete login in the workstation browser when prompted. Keep the workstation awake and connected when a new token is needed. The tool timeout defaults to 300 seconds; change `YANDEX_MCP_TOOL_TIMEOUT` in the server configuration if needed.
+Restart the MCP connection and call a Wiki or Tracker tool. For IAM tokens, complete login in the workstation browser when `yc` prompts. Keep the workstation awake and connected when a new token is needed. The tool timeout defaults to 300 seconds; change `YANDEX_MCP_TOOL_TIMEOUT` in the server configuration if needed.
 
 ### Remote OAuth tokens
 
@@ -327,7 +329,13 @@ Auth-agent serves OAuth tokens as well. It keeps one file per OAuth profile in i
 
 Save each token as a single line in a file whose name is the profile name, for example `work`. A profile name starts with a letter or digit and contains only letters, digits, `.`, `_` and `-`. One auth-agent serves any number of profiles, so different MCP connections can use different accounts.
 
-Set `YANDEX_MCP_AUTH_AGENT_OAUTH_DIR` in the auth-agent environment to use another absolute directory. The installers do not forward this variable and still require `yc` on the workstation.
+To use another directory, set `YANDEX_MCP_AUTH_AGENT_OAUTH_DIR` to an absolute path before you run the installer:
+
+```sh
+export YANDEX_MCP_AUTH_AGENT_OAUTH_DIR=/absolute/path
+```
+
+On Windows, use `$env:YANDEX_MCP_AUTH_AGENT_OAUTH_DIR = 'C:\absolute\path'`. The installer rejects a relative path and saves the value in the auth-agent startup configuration, so auth-agent uses this directory after each restart. When the variable is unset at installation, auth-agent uses the default directory from the table. On Linux, the default directory depends on `XDG_CONFIG_HOME` in the environment of the systemd user service; when you use a non-default `XDG_CONFIG_HOME`, set the directory explicitly.
 
 The server entry names the token type and the profile:
 
@@ -344,7 +352,7 @@ The server entry names the token type and the profile:
 }
 ```
 
-MCP sends the token type together with the profile name, and auth-agent returns a token of exactly that type or an error. A missing or unsupported token type, an unknown OAuth profile and a failed acquisition are errors: auth-agent never substitutes another acquisition method. IAM profile `work` and OAuth profile `work` are different tokens.
+MCP requests a token of the configured type for the profile name, and auth-agent returns a token of exactly that type or an error. An unsupported token type, an unknown OAuth profile and a failed acquisition are errors: auth-agent never substitutes another acquisition method. IAM profile `work` and OAuth profile `work` are different tokens.
 
 ## Client configuration examples
 

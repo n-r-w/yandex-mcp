@@ -46,7 +46,7 @@ type Config struct {
 	// CLIProfile is the optional yc CLI profile used for IAM token retrieval.
 	CLIProfile string
 
-	// IAMTokenRefreshPeriod is the period after which the IAM token should be refreshed.
+	// IAMTokenRefreshPeriod is the period after which the cached IAM or OAuth token is refreshed.
 	IAMTokenRefreshPeriod time.Duration
 
 	// ToolTimeout bounds the complete tools/call operation.
