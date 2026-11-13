@@ -211,7 +211,15 @@ Official references:
 
 ## OAuth token authentication
 
-OAuth mode sends `Authorization: OAuth <token>` and works with both organization types. An organization member can set it up without administrator rights.
+OAuth mode sends `Authorization: OAuth <token>` and works with both organization types.
+
+Prerequisites:
+
+- The account is not federated. Both official API guides direct federated accounts to IAM token authentication, so such accounts use the `local` or `remote` mode.
+- API access is enabled in the organization. When a Wiki administrator has disabled API access, the Wiki integration cannot be configured.
+- Requests run on behalf of the token owner. Tracker and Wiki return only what that user is allowed to read.
+
+Within these limits, registering the OAuth application and issuing the token needs no organization administrator role.
 
 1. Create an application at https://oauth.yandex.ru: choose "For API access or debugging" and add the `tracker:read` and `wiki:read` permissions.
 2. Open `https://oauth.yandex.ru/authorize?response_type=token&client_id=<ClientID>` under the account that works with Tracker and Wiki, and copy the token.
@@ -311,7 +319,14 @@ claude mcp add -s user -e YANDEX_CLOUD_ORG_ID={yandex organization id} -e YANDEX
 
 ### Multiple organizations
 
-When you need to work with two organizations, configure two independent MCP server entries. Each entry should use its own `YANDEX_CLOUD_ORG_ID` and `YANDEX_CLI_PROFILE`.
+When you need to work with two organizations, configure two independent MCP server entries. Each entry carries its own organization ID and its own authentication settings, matching the type of that organization:
+
+- Yandex Cloud organization with IAM tokens: `YANDEX_CLOUD_ORG_ID` and `YANDEX_CLI_PROFILE`.
+- Yandex 360 for Business organization: `YANDEX_ORG_ID`, `YANDEX_MCP_TOKEN_SOURCE=oauth` and `YANDEX_OAUTH_TOKEN_FILE`. `YANDEX_CLI_PROFILE` is not used.
+
+Set only one organization ID per entry: an entry with both `YANDEX_CLOUD_ORG_ID` and `YANDEX_ORG_ID` does not start.
+
+Two Yandex Cloud organizations:
 
 ```json
 "yandex_primary": {
@@ -326,6 +341,26 @@ When you need to work with two organizations, configure two independent MCP serv
   "env": {
     "YANDEX_CLOUD_ORG_ID": "partner organization id",
     "YANDEX_CLI_PROFILE": "partner yc profile"
+  }
+}
+```
+
+A Yandex Cloud organization and a Yandex 360 organization:
+
+```json
+"yandex_cloud": {
+  "command": "/path/to/yandex-mcp",
+  "env": {
+    "YANDEX_CLOUD_ORG_ID": "cloud organization id",
+    "YANDEX_CLI_PROFILE": "yc profile name"
+  }
+},
+"yandex_360": {
+  "command": "/path/to/yandex-mcp",
+  "env": {
+    "YANDEX_MCP_TOKEN_SOURCE": "oauth",
+    "YANDEX_OAUTH_TOKEN_FILE": "/absolute/path/to/.yandex-oauth-token",
+    "YANDEX_ORG_ID": "yandex 360 organization id"
   }
 }
 ```
