@@ -37,7 +37,7 @@ Project: Yandex MCP Server
 2. Yandex Tracker Tools: `docs/tracker-tools.md`
 3. Yandex Wiki Tools: `docs/wiki-tools.md`
 4. Yandex API reference, golang MCP SDK: `docs/research/`
-5. Each feature and each bug fix has a specification directory `docs/specs/{name}/`, where `{name}` names the feature or the bug in kebab case, for example `docs/specs/remote-authentication/`. The directory holds these files:
+5. Each feature and each bug fix has a specification directory `docs/specs/{name}/`, where `{name}` names the feature or the bug in kebab case, for example `docs/specs/remote-authentication/`. A specification describes the system at the time of its change. A later change creates its own specification and leaves earlier specifications unchanged. The directory holds these files:
     1) `problem.md` describes what is wrong now, for whom, and what it costs, with the current behavior and the boundary of the problem. It holds no requirements and no solution.
     2) `requirements.md` lists the requirements under which the problem disappears, the scope and the non-scope, and the scenarios that show that the requirements hold. Each requirement is verifiable without knowledge of the implementation.
     3) `solution.md` describes how the requirements are met, each trade-off with its cost, and how the result is verified.
