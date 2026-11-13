@@ -98,12 +98,34 @@ func run(serverVersion string, args []string) error {
 		if err != nil {
 			return err
 		}
-		service := authagent.New(yc.New(cfg.YCPath))
+		service := authagent.New(yc.New(cfg.YCPath), oauthfile.NewProfiles(cfg.OAuthDir))
 		defer service.Close()
-		slog.InfoContext(ctx, "starting workstation auth-agent", "port", cfg.Port)
+		slog.InfoContext(ctx, "starting workstation auth-agent", "port", cfg.Port, "oauth_dir", cfg.OAuthDir)
 		return service.Run(ctx, cfg.Port, cfg.SSHTarget)
 	}
 	return runMCP(ctx, serverVersion)
+}
+
+// newTokenProvider selects the acquisition location and the token type independently.
+// Remote acquisition forwards the token type to auth-agent; local acquisition runs yc
+// for IAM tokens and reads the configured file for OAuth tokens.
+func newTokenProvider(cfg *config.Config) (*ytoken.Provider, func(), error) {
+	var source ytoken.ITokenSource
+	closeSource := func() {}
+	switch {
+	case cfg.TokenSource == config.TokenSourceRemote:
+		remote, err := authremote.New(cfg.AuthAgentPort, cfg.TokenType)
+		if err != nil {
+			return nil, nil, err
+		}
+		source, closeSource = remote, remote.Close
+	case cfg.TokenType == config.TokenTypeOAuth:
+		source = oauthfile.New(cfg.OAuthTokenFile)
+	default:
+		source = yc.New("yc")
+	}
+	provider := ytoken.New(source, cfg.Profile(), cfg.IAMTokenRefreshPeriod)
+	return provider, func() { provider.Close(); closeSource() }, nil
 }
 
 func runMCP(ctx context.Context, serverVersion string) error {
@@ -118,21 +140,11 @@ func runMCP(ctx context.Context, serverVersion string) error {
 		slog.String("tracker_base_url", cfg.TrackerBaseURL),
 	)
 
-	var tokenProvider *ytoken.Provider
-	switch cfg.TokenSource {
-	case "remote":
-		source, sourceErr := authremote.New(cfg.AuthAgentPort)
-		if sourceErr != nil {
-			return sourceErr
-		}
-		defer source.Close()
-		tokenProvider = ytoken.New(source, cfg.CLIProfile, cfg.IAMTokenRefreshPeriod)
-	case config.TokenSourceOAuth:
-		tokenProvider = ytoken.New(oauthfile.New(cfg.OAuthTokenFile), "", cfg.IAMTokenRefreshPeriod)
-	default:
-		tokenProvider = ytoken.New(yc.New("yc"), cfg.CLIProfile, cfg.IAMTokenRefreshPeriod)
+	tokenProvider, closeTokenProvider, err := newTokenProvider(cfg)
+	if err != nil {
+		return err
 	}
-	defer tokenProvider.Close()
+	defer closeTokenProvider()
 
 	wikiClient := wiki.NewClient(cfg, tokenProvider)
 	trackerClient := tracker.NewClient(cfg, tokenProvider)

@@ -1,4 +1,4 @@
-// Package authremote requests workstation IAM tokens through an SSH tunnel.
+// Package authremote requests workstation tokens through an SSH tunnel.
 package authremote
 
 import (
@@ -19,8 +19,9 @@ import (
 
 // Source contacts only the configured loopback auth-agent endpoint.
 type Source struct {
-	endpoint string
-	client   *http.Client
+	tokenType string
+	endpoint  string
+	client    *http.Client
 }
 
 var (
@@ -28,8 +29,8 @@ var (
 	_ authagent.ITokenSource = (*Source)(nil)
 )
 
-// New constructs a remote source with proxies and redirects disabled.
-func New(port int) (*Source, error) {
+// New constructs a remote source for one token type with proxies and redirects disabled.
+func New(port int, tokenType string) (*Source, error) {
 	address, err := config.AuthAgentAddress(port)
 	if err != nil {
 		return nil, err
@@ -39,7 +40,7 @@ func New(port int) (*Source, error) {
 		Transport:     &http.Transport{},
 		CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse },
 	}
-	return &Source{endpoint: "http://" + address + "/token", client: client}, nil
+	return &Source{tokenType: tokenType, endpoint: "http://" + address + "/token", client: client}, nil
 }
 
 // Acquire waits once for a token. Only the caller's context limits the wait.
@@ -52,10 +53,10 @@ func (s *Source) Acquire(ctx context.Context, profile string) (string, error) {
 }
 
 func (s *Source) request(ctx context.Context, profile string) (string, error) {
-	if strings.TrimSpace(profile) == "" {
+	if strings.TrimSpace(profile) == "" || s.tokenType == "" {
 		return "", errInvalidRequest
 	}
-	body, err := json.Marshal(tokenRequest{Profile: profile})
+	body, err := json.Marshal(tokenRequest{TokenType: s.tokenType, Profile: profile})
 	if err != nil {
 		return "", fmt.Errorf("%w: %w", errInvalidRequest, err)
 	}

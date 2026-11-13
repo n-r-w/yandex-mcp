@@ -1,3 +1,4 @@
+//nolint:exhaustruct_v5 // test file uses partial struct initialization for clarity
 package config
 
 import (
@@ -69,17 +70,40 @@ func TestLoad_MissingCloudOrgID(t *testing.T) {
 	assert.Contains(t, err.Error(), "YANDEX_CLOUD_ORG_ID")
 }
 
-// TestLoad_OAuthOrganization covers the Yandex 360 organization with a file-based OAuth token.
+// acquisitionEnv describes token acquisition and organization settings of one configuration.
+type acquisitionEnv struct {
+	source, tokenType        string
+	cliProfile, oauthProfile string
+	tokenFile                string
+	cloudOrgID, orgID        string
+}
+
+// variables lists every setting with its value, so a test also clears the variables a case leaves empty.
+func (e acquisitionEnv) variables() map[string]string {
+	return map[string]string{
+		"YANDEX_MCP_TOKEN_SOURCE": e.source,
+		"YANDEX_MCP_TOKEN_TYPE":   e.tokenType,
+		"YANDEX_CLI_PROFILE":      e.cliProfile,
+		"YANDEX_OAUTH_PROFILE":    e.oauthProfile,
+		"YANDEX_OAUTH_TOKEN_FILE": e.tokenFile,
+		"YANDEX_CLOUD_ORG_ID":     e.cloudOrgID,
+		"YANDEX_ORG_ID":           e.orgID,
+	}
+}
+
+// TestLoad_OAuthOrganization covers the Yandex 360 organization with a local OAuth token file.
 func TestLoad_OAuthOrganization(t *testing.T) {
 	tokenFile := filepath.Join(t.TempDir(), "token")
 	t.Setenv("YANDEX_CLOUD_ORG_ID", "")
 	t.Setenv("YANDEX_ORG_ID", " 1234567 ")
-	t.Setenv("YANDEX_MCP_TOKEN_SOURCE", "oauth")
+	t.Setenv("YANDEX_MCP_TOKEN_TYPE", "oauth")
 	t.Setenv("YANDEX_OAUTH_TOKEN_FILE", tokenFile)
 
 	cfg, err := Load()
 
 	require.NoError(t, err)
+	assert.Equal(t, TokenSourceLocal, cfg.TokenSource)
+	assert.Equal(t, TokenTypeOAuth, cfg.TokenType)
 	assert.Equal(t, "1234567", cfg.OrgID)
 	assert.Empty(t, cfg.CloudOrgID)
 	assert.Equal(t, tokenFile, cfg.OAuthTokenFile)
@@ -89,50 +113,161 @@ func TestLoad_OAuthOrganization(t *testing.T) {
 	assert.Equal(t, "OAuth", cfg.AuthScheme())
 }
 
-// TestLoad_CloudOrganizationHeaders keeps IAM authentication on the Cloud organization header.
+// TestLoad_CloudOrganizationHeaders keeps the IAM token type and the Cloud organization header by default.
 func TestLoad_CloudOrganizationHeaders(t *testing.T) {
 	t.Setenv("YANDEX_CLOUD_ORG_ID", "cloud-org")
 
 	cfg, err := Load()
 
 	require.NoError(t, err)
+	assert.Equal(t, TokenSourceLocal, cfg.TokenSource)
+	assert.Equal(t, TokenTypeIAM, cfg.TokenType)
 	headerName, headerValue := cfg.OrgHeader()
 	assert.Equal(t, "X-Cloud-Org-Id", headerName)
 	assert.Equal(t, "cloud-org", headerValue)
 	assert.Equal(t, "Bearer", cfg.AuthScheme())
 }
 
-// TestLoad_OAuthWithCloudOrganization allows an OAuth token for a Cloud organization.
-func TestLoad_OAuthWithCloudOrganization(t *testing.T) {
-	t.Setenv("YANDEX_CLOUD_ORG_ID", "cloud-org")
-	t.Setenv("YANDEX_MCP_TOKEN_SOURCE", "oauth")
-	t.Setenv("YANDEX_OAUTH_TOKEN_FILE", filepath.Join(t.TempDir(), "token"))
-
-	cfg, err := Load()
-
-	require.NoError(t, err)
-	headerName, _ := cfg.OrgHeader()
-	assert.Equal(t, "X-Cloud-Org-Id", headerName)
-	assert.Equal(t, "OAuth", cfg.AuthScheme())
-}
-
-// TestLoad_OrganizationAndOAuthValidation rejects ambiguous or unusable authentication settings.
-func TestLoad_OrganizationAndOAuthValidation(t *testing.T) {
+// TestLoad_TokenTypeIndependentOfSource verifies that the Authorization scheme, the profile and the
+// organization compatibility follow the token type for both acquisition locations.
+func TestLoad_TokenTypeIndependentOfSource(t *testing.T) {
+	t.Setenv("YANDEX_MCP_AUTH_AGENT_PORT", "")
 	tokenFile := filepath.Join(t.TempDir(), "token")
 	tests := []struct {
-		name, cloudOrgID, orgID, source, tokenFile, want string
+		name                                string
+		env                                 acquisitionEnv
+		wantScheme, wantProfile, wantHeader string
 	}{
-		{"both organizations", "cloud-org", "1234567", "oauth", tokenFile, "mutually exclusive"},
-		{"360 organization with IAM", "", "1234567", "local", "", "YANDEX_ORG_ID requires"},
-		{"missing token file", "", "1234567", "oauth", "", "YANDEX_OAUTH_TOKEN_FILE"},
-		{"relative token file", "", "1234567", "oauth", "token", "YANDEX_OAUTH_TOKEN_FILE"},
+		{
+			name:        "local iam",
+			env:         acquisitionEnv{source: "local", tokenType: "iam", cliProfile: "work", cloudOrgID: "cloud-org"},
+			wantScheme:  "Bearer",
+			wantProfile: "work",
+			wantHeader:  "X-Cloud-Org-Id",
+		},
+		{
+			name: "remote iam",
+			env: acquisitionEnv{
+				source:     "remote",
+				tokenType:  "iam",
+				cliProfile: "work",
+				cloudOrgID: "cloud-org",
+			},
+			wantScheme:  "Bearer",
+			wantProfile: "work",
+			wantHeader:  "X-Cloud-Org-Id",
+		},
+		{
+			name:        "local oauth",
+			env:         acquisitionEnv{source: "local", tokenType: "oauth", tokenFile: tokenFile, orgID: "1234567"},
+			wantScheme:  "OAuth",
+			wantProfile: "",
+			wantHeader:  "X-Org-Id",
+		},
+		{
+			name:        "remote oauth",
+			env:         acquisitionEnv{source: "remote", tokenType: "oauth", oauthProfile: "work", orgID: "1234567"},
+			wantScheme:  "OAuth",
+			wantProfile: "work",
+			wantHeader:  "X-Org-Id",
+		},
+		{
+			name: "remote oauth with cloud organization",
+			env: acquisitionEnv{
+				source:       "remote",
+				tokenType:    "oauth",
+				cliProfile:   "iam-profile",
+				oauthProfile: "work",
+				cloudOrgID:   "cloud-org",
+			},
+			wantScheme:  "OAuth",
+			wantProfile: "work",
+			wantHeader:  "X-Cloud-Org-Id",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("YANDEX_CLOUD_ORG_ID", tt.cloudOrgID)
-			t.Setenv("YANDEX_ORG_ID", tt.orgID)
-			t.Setenv("YANDEX_MCP_TOKEN_SOURCE", tt.source)
-			t.Setenv("YANDEX_OAUTH_TOKEN_FILE", tt.tokenFile)
+			for name, value := range tt.env.variables() {
+				t.Setenv(name, value)
+			}
+
+			cfg, err := Load()
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.env.source, cfg.TokenSource)
+			assert.Equal(t, tt.env.tokenType, cfg.TokenType)
+			assert.Equal(t, tt.wantScheme, cfg.AuthScheme())
+			assert.Equal(t, tt.wantProfile, cfg.Profile())
+			headerName, _ := cfg.OrgHeader()
+			assert.Equal(t, tt.wantHeader, headerName)
+		})
+	}
+}
+
+// TestLoad_TokenAcquisitionValidation rejects ambiguous or unusable authentication settings.
+func TestLoad_TokenAcquisitionValidation(t *testing.T) {
+	t.Setenv("YANDEX_MCP_AUTH_AGENT_PORT", "")
+	tokenFile := filepath.Join(t.TempDir(), "token")
+	tests := []struct {
+		name string
+		env  acquisitionEnv
+		want string
+	}{
+		{
+			name: "both organizations",
+			env: acquisitionEnv{
+				source: "local", tokenType: "oauth", tokenFile: tokenFile, cloudOrgID: "cloud-org", orgID: "1234567",
+			},
+			want: "mutually exclusive",
+		},
+		{
+			name: "360 organization with local iam",
+			env:  acquisitionEnv{source: "local", tokenType: "iam", orgID: "1234567"},
+			want: "YANDEX_ORG_ID requires YANDEX_MCP_TOKEN_TYPE=oauth",
+		},
+		{
+			name: "360 organization with remote iam",
+			env:  acquisitionEnv{source: "remote", tokenType: "iam", cliProfile: "work", orgID: "1234567"},
+			want: "YANDEX_ORG_ID requires YANDEX_MCP_TOKEN_TYPE=oauth",
+		},
+		{
+			name: "oauth is not an acquisition location",
+			env:  acquisitionEnv{source: "oauth", tokenType: "iam", cloudOrgID: "cloud-org"},
+			want: "YANDEX_MCP_TOKEN_SOURCE must be local or remote",
+		},
+		{
+			name: "unsupported token type",
+			env:  acquisitionEnv{source: "local", tokenType: "bearer", cloudOrgID: "cloud-org"},
+			want: "YANDEX_MCP_TOKEN_TYPE must be iam or oauth",
+		},
+		{
+			name: "local oauth without token file",
+			env:  acquisitionEnv{source: "local", tokenType: "oauth", oauthProfile: "work", orgID: "1234567"},
+			want: "YANDEX_OAUTH_TOKEN_FILE",
+		},
+		{
+			name: "local oauth with relative token file",
+			env:  acquisitionEnv{source: "local", tokenType: "oauth", tokenFile: "token", orgID: "1234567"},
+			want: "YANDEX_OAUTH_TOKEN_FILE",
+		},
+		{
+			name: "remote oauth without oauth profile",
+			env: acquisitionEnv{
+				source: "remote", tokenType: "oauth", cliProfile: "work", tokenFile: tokenFile, orgID: "1234567",
+			},
+			want: "YANDEX_OAUTH_PROFILE",
+		},
+		{
+			name: "remote iam without cli profile",
+			env:  acquisitionEnv{source: "remote", tokenType: "iam", oauthProfile: "work", cloudOrgID: "cloud-org"},
+			want: "YANDEX_CLI_PROFILE",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for name, value := range tt.env.variables() {
+				t.Setenv(name, value)
+			}
 
 			cfg, err := Load()
 

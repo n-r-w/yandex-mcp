@@ -44,14 +44,14 @@ func TestAcquire(t *testing.T) {
 				assert.Equal(t, "/token", r.URL.Path)
 				body, err := io.ReadAll(r.Body)
 				assert.NoError(t, err)
-				assert.JSONEq(t, `{"profile":"work"}`, string(body))
+				assert.JSONEq(t, `{"token_type":"iam","profile":"work"}`, string(body))
 				w.Header().Set("Content-Type", "application/json")
 				w.Header().Set("Location", "http://127.0.0.1:1/redirect-target")
 				w.WriteHeader(tt.status)
 				_, _ = io.WriteString(w, tt.body)
 			}))
 			defer srv.Close()
-			source, err := New(srv.Listener.Addr().(*net.TCPAddr).Port)
+			source, err := New(srv.Listener.Addr().(*net.TCPAddr).Port, "iam")
 			require.NoError(t, err)
 			defer source.Close()
 			token, err := source.Acquire(t.Context(), "work")
@@ -69,11 +69,43 @@ func TestAcquire(t *testing.T) {
 	}
 }
 
+// TestTokenTypeInRequest sends the configured token type with the profile and refuses
+// to send a request that names no token type.
+func TestTokenTypeInRequest(t *testing.T) {
+	t.Parallel()
+	requests := make(chan string, 1)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		assert.NoError(t, err)
+		requests <- string(body)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, `{"token":"oauth-token"}`)
+	}))
+	defer srv.Close()
+	port := srv.Listener.Addr().(*net.TCPAddr).Port
+
+	source, err := New(port, "oauth")
+	require.NoError(t, err)
+	defer source.Close()
+	token, err := source.Acquire(t.Context(), "work")
+	require.NoError(t, err)
+	require.Equal(t, "oauth-token", token)
+	require.JSONEq(t, `{"token_type":"oauth","profile":"work"}`, <-requests)
+
+	untyped, err := New(port, "")
+	require.NoError(t, err)
+	defer untyped.Close()
+	token, err = untyped.Acquire(t.Context(), "work")
+	require.ErrorContains(t, err, "invalid token request")
+	require.Empty(t, token)
+	require.Empty(t, requests)
+}
+
 // TestPortValidation rejects ports outside the TCP range.
 func TestPortValidation(t *testing.T) {
 	t.Parallel()
 	for _, port := range []int{0, -1, 65536} {
-		_, err := New(port)
+		_, err := New(port, "iam")
 		require.ErrorContains(t, err, "YANDEX_MCP_AUTH_AGENT_PORT")
 	}
 }
@@ -90,7 +122,7 @@ func TestCancellation(t *testing.T) {
 		close(stopped)
 	}))
 	defer srv.Close()
-	source, err := New(srv.Listener.Addr().(*net.TCPAddr).Port)
+	source, err := New(srv.Listener.Addr().(*net.TCPAddr).Port, "iam")
 	require.NoError(t, err)
 	defer source.Close()
 	ctx, cancel := context.WithCancel(t.Context())

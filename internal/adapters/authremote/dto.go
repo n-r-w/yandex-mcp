@@ -7,7 +7,8 @@ import (
 )
 
 type tokenRequest struct {
-	Profile string `json:"profile"`
+	TokenType string `json:"token_type"`
+	Profile   string `json:"profile"`
 }
 
 type tokenResponse struct {

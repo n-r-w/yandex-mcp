@@ -34,8 +34,14 @@ type Config struct {
 	// OrgID is the Yandex 360 for Business organization ID for X-Org-Id header.
 	OrgID string
 
-	// OAuthTokenFile is the absolute path to a file holding a Yandex OAuth token.
+	// OAuthTokenFile is the absolute path to a file holding a Yandex OAuth token, used for local acquisition.
 	OAuthTokenFile string
+
+	// OAuthProfile names the OAuth token that auth-agent resolves to a file, used for remote acquisition.
+	OAuthProfile string
+
+	// TokenType selects the IAM or OAuth token type independently of the acquisition location.
+	TokenType string
 
 	// CLIProfile is the optional yc CLI profile used for IAM token retrieval.
 	CLIProfile string
@@ -72,6 +78,8 @@ type envConfig struct {
 	CloudOrgID           string `env:"YANDEX_CLOUD_ORG_ID"`
 	OrgID                string `env:"YANDEX_ORG_ID"`
 	OAuthTokenFile       string `env:"YANDEX_OAUTH_TOKEN_FILE"`
+	OAuthProfile         string `env:"YANDEX_OAUTH_PROFILE"`
+	TokenType            string `env:"YANDEX_MCP_TOKEN_TYPE"              envDefault:"iam"`
 	CLIProfile           string `env:"YANDEX_CLI_PROFILE"`
 	RefreshPeriodHours   int    `env:"YANDEX_IAM_TOKEN_REFRESH_PERIOD"    envDefault:"10"`
 	ToolTimeoutSeconds   int    `env:"YANDEX_MCP_TOOL_TIMEOUT"            envDefault:"300"`
@@ -122,6 +130,8 @@ func Load() (*Config, error) {
 		CloudOrgID:              strings.TrimSpace(ec.CloudOrgID),
 		OrgID:                   strings.TrimSpace(ec.OrgID),
 		OAuthTokenFile:          strings.TrimSpace(ec.OAuthTokenFile),
+		OAuthProfile:            strings.TrimSpace(ec.OAuthProfile),
+		TokenType:               ec.TokenType,
 		CLIProfile:              ec.CLIProfile,
 		IAMTokenRefreshPeriod:   resolveRefreshPeriod(ec.RefreshPeriodHours),
 		ToolTimeout:             time.Duration(ec.ToolTimeoutSeconds) * time.Second,
@@ -290,20 +300,7 @@ func resolveRefreshPeriod(hours int) time.Duration {
 func (c *Config) validate() error {
 	var errs []error
 
-	if c.TokenSource != tokenSourceLocal && c.TokenSource != tokenSourceRemote && c.TokenSource != TokenSourceOAuth {
-		errs = append(errs, errors.New("YANDEX_MCP_TOKEN_SOURCE must be local, remote or oauth"))
-	}
-	if c.TokenSource == TokenSourceOAuth && !filepath.IsAbs(c.OAuthTokenFile) {
-		errs = append(errs, errors.New("YANDEX_OAUTH_TOKEN_FILE must be an absolute path in oauth mode"))
-	}
-	if c.TokenSource == tokenSourceRemote {
-		if strings.TrimSpace(c.CLIProfile) == "" {
-			errs = append(errs, errors.New("YANDEX_CLI_PROFILE is required in remote mode"))
-		}
-		if _, err := AuthAgentAddress(c.AuthAgentPort); err != nil {
-			errs = append(errs, err)
-		}
-	}
+	errs = append(errs, c.validateTokenAcquisition()...)
 
 	if err := validateHTTPSURL(c.WikiBaseURL, "YANDEX_WIKI_BASE_URL"); err != nil {
 		errs = append(errs, err)
@@ -329,16 +326,63 @@ func (c *Config) validate() error {
 	return errors.Join(errs...)
 }
 
-// validateOrganization requires one organization type that the token source can authenticate.
+// validateTokenAcquisition checks the acquisition location and the token type independently,
+// then the settings required by their combination.
+func (c *Config) validateTokenAcquisition() []error {
+	var errs []error
+
+	if c.TokenSource != TokenSourceLocal && c.TokenSource != TokenSourceRemote {
+		errs = append(errs, errors.New("YANDEX_MCP_TOKEN_SOURCE must be local or remote"))
+	}
+	if c.TokenType != TokenTypeIAM && c.TokenType != TokenTypeOAuth {
+		errs = append(errs, errors.New("YANDEX_MCP_TOKEN_TYPE must be iam or oauth"))
+	}
+
+	if c.TokenSource == TokenSourceRemote {
+		if _, err := AuthAgentAddress(c.AuthAgentPort); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if err := c.validateTokenIdentity(); err != nil {
+		errs = append(errs, err)
+	}
+
+	return errs
+}
+
+// validateTokenIdentity requires the setting that identifies the token for the selected
+// combination: a profile name for remote acquisition, a file path for a local OAuth token.
+func (c *Config) validateTokenIdentity() error {
+	remote := c.TokenSource == TokenSourceRemote
+	switch {
+	case remote && c.TokenType == TokenTypeOAuth && c.OAuthProfile == "":
+		return errors.New("YANDEX_OAUTH_PROFILE is required for remote OAuth tokens")
+	case remote && c.TokenType == TokenTypeIAM && strings.TrimSpace(c.CLIProfile) == "":
+		return errors.New("YANDEX_CLI_PROFILE is required in remote mode")
+	case !remote && c.TokenType == TokenTypeOAuth && !filepath.IsAbs(c.OAuthTokenFile):
+		return errors.New("YANDEX_OAUTH_TOKEN_FILE must be an absolute path for local OAuth tokens")
+	}
+	return nil
+}
+
+// Profile returns the profile name that identifies the token for the configured token type.
+func (c *Config) Profile() string {
+	if c.TokenType == TokenTypeOAuth {
+		return c.OAuthProfile
+	}
+	return c.CLIProfile
+}
+
+// validateOrganization requires one organization type that the token type can authenticate.
 func (c *Config) validateOrganization() error {
 	switch {
 	case c.CloudOrgID == "" && c.OrgID == "":
 		return errors.New("YANDEX_CLOUD_ORG_ID or YANDEX_ORG_ID is required")
 	case c.CloudOrgID != "" && c.OrgID != "":
 		return errors.New("YANDEX_CLOUD_ORG_ID and YANDEX_ORG_ID are mutually exclusive")
-	case c.OrgID != "" && c.TokenSource != TokenSourceOAuth:
+	case c.OrgID != "" && c.TokenType != TokenTypeOAuth:
 		// IAM tokens are accepted only by Yandex Cloud organizations.
-		return errors.New("YANDEX_ORG_ID requires YANDEX_MCP_TOKEN_SOURCE=oauth")
+		return errors.New("YANDEX_ORG_ID requires YANDEX_MCP_TOKEN_TYPE=oauth")
 	}
 	return nil
 }
@@ -351,9 +395,9 @@ func (c *Config) OrgHeader() (name, value string) {
 	return headerCloudOrgID, c.CloudOrgID
 }
 
-// AuthScheme returns the Authorization header scheme for the configured token source.
+// AuthScheme returns the Authorization header scheme for the configured token type.
 func (c *Config) AuthScheme() string {
-	if c.TokenSource == TokenSourceOAuth {
+	if c.TokenType == TokenTypeOAuth {
 		return authSchemeOAuth
 	}
 	return authSchemeBearer

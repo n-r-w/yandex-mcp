@@ -89,7 +89,7 @@ func TestClient_HeaderInjection_OAuth(t *testing.T) {
 	cfg := &config.Config{ //nolint:exhaustruct_v5 // test helper
 		TrackerBaseURL:       server.URL,
 		OrgID:                testOrgID,
-		TokenSource:          config.TokenSourceOAuth,
+		TokenType:            config.TokenTypeOAuth,
 		AttachInlineMaxBytes: testAttachInlineMaxBytes,
 	}
 

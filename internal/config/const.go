@@ -1,11 +1,15 @@
 package config
 
 const (
-	tokenSourceLocal  = "local"
-	tokenSourceRemote = "remote"
+	// TokenSourceLocal acquires tokens on the machine that runs MCP.
+	TokenSourceLocal = "local"
+	// TokenSourceRemote acquires tokens through the workstation auth-agent.
+	TokenSourceRemote = "remote"
 
-	// TokenSourceOAuth selects a Yandex OAuth token read from a local file.
-	TokenSourceOAuth = "oauth"
+	// TokenTypeIAM selects IAM tokens, acquired through yc.
+	TokenTypeIAM = "iam"
+	// TokenTypeOAuth selects Yandex OAuth tokens, read from a file.
+	TokenTypeOAuth = "oauth"
 
 	headerCloudOrgID = "X-Cloud-Org-Id"
 	headerOrgID      = "X-Org-Id"

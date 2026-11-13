@@ -90,7 +90,7 @@ func TestClient_HeaderInjection_OAuth(t *testing.T) {
 	cfg := &config.Config{
 		WikiBaseURL:          server.URL,
 		OrgID:                testOrgID,
-		TokenSource:          config.TokenSourceOAuth,
+		TokenType:            config.TokenTypeOAuth,
 		AttachInlineMaxBytes: testAttachInlineMaxBytes,
 	}
 
