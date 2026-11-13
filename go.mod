@@ -1,6 +1,6 @@
 module github.com/n-r-w/yandex-mcp
 
-go 1.27.2
+go 1.27.4
 
 tool (
 	github.com/golangci/golangci-lint/v2/cmd/golangci-lint
