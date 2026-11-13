@@ -25,6 +25,8 @@ type APIClient struct {
 	baseURL             *url.URL
 	baseURLParseErr     error
 	orgID               string
+	orgHeader           string
+	authScheme          string
 	extraHeaders        map[string]string
 	serviceName         string
 	parseError          ErrorParseFunc
@@ -33,10 +35,14 @@ type APIClient struct {
 
 // APIClientConfig contains configuration for creating an APIClient.
 type APIClientConfig struct {
-	HTTPClient          *http.Client
-	TokenProvider       ITokenProvider
-	BaseURL             string
-	OrgID               string
+	HTTPClient    *http.Client
+	TokenProvider ITokenProvider
+	BaseURL       string
+	OrgID         string
+	// OrgHeader is the organization header name. Empty means HeaderCloudOrgID.
+	OrgHeader string
+	// AuthScheme is the Authorization header scheme. Empty means AuthSchemeBearer.
+	AuthScheme          string
 	ExtraHeaders        map[string]string
 	ServiceName         string
 	ParseError          ErrorParseFunc
@@ -58,6 +64,8 @@ func NewAPIClient(cfg APIClientConfig) *APIClient {
 		baseURL:             parsedBaseURL,
 		baseURLParseErr:     baseURLParseErr,
 		orgID:               cfg.OrgID,
+		orgHeader:           cfg.OrgHeader,
+		authScheme:          cfg.AuthScheme,
 		extraHeaders:        cfg.ExtraHeaders,
 		serviceName:         cfg.ServiceName,
 		parseError:          cfg.ParseError,
@@ -373,8 +381,8 @@ func (c *APIClient) executeHTTPRequest(
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 
-	req.Header.Set(HeaderAuthorization, "Bearer "+token)
-	req.Header.Set(HeaderCloudOrgID, c.orgID)
+	req.Header.Set(HeaderAuthorization, c.authorizationValue(token))
+	req.Header.Set(c.orgHeaderName(), c.orgID)
 	req.Header.Set(HeaderContentType, ContentTypeJSON)
 
 	for key, value := range c.extraHeaders {
@@ -386,6 +394,23 @@ func (c *APIClient) executeHTTPRequest(
 		return nil, fmt.Errorf("execute request: %w", err)
 	}
 	return resp, nil
+}
+
+// authorizationValue builds the Authorization header value for the configured token type.
+func (c *APIClient) authorizationValue(token string) string {
+	scheme := c.authScheme
+	if scheme == "" {
+		scheme = AuthSchemeBearer
+	}
+	return scheme + " " + token
+}
+
+// orgHeaderName returns the organization header matching the configured organization type.
+func (c *APIClient) orgHeaderName() string {
+	if c.orgHeader == "" {
+		return HeaderCloudOrgID
+	}
+	return c.orgHeader
 }
 
 // ErrorLogWrapper logs an error with the service name prefix and returns it.
