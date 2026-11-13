@@ -4,18 +4,30 @@ if (-not $env:YANDEX_MCP_SSH_TARGET) { throw 'Set YANDEX_MCP_SSH_TARGET before i
 $binaryCommand = 'yandex-mcp'
 if ($env:YANDEX_MCP_BINARY) { $binaryCommand = $env:YANDEX_MCP_BINARY }
 $binary = (Get-Command -Name $binaryCommand -CommandType Application -ErrorAction Stop).Source
-$ycCommand = 'yc'
-if ($env:YANDEX_MCP_AUTH_AGENT_YC_PATH) { $ycCommand = $env:YANDEX_MCP_AUTH_AGENT_YC_PATH }
-$ycPath = (Get-Command -Name $ycCommand -CommandType Application -ErrorAction Stop).Source
+# Auth-agent looks up the command name yc through the saved PATH at each IAM request.
+$ycPath = 'yc'
+if ($env:YANDEX_MCP_AUTH_AGENT_YC_PATH) {
+    $ycPath = (Get-Command -Name $env:YANDEX_MCP_AUTH_AGENT_YC_PATH -CommandType Application -ErrorAction Stop).Source
+} else {
+    $foundYC = (Get-Command -Name 'yc' -CommandType Application -ErrorAction SilentlyContinue).Source
+    if ($foundYC) { $ycPath = $foundYC } else { Write-Warning 'yc not found; auth-agent serves IAM tokens after yc is installed in PATH' }
+}
 Get-Command -Name ssh -CommandType Application -ErrorAction Stop | Out-Null
 $port = 18765
 if ($env:YANDEX_MCP_AUTH_AGENT_PORT) { $port = [int]$env:YANDEX_MCP_AUTH_AGENT_PORT }
 if ($port -lt 1 -or $port -gt 65535) { throw 'Port must be from 1 to 65535' }
+# Empty means the default OAuth directory that auth-agent computes at each start.
+$oauthDir = [string]$env:YANDEX_MCP_AUTH_AGENT_OAUTH_DIR
+# Absolute Windows paths start with a drive and a separator, or are UNC paths.
+if ($oauthDir -and $oauthDir -notmatch '^([A-Za-z]:[\\/]|[\\/]{2})') {
+    throw 'YANDEX_MCP_AUTH_AGENT_OAUTH_DIR must be an absolute path'
+}
 $directory = Join-Path $env:LOCALAPPDATA 'YandexMCP'
 New-Item -ItemType Directory -Force -Path $directory | Out-Null
 $values = @{
     '@PORT@' = [string]$port
     '@YC_PATH@' = $ycPath
+    '@OAUTH_DIR@' = $oauthDir
     '@BINARY@' = $binary
     '@SSH_TARGET@' = $env:YANDEX_MCP_SSH_TARGET
     '@PATH@' = $env:PATH

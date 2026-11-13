@@ -13,6 +13,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/n-r-w/yandex-mcp/internal/adapters/authremote"
+	"github.com/n-r-w/yandex-mcp/internal/adapters/oauthfile"
 	"github.com/n-r-w/yandex-mcp/internal/adapters/tracker"
 	"github.com/n-r-w/yandex-mcp/internal/adapters/wiki"
 	"github.com/n-r-w/yandex-mcp/internal/adapters/yc"
@@ -97,12 +98,37 @@ func run(serverVersion string, args []string) error {
 		if err != nil {
 			return err
 		}
-		service := authagent.New(yc.New(cfg.YCPath))
+		service := newAuthAgent(cfg)
 		defer service.Close()
-		slog.InfoContext(ctx, "starting workstation auth-agent", "port", cfg.Port)
+		slog.InfoContext(ctx, "starting workstation auth-agent", "port", cfg.Port, "oauth_dir", cfg.OAuthDir)
 		return service.Run(ctx, cfg.Port, cfg.SSHTarget)
 	}
 	return runMCP(ctx, serverVersion)
+}
+
+// newAuthAgent composes the workstation auth-agent with yc for IAM tokens and token files for OAuth tokens.
+func newAuthAgent(cfg *authagent.Config) *authagent.Service {
+	return authagent.New(yc.New(cfg.YCPath), oauthfile.NewProfiles(cfg.OAuthDir))
+}
+
+// newTokenProvider builds the token provider whose source matches the configured acquisition location and token type.
+func newTokenProvider(cfg *config.Config) (*ytoken.Provider, func(), error) {
+	var source ytoken.ITokenSource
+	closeSource := func() {}
+	switch {
+	case cfg.TokenSource == config.TokenSourceRemote:
+		remote, err := authremote.New(cfg.AuthAgentPort, cfg.TokenType)
+		if err != nil {
+			return nil, nil, err
+		}
+		source, closeSource = remote, remote.Close
+	case cfg.TokenType == config.TokenTypeOAuth:
+		source = oauthfile.New(cfg.OAuthTokenFile)
+	default:
+		source = yc.New("yc")
+	}
+	provider := ytoken.New(source, cfg.Profile(), cfg.IAMTokenRefreshPeriod)
+	return provider, func() { provider.Close(); closeSource() }, nil
 }
 
 func runMCP(ctx context.Context, serverVersion string) error {
@@ -117,18 +143,11 @@ func runMCP(ctx context.Context, serverVersion string) error {
 		slog.String("tracker_base_url", cfg.TrackerBaseURL),
 	)
 
-	var tokenProvider *ytoken.Provider
-	if cfg.TokenSource == "remote" {
-		source, sourceErr := authremote.New(cfg.AuthAgentPort)
-		if sourceErr != nil {
-			return sourceErr
-		}
-		defer source.Close()
-		tokenProvider = ytoken.New(source, cfg.CLIProfile, cfg.IAMTokenRefreshPeriod)
-	} else {
-		tokenProvider = ytoken.New(yc.New("yc"), cfg.CLIProfile, cfg.IAMTokenRefreshPeriod)
+	tokenProvider, closeTokenProvider, err := newTokenProvider(cfg)
+	if err != nil {
+		return err
 	}
-	defer tokenProvider.Close()
+	defer closeTokenProvider()
 
 	wikiClient := wiki.NewClient(cfg, tokenProvider)
 	trackerClient := tracker.NewClient(cfg, tokenProvider)

@@ -5,10 +5,22 @@ set -eu
 port=${YANDEX_MCP_AUTH_AGENT_PORT:-18765}
 case "$port" in ''|*[!0-9]*) echo 'Port must be an integer' >&2; exit 1 ;; esac
 [ "$port" -ge 1 ] && [ "$port" -le 65535 ] || exit 1
+# Empty means the default OAuth directory that auth-agent computes at each start.
+oauth_dir=${YANDEX_MCP_AUTH_AGENT_OAUTH_DIR:-}
+case "$oauth_dir" in ''|/*) ;; *) echo 'YANDEX_MCP_AUTH_AGENT_OAUTH_DIR must be an absolute path' >&2; exit 1 ;; esac
 binary=$(command -v "${YANDEX_MCP_BINARY:-yandex-mcp}") || { echo 'yandex-mcp not found; set YANDEX_MCP_BINARY' >&2; exit 1; }
-yc_path=$(command -v "${YANDEX_MCP_AUTH_AGENT_YC_PATH:-yc}") || { echo 'yc not found; set YANDEX_MCP_AUTH_AGENT_YC_PATH' >&2; exit 1; }
+# Positional parameters hold the executables that must exist before installation.
+set -- "$binary"
+if [ -n "${YANDEX_MCP_AUTH_AGENT_YC_PATH:-}" ] || command -v yc >/dev/null; then
+  yc_path=$(command -v "${YANDEX_MCP_AUTH_AGENT_YC_PATH:-yc}") || { echo "YANDEX_MCP_AUTH_AGENT_YC_PATH does not name an executable: $YANDEX_MCP_AUTH_AGENT_YC_PATH" >&2; exit 1; }
+  set -- "$@" "$yc_path"
+else
+  # Auth-agent looks up yc through the saved PATH at each IAM request.
+  yc_path=yc
+  echo 'yc not found; auth-agent serves IAM tokens after yc is installed in PATH' >&2
+fi
 command -v ssh >/dev/null || { echo 'Install OpenSSH and add ssh to PATH' >&2; exit 1; }
-for executable in "$binary" "$yc_path"; do
+for executable in "$@"; do
   case "$executable" in /*) ;; *) echo 'Executable paths must resolve to absolute paths' >&2; exit 1 ;; esac
   [ -f "$executable" ] && [ -x "$executable" ] || { echo "Not executable: $executable" >&2; exit 1; }
 done
@@ -23,6 +35,7 @@ plutil -remove ProgramArguments.0 "$agent"
 plutil -insert ProgramArguments.0 -string "$binary" "$agent"
 plutil -replace EnvironmentVariables.YANDEX_MCP_AUTH_AGENT_PORT -string "$port" "$agent"
 plutil -replace EnvironmentVariables.YANDEX_MCP_AUTH_AGENT_YC_PATH -string "$yc_path" "$agent"
+plutil -replace EnvironmentVariables.YANDEX_MCP_AUTH_AGENT_OAUTH_DIR -string "$oauth_dir" "$agent"
 plutil -replace EnvironmentVariables.YANDEX_MCP_SSH_TARGET -string "$YANDEX_MCP_SSH_TARGET" "$agent"
 plutil -replace EnvironmentVariables.PATH -string "$PATH" "$agent"
 plutil -replace StandardErrorPath -string "$log_dir/auth-agent.log" "$agent"
