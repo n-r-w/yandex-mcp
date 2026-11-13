@@ -7,5 +7,7 @@
 - OAuth profile: a named file that holds one Yandex OAuth token; auth-agent reads it by the profile name that MCP sends.
 - OAuth directory: the workstation directory that holds the OAuth profile files of auth-agent.
 - Startup configuration: the file from which the operating system passes the environment to auth-agent at startup: `auth-agent.env` on Linux, the LaunchAgent plist on macOS, the generated `auth-agent.ps1` on Windows.
-
-Workstation, auth-agent, token source, and token provider are defined in the [remote authentication glossary](../remote-authentication/glossary.md).
+- Workstation: the user's computer with an interactive desktop session, where auth-agent runs.
+- Auth-agent: the `yandex-mcp auth-agent` mode that acquires IAM tokens through `yc` and OAuth tokens from OAuth profiles on the workstation for MCP on a server.
+- Token source: a component that acquires a new token of one type for the token provider.
+- Token provider: the MCP component that caches a token of the configured type and refreshes it.

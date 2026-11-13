@@ -146,5 +146,5 @@ No technical supplement.
 
 - [Problem statement](problem.md)
 - [Technical solution](solution.md)
-- [Remote authentication requirements](../remote-authentication/requirements.md)
+- [Remote authentication requirements](../remote-authentication/requirements.md): requirements of remote IAM acquisition before this change
 - [Pull request 15](https://github.com/n-r-w/yandex-mcp/pull/15)

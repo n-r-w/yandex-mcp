@@ -51,6 +51,7 @@ Auth-agent keys shared acquisitions by the token type and the profile name. IAM 
 
 ### S7. Request compatibility with released versions (NRQ.01)
 
+- The [remote authentication solution](../remote-authentication/solution.md) defines the auth-agent endpoint `POST /token`, the tunnel, HTTP statuses, and shared waiting; this change keeps them and adds the token type to the request.
 - A request without `token_type`, or with an empty `token_type`, asks for an IAM token. MCP sends `token_type` only for OAuth tokens, so an IAM request keeps the released format `{"profile":"work"}`; an OAuth request is `{"token_type":"oauth","profile":"work"}`.
 - The released auth-agent rejects unknown request members, and this change keeps the IAM request free of new members. Version combinations then behave as follows:
 
@@ -70,7 +71,7 @@ Auth-agent keys shared acquisitions by the token type and the profile name. IAM 
 
 ### S9. User documentation (FRQ.09)
 
-README describes the token type choice, the four combinations, local OAuth, remote OAuth with the OAuth directory per operating system, the OAuth prerequisites, and the installation without `yc`. `.env.example` lists each variable of S1, S2, S4, and S8 with the combinations that require it. The [remote authentication solution](../remote-authentication/solution.md) describes the auth-agent request and response format, the tunnel, and shared waiting for both token types, and refers to this document for token types and OAuth profiles.
+README describes the token type choice, the four combinations, local OAuth, remote OAuth with the OAuth directory per operating system, the OAuth prerequisites, and the installation without `yc`. `.env.example` lists each variable of S1, S2, S4, and S8 with the combinations that require it. The [remote authentication specification](../remote-authentication/solution.md) records the design of remote IAM acquisition before this change and stays unchanged.
 
 ### Verification
 
@@ -101,6 +102,6 @@ There are no open questions.
 ## References
 
 - [Problem statement](problem.md) and [requirements](requirements.md)
-- [Remote authentication solution](../remote-authentication/solution.md): tunnel, request format, shared waiting
+- [Remote authentication solution](../remote-authentication/solution.md): design of remote IAM acquisition before this change: tunnel, endpoint, HTTP statuses, shared waiting
 - [Tracker API access](https://yandex.ru/support/tracker/en/concepts/access) and [Wiki API access](https://yandex.ru/support/wiki/en/api-ref/access): token types and organization headers
 - [Pull request 15](https://github.com/n-r-w/yandex-mcp/pull/15)
