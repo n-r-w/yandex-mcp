@@ -1,7 +1,7 @@
 #!/bin/sh
 # Run in a logged-in macOS graphical session. No root privileges are needed.
 set -eu
-: "${YANDEX_MCP_SSH_TARGET:?Set the SSH host or user@host}"
+: "${YANDEX_MCP_SSH_TARGETS:?Set comma-separated SSH hosts or user@host targets}"
 port=${YANDEX_MCP_AUTH_AGENT_PORT:-18765}
 case "$port" in ''|*[!0-9]*) echo 'Port must be an integer' >&2; exit 1 ;; esac
 [ "$port" -ge 1 ] && [ "$port" -le 65535 ] || exit 1
@@ -36,7 +36,7 @@ plutil -insert ProgramArguments.0 -string "$binary" "$agent"
 plutil -replace EnvironmentVariables.YANDEX_MCP_AUTH_AGENT_PORT -string "$port" "$agent"
 plutil -replace EnvironmentVariables.YANDEX_MCP_AUTH_AGENT_YC_PATH -string "$yc_path" "$agent"
 plutil -replace EnvironmentVariables.YANDEX_MCP_AUTH_AGENT_OAUTH_DIR -string "$oauth_dir" "$agent"
-plutil -replace EnvironmentVariables.YANDEX_MCP_SSH_TARGET -string "$YANDEX_MCP_SSH_TARGET" "$agent"
+plutil -replace EnvironmentVariables.YANDEX_MCP_SSH_TARGETS -string "$YANDEX_MCP_SSH_TARGETS" "$agent"
 plutil -replace EnvironmentVariables.PATH -string "$PATH" "$agent"
 plutil -replace StandardErrorPath -string "$log_dir/auth-agent.log" "$agent"
 plutil -lint "$agent"
@@ -45,4 +45,14 @@ loaded_agent=$(printf '%s\n' "$loaded_agents" | awk '$3 == "net.yandex-mcp.auth-
 if [ -n "$loaded_agent" ]; then
   launchctl bootout "gui/$(id -u)/net.yandex-mcp.auth-agent"
 fi
-launchctl bootstrap "gui/$(id -u)" "$agent"
+attempt=1
+while :; do
+  if launchctl bootstrap "gui/$(id -u)" "$agent"; then
+    break
+  else
+    status=$?
+  fi
+  [ "$attempt" -lt 3 ] || exit "$status"
+  attempt=$((attempt + 1))
+  sleep 1
+done

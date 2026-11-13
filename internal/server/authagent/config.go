@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/caarlos0/env/v11"
 
@@ -13,21 +14,23 @@ import (
 
 // Config contains workstation auth-agent settings.
 type Config struct {
-	Port      int
-	YCPath    string
-	SSHTarget string
+	Port       int
+	YCPath     string
+	SSHTargets []string
 	// OAuthDir holds OAuth token files named after profiles. Empty when no directory can be resolved.
 	OAuthDir string
 }
 
 type envConfig struct {
-	Port      int    `env:"YANDEX_MCP_AUTH_AGENT_PORT"              envDefault:"18765"`
-	YCPath    string `env:"YANDEX_MCP_AUTH_AGENT_YC_PATH"           envDefault:"yc"`
-	OAuthDir  string `env:"YANDEX_MCP_AUTH_AGENT_OAUTH_DIR"`
-	SSHTarget string `env:"YANDEX_MCP_SSH_TARGET,required,notEmpty"`
+	Port       int      `env:"YANDEX_MCP_AUTH_AGENT_PORT"      envDefault:"18765"`
+	YCPath     string   `env:"YANDEX_MCP_AUTH_AGENT_YC_PATH"   envDefault:"yc"`
+	OAuthDir   string   `env:"YANDEX_MCP_AUTH_AGENT_OAUTH_DIR"`
+	SSHTargets []string `env:"YANDEX_MCP_SSH_TARGETS"                             envSeparator:","`
+	// SSHTarget is the single SSH destination that installers of v1.0.1 to v1.1.0 save.
+	SSHTarget string `env:"YANDEX_MCP_SSH_TARGET"`
 }
 
-// LoadConfig reads the SSH destination, loopback port, optional yc command override,
+// LoadConfig reads SSH destinations, loopback port, optional yc command override,
 // and the directory of OAuth profile files.
 func LoadConfig() (*Config, error) {
 	var ec envConfig
@@ -37,11 +40,30 @@ func LoadConfig() (*Config, error) {
 	if _, err := config.AuthAgentAddress(ec.Port); err != nil {
 		return nil, err
 	}
+	if len(ec.SSHTargets) == 0 {
+		if ec.SSHTarget == "" {
+			return nil, errors.New("YANDEX_MCP_SSH_TARGETS is required")
+		}
+		// Earlier versions pass the setting to SSH as one destination, so a comma stays part of it.
+		ec.SSHTargets = []string{ec.SSHTarget}
+	}
+	seen := make(map[string]struct{}, len(ec.SSHTargets))
+	for index, target := range ec.SSHTargets {
+		target = strings.TrimSpace(target)
+		if target == "" {
+			return nil, errors.New("YANDEX_MCP_SSH_TARGETS contains an empty target")
+		}
+		if _, exists := seen[target]; exists {
+			return nil, fmt.Errorf("YANDEX_MCP_SSH_TARGETS contains duplicate target %q", target)
+		}
+		ec.SSHTargets[index] = target
+		seen[target] = struct{}{}
+	}
 	oauthDir, err := resolveOAuthDir(ec.OAuthDir)
 	if err != nil {
 		return nil, err
 	}
-	return &Config{Port: ec.Port, YCPath: ec.YCPath, SSHTarget: ec.SSHTarget, OAuthDir: oauthDir}, nil
+	return &Config{Port: ec.Port, YCPath: ec.YCPath, SSHTargets: ec.SSHTargets, OAuthDir: oauthDir}, nil
 }
 
 // resolveOAuthDir returns the explicit directory or the per-user default.

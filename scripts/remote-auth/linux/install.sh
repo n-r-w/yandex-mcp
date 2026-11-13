@@ -1,7 +1,7 @@
 #!/bin/sh
 # Run in a systemd-integrated graphical desktop session, without sudo.
 set -eu
-: "${YANDEX_MCP_SSH_TARGET:?Set the SSH host or user@host}"
+: "${YANDEX_MCP_SSH_TARGETS:?Set comma-separated SSH hosts or user@host targets}"
 port=${YANDEX_MCP_AUTH_AGENT_PORT:-18765}
 case "$port" in ''|*[!0-9]*) echo 'Port must be an integer' >&2; exit 1 ;; esac
 [ "$port" -ge 1 ] && [ "$port" -le 65535 ] || exit 1
@@ -45,7 +45,7 @@ write_setting() {
   write_setting YANDEX_MCP_AUTH_AGENT_PORT "$port"
   write_setting YANDEX_MCP_AUTH_AGENT_YC_PATH "$yc_path"
   write_setting YANDEX_MCP_AUTH_AGENT_OAUTH_DIR "$oauth_dir"
-  write_setting YANDEX_MCP_SSH_TARGET "$YANDEX_MCP_SSH_TARGET"
+  write_setting YANDEX_MCP_SSH_TARGETS "$YANDEX_MCP_SSH_TARGETS"
   write_setting PATH "$PATH"
 } > "$config_dir/auth-agent.env"
 cp "$source_dir/auth-agent.service" "$startup_dir/yandex-mcp-auth-agent.service"

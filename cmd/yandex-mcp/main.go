@@ -100,8 +100,9 @@ func run(serverVersion string, args []string) error {
 		}
 		service := newAuthAgent(cfg)
 		defer service.Close()
-		slog.InfoContext(ctx, "starting workstation auth-agent", "port", cfg.Port, "oauth_dir", cfg.OAuthDir)
-		return service.Run(ctx, cfg.Port, cfg.SSHTarget)
+		slog.InfoContext(ctx, "starting workstation auth-agent", "port", cfg.Port, "ssh_targets", cfg.SSHTargets,
+			"oauth_dir", cfg.OAuthDir)
+		return service.Run(ctx, cfg.Port, cfg.SSHTargets)
 	}
 	return runMCP(ctx, serverVersion)
 }

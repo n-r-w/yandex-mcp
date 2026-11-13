@@ -297,7 +297,7 @@ From the extracted release archive or repository, run in your graphical desktop 
 
 ```sh
 export YANDEX_MCP_BINARY=/absolute/workstation/path/to/yandex-mcp
-export YANDEX_MCP_SSH_TARGET=user@server.example
+export YANDEX_MCP_SSH_TARGETS=user@server-one.example,user@server-two.example
 sh scripts/remote-auth/macos/install.sh
 ```
 
@@ -305,15 +305,15 @@ On a systemd-integrated Linux desktop, replace `macos` with `linux`. On Windows,
 
 ```powershell
 $env:YANDEX_MCP_BINARY = 'C:\Tools\yandex-mcp.exe'
-$env:YANDEX_MCP_SSH_TARGET = 'user@server.example'
+$env:YANDEX_MCP_SSH_TARGETS = 'user@server-one.example,user@server-two.example'
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\remote-auth\windows\install.ps1
 ```
 
-Replace the workstation executable path and SSH destination. The installer configures one auth-agent startup entry. Auth-agent starts and reconnects SSH. `YANDEX_MCP_BINARY` is optional when `yandex-mcp` is in `PATH`.
+Replace the workstation executable path and SSH destinations. The installer configures one auth-agent startup entry. Auth-agent starts one SSH tunnel for each destination and reconnects each tunnel independently. Auth-agent refuses to start when the list holds an empty or repeated destination. Auth-agent installed by v1.1.0 or earlier keeps its single destination from `YANDEX_MCP_SSH_TARGET` after you replace the executable; run the installer again to switch to `YANDEX_MCP_SSH_TARGETS`. `YANDEX_MCP_BINARY` is optional when `yandex-mcp` is in `PATH`.
 
 When `yc` is not in `PATH`, the installer completes with a warning. Auth-agent then serves OAuth tokens, and IAM requests fail until `yc` is installed in a directory of the `PATH` that the installer saved. To use another `yc` executable, set `YANDEX_MCP_AUTH_AGENT_YC_PATH` before you run the installer; the installer stops when this value does not resolve to an executable.
 
-Use the same `YANDEX_MCP_AUTH_AGENT_PORT` on both machines, default `18765`.
+Use the same `YANDEX_MCP_AUTH_AGENT_PORT` on the workstation and every server, default `18765`.
 
 Restart the MCP connection and call a Wiki or Tracker tool. For IAM tokens, complete login in the workstation browser when `yc` prompts. Keep the workstation awake and connected when a new token is needed. The tool timeout defaults to 300 seconds; change `YANDEX_MCP_TOOL_TIMEOUT` in the server configuration if needed.
 

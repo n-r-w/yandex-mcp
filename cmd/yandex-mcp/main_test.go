@@ -163,7 +163,7 @@ func TestTokenProviderCombinations(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(agentDir, "work"), []byte("agent-work-token"), 0o600))
 	require.NoError(t, os.WriteFile(filepath.Join(agentDir, "personal"), []byte("agent-personal-token"), 0o600))
 
-	agent := newAuthAgent(&authagent.Config{Port: 0, YCPath: ycPath, SSHTarget: "", OAuthDir: agentDir})
+	agent := newAuthAgent(&authagent.Config{Port: 0, YCPath: ycPath, SSHTargets: nil, OAuthDir: agentDir})
 	defer agent.Close()
 	endpoint := httptest.NewServer(agent)
 	defer endpoint.Close()

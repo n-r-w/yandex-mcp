@@ -8,9 +8,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestLoadConfig covers PATH-based defaults, explicit overrides, and invalid ports.
+// TestLoadConfig covers multiple SSH targets, PATH-based defaults, explicit overrides, and invalid input.
 func TestLoadConfig(t *testing.T) {
-	t.Setenv("YANDEX_MCP_SSH_TARGET", "test-server")
+	t.Setenv("YANDEX_MCP_SSH_TARGETS", "first-server,second-server")
+	t.Setenv("YANDEX_MCP_SSH_TARGET", "")
 	t.Setenv("YANDEX_CLOUD_ORG_ID", "")
 	t.Setenv("YANDEX_MCP_AUTH_AGENT_PORT", "")
 	t.Setenv("YANDEX_MCP_AUTH_AGENT_YC_PATH", "")
@@ -18,11 +19,39 @@ func TestLoadConfig(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "yc", cfg.YCPath)
 	require.Equal(t, 18765, cfg.Port)
-	t.Run("missing SSH target", func(t *testing.T) {
-		t.Setenv("YANDEX_MCP_SSH_TARGET", "")
-		_, err := LoadConfig()
-		require.ErrorContains(t, err, "YANDEX_MCP_SSH_TARGET")
-	})
+	require.Equal(t, []string{"first-server", "second-server"}, cfg.SSHTargets)
+	for name, targets := range map[string]string{
+		"missing SSH targets":   "",
+		"empty SSH target":      "first-server,,second-server",
+		"duplicate SSH targets": "first-server,first-server",
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv("YANDEX_MCP_SSH_TARGETS", targets)
+			_, err := LoadConfig()
+			require.ErrorContains(t, err, "YANDEX_MCP_SSH_TARGETS")
+		})
+	}
+	for name, tc := range map[string]struct {
+		targets string
+		legacy  string
+		want    []string
+	}{
+		"single target of an earlier version": {targets: "", legacy: "old-server", want: []string{"old-server"}},
+		"earlier target with a comma":         {targets: "", legacy: "old,server", want: []string{"old,server"}},
+		"list wins over the earlier target": {
+			targets: "first-server,second-server",
+			legacy:  "old-server",
+			want:    []string{"first-server", "second-server"},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv("YANDEX_MCP_SSH_TARGETS", tc.targets)
+			t.Setenv("YANDEX_MCP_SSH_TARGET", tc.legacy)
+			cfg, err := LoadConfig()
+			require.NoError(t, err)
+			require.Equal(t, tc.want, cfg.SSHTargets)
+		})
+	}
 	executable, err := os.Executable()
 	require.NoError(t, err)
 	t.Setenv("YANDEX_MCP_AUTH_AGENT_YC_PATH", executable)
@@ -48,7 +77,7 @@ func TestLoadConfig(t *testing.T) {
 // TestLoadConfigOAuthDir covers the per-user default directory of OAuth profile files,
 // an explicit override, and rejection of a relative override.
 func TestLoadConfigOAuthDir(t *testing.T) {
-	t.Setenv("YANDEX_MCP_SSH_TARGET", "test-server")
+	t.Setenv("YANDEX_MCP_SSH_TARGETS", "test-server")
 	t.Setenv("YANDEX_MCP_AUTH_AGENT_PORT", "")
 	t.Setenv("YANDEX_MCP_AUTH_AGENT_OAUTH_DIR", "")
 	userConfigDir, err := os.UserConfigDir()
