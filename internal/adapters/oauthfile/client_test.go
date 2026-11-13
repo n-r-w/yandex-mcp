@@ -55,3 +55,56 @@ func TestAcquire(t *testing.T) {
 	require.ErrorIs(t, err, context.Canceled)
 	require.Empty(t, got)
 }
+
+// TestAcquireProfile selects different token files by profile name and rejects profiles
+// that have no file, leave the directory, or arrive when no directory is configured.
+func TestAcquireProfile(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	outside := filepath.Join(t.TempDir(), "outside")
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "work"), []byte("work-token\r\n"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "personal.2"), []byte("personal-token"), 0o600))
+	require.NoError(t, os.WriteFile(outside, []byte("outside-token"), 0o600))
+	source := NewProfiles(dir)
+
+	for profile, want := range map[string]string{"work": "work-token", "personal.2": "personal-token"} {
+		got, err := source.Acquire(t.Context(), profile)
+		require.NoError(t, err, profile)
+		require.Equal(t, want, got, profile)
+	}
+
+	got, err := source.Acquire(t.Context(), "absent")
+	require.ErrorAs(t, err, &domain.AuthenticationError{})
+	require.ErrorIs(t, err, errUnknownProfile)
+	require.ErrorContains(t, err, `"absent"`)
+	require.Empty(t, got)
+
+	relative, err := filepath.Rel(dir, outside)
+	require.NoError(t, err)
+	escaping := []string{"", ".", "..", ".hidden", relative, outside, "work/../work", `work\..\work`, "work:stream"}
+	for _, profile := range escaping {
+		got, err = source.Acquire(t.Context(), profile)
+		require.ErrorAs(t, err, &domain.AuthenticationError{}, profile)
+		require.ErrorIs(t, err, errInvalidProfile, profile)
+		require.Empty(t, got, profile)
+		require.NotContains(t, err.Error(), "outside-token", profile)
+	}
+
+	got, err = NewProfiles("").Acquire(t.Context(), "work")
+	require.ErrorAs(t, err, &domain.AuthenticationError{})
+	require.ErrorIs(t, err, errNoProfilesDir)
+	require.Empty(t, got)
+}
+
+// TestAcquireFileIgnoresProfile keeps the single-file source independent of the profile name.
+func TestAcquireFileIgnoresProfile(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join(t.TempDir(), "token")
+	require.NoError(t, os.WriteFile(path, []byte("file-token"), 0o600))
+
+	got, err := New(path).Acquire(t.Context(), "../any/profile")
+	require.NoError(t, err)
+	require.Equal(t, "file-token", got)
+}

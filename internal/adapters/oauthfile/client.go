@@ -1,10 +1,14 @@
-// Package oauthfile reads a Yandex OAuth token from a local file.
+// Package oauthfile reads Yandex OAuth tokens from local files.
 package oauthfile
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"unicode"
 
@@ -13,9 +17,12 @@ import (
 	"github.com/n-r-w/yandex-mcp/internal/server/authagent"
 )
 
-// Source reads the token file on every acquisition, so a replaced token is used without a restart.
+// Source reads a token file on every acquisition, so a replaced token is used without a restart.
+// A source is bound either to one file or to a directory of files named after profiles.
 type Source struct {
-	path string
+	path    string
+	dir     string
+	pattern *regexp.Regexp
 }
 
 var (
@@ -23,18 +30,32 @@ var (
 	_ authagent.ITokenSource = (*Source)(nil)
 )
 
-// New constructs a source for an absolute token file path.
+// New constructs a source for one absolute token file path. The requested profile is ignored.
 func New(path string) *Source {
-	return &Source{path: path}
+	return &Source{path: path, dir: "", pattern: nil}
 }
 
-// Acquire returns the token stored in the file. The profile is unused: the file identifies the account.
-func (s *Source) Acquire(ctx context.Context, _ string) (string, error) {
+// NewProfiles constructs a source that resolves a profile name to the file of that name in dir.
+// An empty dir makes every acquisition fail explicitly.
+func NewProfiles(dir string) *Source {
+	return &Source{path: "", dir: dir, pattern: regexp.MustCompile(profilePattern)}
+}
+
+// Acquire returns the token stored in the file selected by the source.
+func (s *Source) Acquire(ctx context.Context, profile string) (string, error) {
 	if err := ctx.Err(); err != nil {
 		return "", err
 	}
-	raw, err := os.ReadFile(s.path)
+	path, err := s.resolve(profile)
 	if err != nil {
+		return "", domain.AuthenticationError{Err: err}
+	}
+	//nolint:gosec // the path is deployment configuration; a profile name cannot leave its directory
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		if s.pattern != nil && errors.Is(err, fs.ErrNotExist) {
+			err = fmt.Errorf("%w %q: %w", errUnknownProfile, profile, err)
+		}
 		return "", domain.AuthenticationError{Err: fmt.Errorf("read OAuth token file: %w", err)}
 	}
 	// Text editors may prepend a byte order mark and append a line break.
@@ -46,6 +67,20 @@ func (s *Source) Acquire(ctx context.Context, _ string) (string, error) {
 		return "", domain.AuthenticationError{Err: errMalformedToken}
 	}
 	return token, nil
+}
+
+// resolve maps the profile to a file path. Profile names cannot leave the profiles directory.
+func (s *Source) resolve(profile string) (string, error) {
+	if s.pattern == nil {
+		return s.path, nil
+	}
+	if s.dir == "" {
+		return "", errNoProfilesDir
+	}
+	if !s.pattern.MatchString(profile) {
+		return "", fmt.Errorf("%w: %q", errInvalidProfile, profile)
+	}
+	return filepath.Join(s.dir, profile), nil
 }
 
 // isForbiddenRune rejects characters that cannot appear in an HTTP header token value.
