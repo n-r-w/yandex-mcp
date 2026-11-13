@@ -6,15 +6,15 @@ Terms are defined in the [glossary](glossary.md).
 
 ## Context and Problem
 
-The [problem statement](problem.md) describes the problem: members of Yandex 360 organizations cannot use `yandex-mcp`, because MCP and auth-agent work only with IAM tokens and Yandex Cloud organizations.
+See the [problem statement](problem.md).
 
 ## Goal
 
-A member of a Yandex 360 organization uses Tracker and Wiki tools with MCP on the user's machine or on a server, and members of Yandex Cloud organizations keep working with their current settings.
+A member of a Yandex 360 organization uses Tracker and Wiki tools with the token acquired on the machine that runs MCP or through auth-agent, and members of Yandex Cloud organizations keep working with their current settings.
 
 ## Affected Scenarios
 
-- An agent calls a Tracker or Wiki tool with MCP on the user's machine.
+- An agent calls a Tracker or Wiki tool, and MCP acquires the token on the machine that runs MCP.
 - An agent calls a Tracker or Wiki tool with MCP on a server and auth-agent on the workstation.
 - The user installs auth-agent on the workstation and restarts the workstation.
 - The user upgrades `yandex-mcp` on the server and on the workstation at different times.
@@ -29,9 +29,9 @@ The scope excludes issuing and renewing OAuth tokens, federated accounts of Yand
 
 ### Functional Requirements
 
-- [X] FRQ.01: The user selects the token type, IAM or OAuth, independently of the acquisition location, the machine that runs MCP or auth-agent, and each of the four combinations delivers a token of the selected type.
+- [X] FRQ.01: The user selects the token type, IAM or OAuth, and the acquisition location, the machine that runs MCP or auth-agent, independently of each other. Each of the four combinations of type and location delivers a token of the selected type.
   - Origin: source. PRB.01, PRB.02. Review of pull request 15: `YANDEX_MCP_TOKEN_SOURCE=local|remote` and `YANDEX_MCP_TOKEN_TYPE=iam|oauth`.
-  - Goal: An OAuth token is available in both scenarios.
+  - Goal: An OAuth token is available in the scenarios of PRB.01 and PRB.02.
   - Feasibility: Confirmed. Token sources for both types exist on both machines.
 - [X] FRQ.02: With an OAuth token, MCP sends Tracker and Wiki requests with the `OAuth` scheme; with an IAM token, with the `Bearer` scheme. For a Yandex 360 organization MCP sends the organization ID in `X-Org-Id`, for a Yandex Cloud organization in `X-Cloud-Org-Id`. MCP refuses to start when a Yandex 360 organization is configured with the IAM token type, when no organization is configured, or when both are configured.
   - Origin: source. PRB.01, PRB.02. Review of pull request 15: the scheme and the organization compatibility follow the token type.
@@ -39,25 +39,25 @@ The scope excludes issuing and renewing OAuth tokens, federated accounts of Yand
   - Feasibility: Confirmed.
 - [X] FRQ.03: When MCP acquires an OAuth token on its own machine, it reads the token from the file that the user configured.
   - Origin: formulated. PRB.01.
-  - Goal: An OAuth token for MCP on the user's machine.
-  - Feasibility: Confirmed.
-- [X] FRQ.04: Auth-agent serves OAuth tokens of several OAuth profiles whose files stay on the workstation. MCP sends the profile name, so different MCP connections can use different accounts.
+  - Goal: An OAuth token for MCP that acquires the token on the machine that runs MCP.
+  - Feasibility: Confirmed. Per the description of pull request 15, not checked independently: `tracker_user_current`, `tracker_issue_get`, and `wiki_page_get` returned data for a real Yandex 360 organization with a local OAuth token.
+- [X] FRQ.04: Auth-agent serves OAuth tokens of any number of OAuth profiles whose files stay on the workstation. MCP sends the profile name, so different MCP connections can use different accounts.
   - Origin: source. PRB.02. Review of pull request 15: one auth-agent supports multiple named OAuth files.
   - Goal: An OAuth token for MCP on a server.
   - Feasibility: Confirmed.
-- [X] FRQ.05: When the token of the requested type cannot be acquired, for example because of a missing file, an unknown OAuth profile, a `yc` failure, or an unsupported token type, the tool returns an error with the cause. Neither MCP nor auth-agent tries another acquisition method.
+- [ ] FRQ.05: When the token of the requested type cannot be acquired, for example because of a missing file, an unknown OAuth profile, or a `yc` failure, the tool returns an error with the cause. Neither MCP nor auth-agent tries another acquisition method. MCP refuses to start with a token type other than `iam` or `oauth`.
   - Origin: source. PRB.01, PRB.02. Review of pull request 15: auth-agent must not substitute another acquisition method.
   - Goal: The user sees the actual cause and never receives a token of another type.
   - Feasibility: Confirmed.
-- [X] FRQ.06: Concurrent requests for a token of one type and one profile wait for one acquisition. Requests for IAM profile `work` and OAuth profile `work` acquire their tokens independently.
+- [X] FRQ.06: Auth-agent answers concurrent requests for a token of one type and one profile with one acquisition. Requests for yc profile `work` and OAuth profile `work` acquire their tokens independently.
   - Origin: source. PRB.02. Review of pull request 15: shared acquisitions distinguish token types.
   - Goal: Auth-agent never answers an OAuth request with an IAM token of the same profile name.
   - Feasibility: Confirmed.
-- [X] FRQ.07: On a workstation without `yc`, auth-agent installs on Linux, macOS, and Windows and serves OAuth tokens. Such auth-agent answers an IAM request with an error that states that `yc` is not found.
+- [X] FRQ.07: On a workstation without `yc`, the installer completes on Linux, macOS, and Windows, and auth-agent serves OAuth tokens. Such auth-agent answers an IAM request with an error that states that `yc` is not found.
   - Origin: source. PRB.02. Review of pull request 15, item "OAuth-only installation still requires `yc`".
   - Goal: OAuth on the workstation needs no `yc`.
   - Feasibility: Confirmed. The OAuth profile source does not run `yc`.
-- [X] FRQ.08: Auth-agent uses the OAuth directory that the user set at installation after each restart.
+- [X] FRQ.08: After each restart of the workstation, auth-agent uses the OAuth directory that the user set at installation.
   - Origin: source. PRB.02. Review of pull request 15, item "The selected OAuth directory must survive subsequent launches", for an explicitly set directory.
   - Goal: OAuth tokens remain available after the workstation restarts.
   - Feasibility: Confirmed. Each supported operating system has a startup configuration through which the installers already pass environment variables.
@@ -80,6 +80,7 @@ The scope excludes issuing and renewing OAuth tokens, federated accounts of Yand
 | PRB.01: MCP acquires only an IAM token and sends the Yandex Cloud headers | FRQ.01 (local OAuth), FRQ.02, FRQ.03, FRQ.05, FRQ.09 |
 | PRB.02: auth-agent acquires only an IAM token through `yc` | FRQ.01 (remote OAuth), FRQ.02, FRQ.04, FRQ.05, FRQ.06, FRQ.07, FRQ.08, FRQ.09 |
 | Constraint: existing IAM users keep working | NRQ.01, FRQ.01 (local IAM, remote IAM) |
+| Constraint: a configuration that would send a wrong organization header stops at startup | FRQ.02 (no organization, both organizations) |
 
 Sufficiency: each row has requirements.
 Necessity: each requirement stands in a row.
@@ -110,28 +111,29 @@ Necessity: each requirement stands in a row.
   - Requirements: FRQ.05
   - Level: external
   - Area: MCP, auth-agent
-  - Flow: With a missing file, an unknown profile, a `yc` failure, or an unsupported token type, the tool returns an error with the cause, and no other token source runs.
+  - Flow: With a missing file, an unknown profile, or a `yc` failure, the tool returns an error with the cause, and no other token source runs. Startup with a token type other than `iam` or `oauth` ends with a configuration error.
 - SCN.06: Equal profile names of different token types
   - Requirements: FRQ.06
   - Level: external
   - Area: auth-agent
-  - Flow: Concurrent requests for IAM profile `work` and OAuth profile `work` each receive a token of their own type.
+  - Flow: Concurrent requests for yc profile `work` and OAuth profile `work` each receive a token of their own type.
 - SCN.07: Installation without `yc`
   - Requirements: FRQ.07 (Linux, macOS)
   - Level: external
   - Area: installer, startup configuration, auth-agent
   - Flow: The installer on a machine without `yc` ends successfully. Auth-agent serves an OAuth token and answers an IAM request with an error that `yc` is not found.
 - SCN.08: OAuth directory after a restart
-  - Requirements: FRQ.08
+  - Requirements: FRQ.08 (Linux, macOS)
   - Level: external
   - Area: installer, startup configuration, auth-agent
-  - Flow: Auth-agent is installed with the OAuth directory `/absolute/custom-oauth`. After a restart with only the environment of the startup configuration, profile `work` is read from `/absolute/custom-oauth/work`.
+  - Flow: Auth-agent is installed with an explicit absolute OAuth directory. After a restart with only the environment of the startup configuration, profile `work` is read from that directory.
 - SCN.09: Different versions of MCP and auth-agent
   - Requirements: NRQ.01
   - Level: external
   - Area: MCP, auth-agent
-  - Flow: MCP v1.0.4 with the new auth-agent and the new MCP with auth-agent v1.0.4 acquire an IAM token. The new MCP requesting an OAuth token from auth-agent v1.0.4 returns an error with the auth-agent response.
+  - Flow: MCP v1.0.4 with the new auth-agent and the new MCP with auth-agent v1.0.4 acquire an IAM token. When the new MCP requests an OAuth token from auth-agent v1.0.4, the tool returns an error with the auth-agent response.
 - FRQ.07, Windows: no scenario. No PowerShell is available for the check; the Windows installer is checked by reading its code.
+- FRQ.08, Windows: no scenario. No PowerShell is available for the check; the Windows installer is checked by reading its code.
 - FRQ.09: no scenario. Documentation is checked by comparing its text with the code.
 
 ## Open Questions

@@ -4,8 +4,7 @@
 
 The [problem statement](problem.md) describes the problem, and the [requirements](requirements.md) define the expected behavior. Terms are defined in the [glossary](glossary.md).
 
-- MCP and auth-agent acquire only IAM tokens through `yc`, and MCP sends only the Yandex Cloud organization header, so members of Yandex 360 organizations cannot use Tracker and Wiki tools.
-- Remote authentication is released in v1.0.1 to v1.0.4, so a change of the auth-agent request must keep working with these versions.
+- Members of Yandex 360 organizations cannot use Tracker and Wiki tools of `yandex-mcp`.
 
 ## Proposed Solution
 
@@ -16,7 +15,7 @@ MCP gets a token type setting that is independent of the acquisition location. T
 - `YANDEX_MCP_TOKEN_SOURCE=local|remote` selects the acquisition location; `YANDEX_MCP_TOKEN_TYPE=iam|oauth`, default `iam`, selects the token type. The two settings are independent.
 - MCP builds its token source from both settings:
 
-| Location | Type | Token source | Token identity |
+| Location | Type | Token source | Setting that names the token |
 |---|---|---|---|
 | `local` | `iam` | `yc` on the MCP machine | `YANDEX_CLI_PROFILE`, optional |
 | `local` | `oauth` | file on the MCP machine | `YANDEX_OAUTH_TOKEN_FILE`, absolute path |
@@ -39,7 +38,7 @@ The local OAuth source reads `YANDEX_OAUTH_TOKEN_FILE` at each acquisition, so a
 
 - An OAuth profile is a file in the OAuth directory whose name is the profile name. The default OAuth directory is `<user config dir>/yandex-mcp/oauth`, where Go `os.UserConfigDir` gives the user config dir; `YANDEX_MCP_AUTH_AGENT_OAUTH_DIR` replaces it with an absolute path.
 - A profile name starts with a letter or digit and contains only letters, digits, `.`, `_`, and `-`, so a request cannot read a file outside the OAuth directory. Auth-agent reports a profile without a file as an unknown OAuth profile.
-- One auth-agent serves any number of OAuth profiles; IAM profiles stay in `yc` and are not duplicated in auth-agent configuration.
+- One auth-agent serves any number of OAuth profiles; yc profiles stay in `yc` and are not duplicated in auth-agent configuration.
 
 ### S5. Strict source selection (FRQ.05)
 
@@ -47,7 +46,7 @@ Auth-agent selects the token source only by the token type of the request, and M
 
 ### S6. Shared acquisitions by token type (FRQ.06)
 
-Auth-agent keys shared acquisitions by the token type and the profile name. IAM profile `work` and OAuth profile `work` therefore have separate acquisitions, and a waiter never receives a token of another type.
+Auth-agent keys shared acquisitions by the token type and the profile name. yc profile `work` and OAuth profile `work` therefore have separate acquisitions, and a waiter never receives a token of another type.
 
 ### S7. Request compatibility with released versions (NRQ.01)
 
@@ -61,29 +60,33 @@ Auth-agent keys shared acquisitions by the token type and the profile name. IAM 
 | this change | v1.0.1 to v1.0.4 | token | HTTP 400 `unknown object member name "token_type"`, returned in the tool error |
 | this change | this change | token | token |
 
-- Trade-off: the contract has a default token type. An explicit error for a missing token type would break every mixed-version pair for IAM.
+- Trade-off: the contract has a default token type. An explicit error for a missing token type would break every mixed-version pair for IAM. Cost: a client that omits the token type receives an IAM token without an error.
 
 ### S8. Installation for OAuth on the workstation (FRQ.07, FRQ.08)
 
 - When `YANDEX_MCP_AUTH_AGENT_YC_PATH` is unset and `yc` is not found, the installer completes and writes the command name `yc` to the startup configuration. Auth-agent then looks up `yc` through the saved `PATH` at each IAM request, and the request fails with the lookup error while `yc` is absent. An installation of `yc` into a directory of the saved `PATH` works without reinstalling auth-agent. When `YANDEX_MCP_AUTH_AGENT_YC_PATH` is set and does not resolve to an executable, the installation fails, because the user named an executable that does not exist.
 - The installer rejects a relative `YANDEX_MCP_AUTH_AGENT_OAUTH_DIR` and writes its value to the startup configuration. An unset variable is written as an empty value, and auth-agent then computes the default OAuth directory at each startup.
-- Trade-off: on Linux the default OAuth directory depends on `XDG_CONFIG_HOME` in the environment of the systemd user service. When this value differs from the installation shell, auth-agent uses another default directory than the user expects. The installers do not compute the default directory, because a copy of the Go rule in three scripts would drift from the code; a user with a non-default `XDG_CONFIG_HOME` sets the directory explicitly.
+- Trade-off: on Linux the default OAuth directory depends on `XDG_CONFIG_HOME` in the environment of the systemd user service. When the service sees a different value than the installation shell, auth-agent reads profiles from a default directory other than the one that the README table shows. The installers do not compute the default directory, because a copy of the Go rule in three scripts would drift from the code; a user with a non-default `XDG_CONFIG_HOME` sets the directory explicitly.
 
 ### S9. User documentation (FRQ.09)
 
-README describes the token type choice, the four combinations, local OAuth, remote OAuth with the OAuth directory per operating system, the OAuth prerequisites, and the installation without `yc`. `.env.example` lists each variable of S1, S2, S4, and S8 with the combinations that require it. The [remote authentication specification](../remote-authentication/solution.md) records the design of remote IAM acquisition before this change and stays unchanged.
+README describes the token type choice, the four combinations, local OAuth, remote OAuth with the OAuth directory per operating system, the OAuth prerequisites, and the installation without `yc`. `.env.example` lists each variable of S1, S2, S4, and S8 with the combinations that require it.
 
 ### Verification
 
 - SCN.01 and SCN.03: tests of the Tracker and Wiki clients send requests to a local HTTP server and check the scheme and the organization header for both token types.
-- SCN.02, SCN.03, and SCN.05: a test builds the token provider for each of the four combinations against a test `yc` executable and a real auth-agent HTTP handler. The test builds auth-agent with the same function that the `auth-agent` command uses, so a wrong source in the production composition fails the test.
+- SCN.02 and SCN.03: `TestTokenProviderCombinations` in `cmd/yandex-mcp/main_test.go` builds the token provider for each of the four combinations against a test `yc` executable and a real auth-agent HTTP handler. The test builds auth-agent with the same function that the `auth-agent` command uses, so a wrong source in the production composition fails the test.
+- SCN.05: `TestTokenProviderCombinations` covers a missing token file and an unknown OAuth profile, and checks that `yc` stays unused. `TestTokenProtocol` in `internal/server/authagent/service_test.go` covers an unsupported token type, which auth-agent rejects without running a source. No test runs a failing `yc` through auth-agent. `TestRemoteMCPPreservesErrorAndLogs` in `cmd/yandex-mcp/main_test.go` covers the path above `yc`: a real auth-agent handler with a mocked IAM source that fails, and the MCP process that returns the error in the tool result. `TestAcquire` in `internal/adapters/yc/client_test.go` checks that a failing `yc` gives an error with its exit status and output.
 - SCN.04: configuration tests cover each rejected organization case.
 - SCN.06: an auth-agent test runs concurrent IAM and OAuth requests with profile `work`.
-- SCN.07 and SCN.08: the Linux installer runs in a sandbox with stub commands; auth-agent then starts with only the environment of the generated `auth-agent.env` and another `XDG_CONFIG_HOME`. `scripts/remote-auth/macos/test_install.py` covers the same cases for the macOS installer. The Windows installer is checked by reading its code.
-- SCN.09: builds of `main` and of this change run as auth-agent, and requests in both formats go to each of them.
+- SCN.07 and SCN.08 on Linux: a manual run checked the installer; it is not a test in the repository. The run used a copy of the installer with redirected output directories and stub commands, then started auth-agent with only the environment of the generated `auth-agent.env` and another `XDG_CONFIG_HOME`.
+- SCN.07 and SCN.08 on macOS: `scripts/remote-auth/macos/test_install.py` checks that the macOS installer completes without `yc`, writes the command name `yc`, rejects a missing explicit `yc` path and a relative OAuth directory, and writes the OAuth directory to the plist. The macOS installer and auth-agent also ran once on macOS arm64 with the real `plutil`: auth-agent, started with only the plist environment, served the OAuth token from the configured directory and answered the IAM request with the `yc` lookup error.
+- SCN.07 and SCN.08 on Windows: the installer is checked by reading its code.
+- SCN.09: builds of v1.0.4 and of this change run as auth-agent, and requests in both formats go to each of them.
 
 ### Changes outside the feature
 
+- `go.mod`, CI and release workflows raise Go to 1.27.4, because govulncheck reports standard library advisories for 1.27.2.
 - The CI and release workflows drop their separate installation of golangci-lint and ifaceguard. `task lint` runs both through `go tool`, so the versions in `go.mod` are the only linter versions.
 - `AGENTS.md` requires a specification in `docs/specs/{feature or bug name}/` for each change: `problem.md`, `requirements.md`, `solution.md`, and `glossary.md` when the specification introduces terms. `AGENTS.md` no longer forbids backward compatibility.
 

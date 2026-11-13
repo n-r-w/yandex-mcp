@@ -1,13 +1,22 @@
 # Yandex 360 OAuth support glossary
 
-- Yandex Cloud organization: an organization of Yandex Cloud Organization; Tracker and Wiki identify it by the `X-Cloud-Org-Id` header.
-- Yandex 360 organization: an organization of Yandex 360 for Business; Tracker and Wiki identify it by the `X-Org-Id` header.
+- MCP: the `yandex-mcp` server that gives an agent read access to Yandex Tracker and Yandex Wiki.
+- Agent: the AI assistant that calls MCP tools on behalf of the user.
+- Yandex Cloud organization: an organization of Yandex Cloud Organization.
+- Yandex 360 organization: an organization of Yandex 360 for Business.
+- Federated account: an account that signs in through the identity provider of an organization instead of a Yandex ID.
+- IAM token: a short-lived Yandex Cloud token that `yc` issues for a yc profile.
+- `yc`: the Yandex Cloud command-line interface.
+- yc profile: a named `yc` configuration that holds one Yandex Cloud account and its settings.
 - Token type: the kind of token that MCP sends to Tracker and Wiki: an IAM token or a Yandex OAuth token.
 - Acquisition location: the machine where the token is acquired: the machine that runs MCP, or the workstation through auth-agent.
-- OAuth profile: a named file that holds one Yandex OAuth token; auth-agent reads it by the profile name that MCP sends.
+- Remote authentication: the mode in which MCP runs on a server and receives tokens from auth-agent on the workstation through an SSH tunnel.
+- OAuth profile: a named file on the workstation that holds one Yandex OAuth token.
 - OAuth directory: the workstation directory that holds the OAuth profile files of auth-agent.
-- Startup configuration: the file from which the operating system passes the environment to auth-agent at startup: `auth-agent.env` on Linux, the LaunchAgent plist on macOS, the generated `auth-agent.ps1` on Windows.
+- Startup configuration: the file that holds the environment of auth-agent at startup: `auth-agent.env` on Linux, the LaunchAgent plist on macOS, the generated `auth-agent.ps1` on Windows.
 - Workstation: the user's computer with an interactive desktop session, where auth-agent runs.
 - Auth-agent: the `yandex-mcp auth-agent` mode that acquires IAM tokens through `yc` and OAuth tokens from OAuth profiles on the workstation for MCP on a server.
+- Shared acquisition: one token acquisition of auth-agent whose result goes to each concurrent request for the same token type and profile.
+- Waiter: a request that receives the result of a shared acquisition.
 - Token source: a component that acquires a new token of one type for the token provider.
 - Token provider: the MCP component that caches a token of the configured type and refreshes it.

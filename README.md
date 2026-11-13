@@ -155,11 +155,11 @@ Token acquisition has two independent settings: where the token is acquired and 
 
 - `YANDEX_OAUTH_TOKEN_FILE` (required for local OAuth)
   * Absolute path to a file on the MCP machine that contains one Yandex OAuth token.
-  * The file is read again when the cached token expires or the API answers `401`/`403`, so a replaced token is used without a restart.
+  * The server reads the file again when `YANDEX_IAM_TOKEN_REFRESH_PERIOD` has passed since the last read or when the API answers `401`/`403`, so a replaced token is used without a restart.
 
 - `YANDEX_OAUTH_PROFILE` (required for remote OAuth)
   * Name of the OAuth profile that auth-agent resolves to a token file on the workstation.
-  * The file path stays in the auth-agent configuration; MCP sends only the profile name.
+  * The token file stays in the auth-agent OAuth directory on the workstation; MCP sends only the profile name.
 
 - `YANDEX_WIKI_BASE_URL` (optional, default: `https://api.wiki.yandex.net`)
   * Base URL for Yandex Wiki API.
@@ -235,7 +235,7 @@ Prerequisites:
 - API access is enabled in the organization. When a Wiki administrator has disabled API access, the Wiki integration cannot be configured.
 - Requests run on behalf of the token owner. Tracker and Wiki return only what that user is allowed to read.
 
-Within these limits, registering the OAuth application and issuing the token needs no organization administrator role.
+The user registers the OAuth application and issues the token while logged in to the account that works with the API, as the steps of the [Tracker](https://yandex.ru/support/tracker/en/concepts/access) and [Wiki](https://yandex.ru/support/wiki/en/api-ref/access) API access guides describe.
 
 1. Create an application at https://oauth.yandex.ru: choose "For API access or debugging" and add the `tracker:read` and `wiki:read` permissions.
 2. Open `https://oauth.yandex.ru/authorize?response_type=token&client_id=<ClientID>` under the account that works with Tracker and Wiki, and copy the token.
@@ -319,7 +319,7 @@ Restart the MCP connection and call a Wiki or Tracker tool. For IAM tokens, comp
 
 ### Remote OAuth tokens
 
-Auth-agent serves OAuth tokens as well. It keeps one file per OAuth profile in its OAuth directory and reads the file named after the requested profile.
+Auth-agent also serves OAuth tokens. It reads the token of a profile from the file with the profile's name in its OAuth directory.
 
 | Workstation OS | Default OAuth directory |
 | --- | --- |
@@ -352,7 +352,9 @@ The server entry names the token type and the profile:
 }
 ```
 
-MCP requests a token of the configured type for the profile name, and auth-agent returns a token of exactly that type or an error. An unsupported token type, an unknown OAuth profile and a failed acquisition are errors: auth-agent never substitutes another acquisition method. IAM profile `work` and OAuth profile `work` are different tokens.
+MCP requests a token of the configured type for the profile name, and auth-agent returns a token of exactly that type or an error. An unknown OAuth profile and a failed acquisition are errors: auth-agent never substitutes another acquisition method. yc profile `work` and OAuth profile `work` are different tokens.
+
+Remote OAuth tokens need auth-agent of a release after v1.0.4. Auth-agent v1.0.4 and earlier answers an OAuth request with the error `unknown object member name "token_type"`, and the tool returns this error. Remote IAM tokens work with any pair of MCP and auth-agent versions from v1.0.1 on.
 
 ## Client configuration examples
 
@@ -381,7 +383,7 @@ When you need to work with two organizations, configure two independent MCP serv
 - Yandex Cloud organization with IAM tokens: `YANDEX_CLOUD_ORG_ID` and `YANDEX_CLI_PROFILE`.
 - Yandex 360 for Business organization: `YANDEX_ORG_ID`, `YANDEX_MCP_TOKEN_TYPE=oauth` and `YANDEX_OAUTH_TOKEN_FILE` (or `YANDEX_OAUTH_PROFILE` for remote acquisition). `YANDEX_CLI_PROFILE` is not used.
 
-Set only one organization ID per entry: an entry with both `YANDEX_CLOUD_ORG_ID` and `YANDEX_ORG_ID` does not start.
+Set only one organization ID per entry, as [Environment variables](#environment-variables) describes.
 
 Two Yandex Cloud organizations:
 
