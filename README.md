@@ -129,21 +129,37 @@ Set exactly one organization ID: `YANDEX_CLOUD_ORG_ID` or `YANDEX_ORG_ID`.
 
 - `YANDEX_ORG_ID`
   * Yandex 360 for Business organization ID, sent as `X-Org-Id`.
-  * Requires `YANDEX_MCP_TOKEN_SOURCE=oauth`: IAM tokens are accepted only by Yandex Cloud organizations.
+  * Requires `YANDEX_MCP_TOKEN_TYPE=oauth`: IAM tokens are accepted only by Yandex Cloud organizations.
+
+Token acquisition has two independent settings: where the token is acquired and which token type is acquired.
 
 - `YANDEX_MCP_TOKEN_SOURCE` (optional, default: `local`)
-  * `local` obtains IAM tokens through `yc` on this machine.
-  * `remote` obtains IAM tokens from the workstation auth-agent, see [Remote authentication](#remote-authentication).
-  * `oauth` reads a Yandex OAuth token from `YANDEX_OAUTH_TOKEN_FILE`, see [OAuth token authentication](#oauth-token-authentication).
+  * `local` acquires the token on the machine that runs MCP.
+  * `remote` acquires the token from the workstation auth-agent, see [Remote authentication](#remote-authentication).
 
-- `YANDEX_OAUTH_TOKEN_FILE` (required in `oauth` mode)
-  * Absolute path to a file that contains one Yandex OAuth token.
-  * The file is read again when the cached token expires or the API answers `401`/`403`, so a replaced token is used without a restart.
+- `YANDEX_MCP_TOKEN_TYPE` (optional, default: `iam`)
+  * `iam` acquires an IAM token through `yc` and sends `Authorization: Bearer <token>`.
+  * `oauth` reads a Yandex OAuth token from a file and sends `Authorization: OAuth <token>`, see [OAuth token authentication](#oauth-token-authentication).
 
-- `YANDEX_CLI_PROFILE` (optional)
+| Source | Type | Token comes from | Required settings |
+| --- | --- | --- | --- |
+| `local` | `iam` | `yc` on the MCP machine | none, `YANDEX_CLI_PROFILE` optional |
+| `remote` | `iam` | `yc` on the workstation | `YANDEX_CLI_PROFILE` |
+| `local` | `oauth` | file on the MCP machine | `YANDEX_OAUTH_TOKEN_FILE` |
+| `remote` | `oauth` | file on the workstation | `YANDEX_OAUTH_PROFILE` |
+
+- `YANDEX_CLI_PROFILE` (optional for local IAM, required for remote IAM)
   * yc CLI profile used to retrieve IAM tokens.
   * When empty, yc uses the active profile.
   * When set, the server runs `yc iam create-token --profile <YANDEX_CLI_PROFILE>`.
+
+- `YANDEX_OAUTH_TOKEN_FILE` (required for local OAuth)
+  * Absolute path to a file on the MCP machine that contains one Yandex OAuth token.
+  * The file is read again when the cached token expires or the API answers `401`/`403`, so a replaced token is used without a restart.
+
+- `YANDEX_OAUTH_PROFILE` (required for remote OAuth)
+  * Name of the OAuth profile that auth-agent resolves to a token file on the workstation.
+  * The file path stays in the auth-agent configuration; MCP sends only the profile name.
 
 - `YANDEX_WIKI_BASE_URL` (optional, default: `https://api.wiki.yandex.net`)
   * Base URL for Yandex Wiki API.
@@ -182,7 +198,7 @@ Set exactly one organization ID: `YANDEX_CLOUD_ORG_ID` or `YANDEX_ORG_ID`.
 
 ## Authentication
 
-The project obtains IAM tokens through Yandex Cloud CLI `yc`. Local mode runs `yc` on the MCP machine. [Remote mode](#remote-authentication) runs it on the workstation. [OAuth mode](#oauth-token-authentication) needs no `yc` and is the only mode that works with a Yandex 360 for Business organization.
+The project acquires an IAM token through Yandex Cloud CLI `yc` or reads a Yandex OAuth token from a file, selected by `YANDEX_MCP_TOKEN_TYPE`. Either token type is acquired on the MCP machine or, in [remote mode](#remote-authentication), on the workstation, selected by `YANDEX_MCP_TOKEN_SOURCE`. The [OAuth token type](#oauth-token-authentication) needs no `yc` and is the only one that works with a Yandex 360 for Business organization.
 
 **IAM token acquisition (`yc` prerequisites)**
 
@@ -211,11 +227,11 @@ Official references:
 
 ## OAuth token authentication
 
-OAuth mode sends `Authorization: OAuth <token>` and works with both organization types.
+The `oauth` token type sends `Authorization: OAuth <token>` and works with both organization types. It combines with either acquisition location: the token file is read on the MCP machine (`local`) or on the workstation through auth-agent (`remote`).
 
 Prerequisites:
 
-- The account is not federated. Both official API guides direct federated accounts to IAM token authentication, so such accounts use the `local` or `remote` mode.
+- The account is not federated. Both official API guides direct federated accounts to IAM token authentication, so such accounts use the `iam` token type.
 - API access is enabled in the organization. When a Wiki administrator has disabled API access, the Wiki integration cannot be configured.
 - Requests run on behalf of the token owner. Tracker and Wiki return only what that user is allowed to read.
 
@@ -224,13 +240,13 @@ Within these limits, registering the OAuth application and issuing the token nee
 1. Create an application at https://oauth.yandex.ru: choose "For API access or debugging" and add the `tracker:read` and `wiki:read` permissions.
 2. Open `https://oauth.yandex.ru/authorize?response_type=token&client_id=<ClientID>` under the account that works with Tracker and Wiki, and copy the token.
 3. Save the token as a single line in a file outside any repository, for example `~/.yandex-oauth-token`.
-4. Configure the server:
+4. Configure the server for local acquisition:
 
 ```json
 "yandex": {
   "command": "/path/to/yandex-mcp",
   "env": {
-    "YANDEX_MCP_TOKEN_SOURCE": "oauth",
+    "YANDEX_MCP_TOKEN_TYPE": "oauth",
     "YANDEX_OAUTH_TOKEN_FILE": "/absolute/path/to/.yandex-oauth-token",
     "YANDEX_ORG_ID": "yandex 360 organization id"
   }
@@ -238,6 +254,8 @@ Within these limits, registering the OAuth application and issuing the token nee
 ```
 
 For a Yandex Cloud organization, set `YANDEX_CLOUD_ORG_ID` instead of `YANDEX_ORG_ID`.
+
+For remote acquisition, save the token on the workstation as a file named after the profile in the auth-agent OAuth directory, and name that profile on the server, see [Remote OAuth tokens](#remote-oauth-tokens).
 
 Notes:
 
@@ -247,7 +265,7 @@ Notes:
 
 ## Remote authentication
 
-MCP runs on the Linux server; `yc` and browser login run on your workstation. Install `yandex-mcp` on both machines and prepare a workstation `yc` profile. Server-side `yc` is not needed. Use only trusted machines and users.
+MCP runs on the Linux server; token acquisition runs on your workstation: `yc` with browser login for IAM tokens, token files for OAuth tokens. Install `yandex-mcp` on both machines and prepare a workstation `yc` profile or an OAuth profile file. Server-side `yc` is not needed. Use only trusted machines and users.
 
 ### Server MCP client
 
@@ -297,6 +315,37 @@ Use the same `YANDEX_MCP_AUTH_AGENT_PORT` on both machines, default `18765`.
 
 Restart the MCP connection and call a Wiki or Tracker tool. Complete login in the workstation browser when prompted. Keep the workstation awake and connected when a new token is needed. The tool timeout defaults to 300 seconds; change `YANDEX_MCP_TOOL_TIMEOUT` in the server configuration if needed.
 
+### Remote OAuth tokens
+
+Auth-agent serves OAuth tokens as well. It keeps one file per OAuth profile in its OAuth directory and reads the file named after the requested profile.
+
+| Workstation OS | Default OAuth directory |
+| --- | --- |
+| Linux | `$XDG_CONFIG_HOME/yandex-mcp/oauth`, usually `~/.config/yandex-mcp/oauth` |
+| macOS | `~/Library/Application Support/yandex-mcp/oauth` |
+| Windows | `%AppData%\yandex-mcp\oauth` |
+
+Save each token as a single line in a file whose name is the profile name, for example `work`. A profile name starts with a letter or digit and contains only letters, digits, `.`, `_` and `-`. One auth-agent serves any number of profiles, so different MCP connections can use different accounts.
+
+Set `YANDEX_MCP_AUTH_AGENT_OAUTH_DIR` in the auth-agent environment to use another absolute directory. The installers do not forward this variable and still require `yc` on the workstation.
+
+The server entry names the token type and the profile:
+
+```json
+"yandex": {
+  "command": "/absolute/server/path/to/yandex-mcp",
+  "env": {
+    "YANDEX_MCP_TOKEN_SOURCE": "remote",
+    "YANDEX_MCP_TOKEN_TYPE": "oauth",
+    "YANDEX_MCP_AUTH_AGENT_PORT": "18765",
+    "YANDEX_OAUTH_PROFILE": "work",
+    "YANDEX_ORG_ID": "yandex 360 organization id"
+  }
+}
+```
+
+MCP sends the token type together with the profile name, and auth-agent returns a token of exactly that type or an error. A missing or unsupported token type, an unknown OAuth profile and a failed acquisition are errors: auth-agent never substitutes another acquisition method. IAM profile `work` and OAuth profile `work` are different tokens.
+
 ## Client configuration examples
 
 ### Claude Code
@@ -322,7 +371,7 @@ claude mcp add -s user -e YANDEX_CLOUD_ORG_ID={yandex organization id} -e YANDEX
 When you need to work with two organizations, configure two independent MCP server entries. Each entry carries its own organization ID and its own authentication settings, matching the type of that organization:
 
 - Yandex Cloud organization with IAM tokens: `YANDEX_CLOUD_ORG_ID` and `YANDEX_CLI_PROFILE`.
-- Yandex 360 for Business organization: `YANDEX_ORG_ID`, `YANDEX_MCP_TOKEN_SOURCE=oauth` and `YANDEX_OAUTH_TOKEN_FILE`. `YANDEX_CLI_PROFILE` is not used.
+- Yandex 360 for Business organization: `YANDEX_ORG_ID`, `YANDEX_MCP_TOKEN_TYPE=oauth` and `YANDEX_OAUTH_TOKEN_FILE` (or `YANDEX_OAUTH_PROFILE` for remote acquisition). `YANDEX_CLI_PROFILE` is not used.
 
 Set only one organization ID per entry: an entry with both `YANDEX_CLOUD_ORG_ID` and `YANDEX_ORG_ID` does not start.
 
@@ -358,7 +407,7 @@ A Yandex Cloud organization and a Yandex 360 organization:
 "yandex_360": {
   "command": "/path/to/yandex-mcp",
   "env": {
-    "YANDEX_MCP_TOKEN_SOURCE": "oauth",
+    "YANDEX_MCP_TOKEN_TYPE": "oauth",
     "YANDEX_OAUTH_TOKEN_FILE": "/absolute/path/to/.yandex-oauth-token",
     "YANDEX_ORG_ID": "yandex 360 organization id"
   }

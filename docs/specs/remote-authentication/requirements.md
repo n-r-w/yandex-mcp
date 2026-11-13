@@ -35,7 +35,7 @@ The scope excludes password and MFA automation, running ordinary server-side `yc
 - **FRQ-02:** A tool call waits for authentication within its overall timeout. After successful login, execution continues without another tool call.
   - Goal: Continue the task after login.
   - Goal achievement: Full when the call completes before its deadline.
-- **FRQ-03:** Concurrent requests for one profile share one token acquisition, including requests from different MCP processes.
+- **FRQ-03:** Concurrent requests for one token type and profile share one token acquisition, including requests from different MCP processes.
   - Goal: Prevent multiple concurrent login operations.
   - Goal achievement: Full. Concurrent requests do not open extra browser windows.
 - **FRQ-04:** Cancellation or timeout ends that call's wait. Token acquisition stops only after the last waiter leaves.

@@ -46,6 +46,7 @@ Auth-agent does not proxy Wiki or Tracker API calls. The browser callback remain
 
 - The MCP group combines calls within one process. The workstation group combines requests from different MCP processes.
 - Canceling one caller removes only that waiter. The last waiter leaving cancels acquisition.
+- The workstation group keys acquisitions by token type and profile, so IAM profile `work` and OAuth profile `work` never share one acquisition.
 - The group keeps the profile occupied until acquisition returns. Native `yc` acquisition returns only after `exec.Cmd.Run` finishes, so the next process for that profile cannot overlap the previous process.
 - Shutdown cancels the acquisitions owned by the stopping process and waits for cleanup.
 
@@ -54,7 +55,8 @@ Auth-agent does not proxy Wiki or Tracker API calls. The browser callback remain
 Auth-agent accepts `POST /token` on IPv4 loopback. The same configurable port, default 18765, is used on the workstation and the server. The bind address is fixed to `127.0.0.1`; SSH server policy must preserve loopback-only forwarding.
 
 - Both machines and their local processes are trusted. There is no HTTP authorization or profile allowlist. Any process with access to a listener can request a workstation profile.
-- The request specifies the profile. Auth-agent executes only `yc iam create-token --profile <profile>`, without a shell or caller-supplied commands.
+- The request specifies the token type and the profile. For `iam`, auth-agent executes only `yc iam create-token --profile <profile>`, without a shell or caller-supplied commands. For `oauth`, it reads the file named after the profile in its own OAuth directory; a profile name cannot leave that directory.
+- Auth-agent returns a token of the requested type or an error. It never substitutes another acquisition method.
 - The HTTP request waits for acquisition. Closing the request cancels its wait. There are no authentication jobs or polling endpoints.
 - Remote requests use the fixed loopback address without HTTP proxies or redirects.
 - Credential files stay on the workstation. MCP caches tokens in memory. Successful `yc` output is not logged.
@@ -66,22 +68,30 @@ Requests and responses use JSON without a separate protocol version or string er
 Request:
 
 ```json
-{"profile":"work"}
+{"token_type":"iam","profile":"work"}
+```
+
+or:
+
+```json
+{"token_type":"oauth","profile":"work"}
 ```
 
 HTTP 200 response:
 
 ```json
-{"token":"<IAM-token>"}
+{"token":"<token>"}
 ```
 
-A failed `yc` invocation returns HTTP 502:
+The response does not repeat the token type: MCP builds `Bearer` or `OAuth` from the type it requested.
+
+A failed `yc` invocation, an unknown OAuth profile, or an unreadable OAuth token file returns HTTP 502:
 
 ```json
 {"message":"exit status 1\n<original stderr>"}
 ```
 
-HTTP 400 reports invalid requests. HTTP 500 reports an empty token returned by the source. Requests are limited to 4096 bytes; error responses are not truncated. Invalid JSON, unknown fields, and conflicting token/message fields are rejected.
+HTTP 400 reports invalid requests, including a missing or unsupported token type. HTTP 500 reports an empty token returned by the source. Requests are limited to 4096 bytes; error responses are not truncated. Invalid JSON, unknown fields, and conflicting token/message fields are rejected.
 
 MCP preserves the response's HTTP status and original message. `domain.AuthenticationError` prevents tool error handling from replacing authentication diagnostics with `internal error`. The complete failed-command stderr reaches the tool result and the structured MCP log without redaction. Connection errors retain their original transport cause. SSH process errors are logged on the workstation.
 
@@ -89,10 +99,12 @@ Token requests are not automatically retried. A subsequent tool call can request
 
 ### D7. Configuration boundaries
 
-- Remote MCP requires `YANDEX_MCP_TOKEN_SOURCE=remote`, `YANDEX_CLI_PROFILE`, and `YANDEX_CLOUD_ORG_ID`. Local mode permits the active `yc` profile.
+- `YANDEX_MCP_TOKEN_SOURCE` selects where the token is acquired, `YANDEX_MCP_TOKEN_TYPE` selects which token is acquired; the two settings are independent.
+- Remote MCP requires `YANDEX_MCP_TOKEN_SOURCE=remote`, an organization ID, and the profile of the selected token type: `YANDEX_CLI_PROFILE` for `iam`, `YANDEX_OAUTH_PROFILE` for `oauth`. Local mode permits the active `yc` profile for `iam` and reads `YANDEX_OAUTH_TOKEN_FILE` for `oauth`.
 - Workstation auth-agent requires `YANDEX_MCP_SSH_TARGET`, an SSH alias or `user@host`. It does not load organization or Wiki/Tracker settings.
 - `YANDEX_MCP_AUTH_AGENT_PORT` defaults to 18765 on both machines. Different port numbers at opposite tunnel ends are not supported.
 - Native `yc` is found through `PATH`. `YANDEX_MCP_AUTH_AGENT_YC_PATH` overrides the command. OpenSSH is found through `PATH`.
+- OAuth profile files live in `<user config dir>/yandex-mcp/oauth` on the workstation. `YANDEX_MCP_AUTH_AGENT_OAUTH_DIR` overrides the directory. IAM profiles are not duplicated in auth-agent configuration.
 - Installers locate `yandex-mcp` through `PATH` unless `YANDEX_MCP_BINARY` overrides it. They persist executable paths and the installation session's `PATH` in the single user-session startup entry. Auth-agent itself has no configuration-file parser.
 
 The [README](../../../README.md#remote-authentication) contains the connection example and installation commands. GitHub release archives contain binaries, README, LICENSE, `.env.example`, and startup scripts. Internal specifications remain in the repository.
@@ -105,7 +117,7 @@ The [README](../../../README.md#remote-authentication) contains the connection e
 
 ## Solution verification
 
-Verification covers token caching, the overall deadline across refresh and API retry, independent waiter cancellation, native process cleanup, arbitrary requested profiles, original diagnostics in MCP results and logs, and native SSH restart and shutdown.
+Verification covers token caching, the overall deadline across refresh and API retry, independent waiter cancellation, native process cleanup, arbitrary requested profiles, all four combinations of acquisition location and token type, OAuth profile selection, independent IAM and OAuth acquisitions for equal profile names, rejection of missing or unsupported token types and unknown OAuth profiles, original diagnostics in MCP results and logs, and native SSH restart and shutdown.
 
 A Linux ARM64 workstation container and Linux AMD64 server exercised auth-agent with its own native SSH child and no container restart policy. Token exchange recovered after killing SSH and after disconnecting and reconnecting the container network. Auth-agent stayed in the same process with zero container restarts. Two MCP processes shared one acquisition; cancellation preserved the other waiter, and final-waiter cancellation stopped native `yc`. Full diagnostics reached the tool result and MCP log. Auth-agent shutdown exited normally and released the server listener. The check used a test native `yc` executable, not browser login.
 
