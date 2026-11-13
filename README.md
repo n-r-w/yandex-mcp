@@ -309,7 +309,7 @@ $env:YANDEX_MCP_SSH_TARGETS = 'user@server-one.example,user@server-two.example'
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\remote-auth\windows\install.ps1
 ```
 
-Replace the workstation executable path and SSH destinations. The installer configures one auth-agent startup entry. Auth-agent starts one SSH tunnel for each destination and reconnects each tunnel independently. Empty and duplicate destinations are rejected. `YANDEX_MCP_BINARY` is optional when `yandex-mcp` is in `PATH`.
+Replace the workstation executable path and SSH destinations. The installer configures one auth-agent startup entry. Auth-agent starts one SSH tunnel for each destination and reconnects each tunnel independently. Auth-agent refuses to start when the list holds an empty or repeated destination. Auth-agent installed by v1.1.0 or earlier keeps its single destination from `YANDEX_MCP_SSH_TARGET` after you replace the executable; run the installer again to switch to `YANDEX_MCP_SSH_TARGETS`. `YANDEX_MCP_BINARY` is optional when `yandex-mcp` is in `PATH`.
 
 When `yc` is not in `PATH`, the installer completes with a warning. Auth-agent then serves OAuth tokens, and IAM requests fail until `yc` is installed in a directory of the `PATH` that the installer saved. To use another `yc` executable, set `YANDEX_MCP_AUTH_AGENT_YC_PATH` before you run the installer; the installer stops when this value does not resolve to an executable.
 

@@ -22,10 +22,12 @@ type Config struct {
 }
 
 type envConfig struct {
-	Port       int      `env:"YANDEX_MCP_AUTH_AGENT_PORT"               envDefault:"18765"`
-	YCPath     string   `env:"YANDEX_MCP_AUTH_AGENT_YC_PATH"            envDefault:"yc"`
+	Port       int      `env:"YANDEX_MCP_AUTH_AGENT_PORT"      envDefault:"18765"`
+	YCPath     string   `env:"YANDEX_MCP_AUTH_AGENT_YC_PATH"   envDefault:"yc"`
 	OAuthDir   string   `env:"YANDEX_MCP_AUTH_AGENT_OAUTH_DIR"`
-	SSHTargets []string `env:"YANDEX_MCP_SSH_TARGETS,required,notEmpty"                    envSeparator:","`
+	SSHTargets []string `env:"YANDEX_MCP_SSH_TARGETS"                             envSeparator:","`
+	// SSHTarget is the single SSH destination that installers of v1.0.1 to v1.1.0 save.
+	SSHTarget string `env:"YANDEX_MCP_SSH_TARGET"`
 }
 
 // LoadConfig reads SSH destinations, loopback port, optional yc command override,
@@ -37,6 +39,13 @@ func LoadConfig() (*Config, error) {
 	}
 	if _, err := config.AuthAgentAddress(ec.Port); err != nil {
 		return nil, err
+	}
+	if len(ec.SSHTargets) == 0 {
+		if ec.SSHTarget == "" {
+			return nil, errors.New("YANDEX_MCP_SSH_TARGETS is required")
+		}
+		// Earlier versions pass the setting to SSH as one destination, so a comma stays part of it.
+		ec.SSHTargets = []string{ec.SSHTarget}
 	}
 	seen := make(map[string]struct{}, len(ec.SSHTargets))
 	for index, target := range ec.SSHTargets {

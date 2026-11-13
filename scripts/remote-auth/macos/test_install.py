@@ -107,12 +107,10 @@ esac
             return result, calls.read_text().splitlines(), settings
 
     def test_first_install(self):
-        result, calls, _ = self.run_install()
+        result, calls, settings = self.run_install()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(calls, ["list", "bootstrap"])
-        plist = Path(__file__).with_name("auth-agent.plist").read_text()
-        self.assertIn("YANDEX_MCP_SSH_TARGETS", plist)
-        self.assertNotIn("YANDEX_MCP_SSH_TARGET</key>", plist)
+        self.assertEqual(settings["YANDEX_MCP_SSH_TARGETS"], "first@example.invalid,second@example.invalid")
 
     def test_reinstall(self):
         result, calls, _ = self.run_install(loaded=True)

@@ -57,12 +57,8 @@ func TestMain(m *testing.M) {
 		if err != nil {
 			os.Exit(3)
 		}
-		if os.Getenv("YANDEX_MCP_TEST_SSH_HOLD") == "1" {
-			_, _ = fmt.Fprintln(file, target)
-			_ = file.Close()
-			for {
-				time.Sleep(time.Hour)
-			}
+		if hold := os.Getenv("YANDEX_MCP_TEST_SSH_HOLD"); hold != "" {
+			recordTargetAndHold(file, target, hold)
 		}
 		_, _ = fmt.Fprintln(file, os.Getpid())
 		_ = file.Close()
@@ -75,6 +71,18 @@ func TestMain(m *testing.M) {
 	}
 	_, _ = fmt.Fprintln(os.Stderr, "original SSH diagnostic")
 	os.Exit(7)
+}
+
+// recordTargetAndHold records the started target and keeps its SSH running only when hold lists it.
+func recordTargetAndHold(file *os.File, target, hold string) {
+	_, _ = fmt.Fprintln(file, target)
+	_ = file.Close()
+	if !slices.Contains(strings.Split(hold, ","), target) {
+		os.Exit(7)
+	}
+	for {
+		time.Sleep(time.Hour)
+	}
 }
 
 // installSSHFixture puts a native executable on PATH without touching user settings.
@@ -134,7 +142,7 @@ func TestMultipleTunnels(t *testing.T) {
 	installSSHFixture(t)
 	events := filepath.Join(t.TempDir(), "events")
 	t.Setenv("YANDEX_MCP_TEST_SSH_EVENTS", events)
-	t.Setenv("YANDEX_MCP_TEST_SSH_HOLD", "1")
+	t.Setenv("YANDEX_MCP_TEST_SSH_HOLD", "first-server,second-server")
 	t.Setenv("YANDEX_MCP_TEST_SSH_TARGETS", "first-server,second-server")
 	ctx, cancel := context.WithCancel(t.Context())
 	done := make(chan struct{})
@@ -158,6 +166,32 @@ func TestMultipleTunnels(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		require.FailNow(t, "SSH processes did not stop")
 	}
+}
+
+// TestTunnelRestartIsIndependent checks that a failed tunnel restarts while the tunnel to another target keeps running.
+func TestTunnelRestartIsIndependent(t *testing.T) {
+	installSSHFixture(t)
+	events := filepath.Join(t.TempDir(), "events")
+	t.Setenv("YANDEX_MCP_TEST_SSH_EVENTS", events)
+	t.Setenv("YANDEX_MCP_TEST_SSH_HOLD", "second-server")
+	t.Setenv("YANDEX_MCP_TEST_SSH_TARGETS", "first-server,second-server")
+	ctx, cancel := context.WithCancel(t.Context())
+	done := make(chan struct{})
+	var service Service
+	go func() {
+		defer close(done)
+		service.runTunnels(ctx, []string{"first-server", "second-server"}, "127.0.0.1:18765")
+	}()
+	defer func() {
+		cancel()
+		<-done
+	}()
+	countStarts := func(target string) int {
+		data, _ := os.ReadFile(events)
+		return strings.Count(string(data), target+"\n")
+	}
+	require.Eventually(t, func() bool { return countStarts("first-server") >= 2 }, 3*sshRetryDelay, 25*time.Millisecond)
+	require.Equal(t, 1, countStarts("second-server"))
 }
 
 // TestRunSSH checks native PATH lookup, fixed forwarding arguments, and original stderr.

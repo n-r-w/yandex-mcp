@@ -9,10 +9,10 @@ The [problem statement](problem.md) gives the basis for this solution. The [requ
 ### D1. Two modes in one binary
 
 - Normal `yandex-mcp` invocation exposes tools over stdio. Local mode obtains tokens through local `yc`; remote mode requests them from the workstation.
-- `yandex-mcp auth-agent` runs one workstation HTTP listener and manages a native OpenSSH reverse tunnel to each configured server.
+- `yandex-mcp auth-agent` runs the workstation HTTP listener and manages a native OpenSSH reverse tunnel to the Linux server.
 - The OS starts one auth-agent entry in the user's graphical session. There is no separate tunnel service. macOS uses a LaunchAgent, Linux uses a systemd user service, and Windows uses an interactive Task Scheduler task.
-- Auth-agent manages each SSH tunnel independently and restarts a tunnel five seconds after its connection attempt ends. OpenSSH uses `ServerAliveInterval=15`, `ServerAliveCountMax=3`, `ConnectTimeout=10`, `BatchMode=yes`, and `ExitOnForwardFailure=yes`. SSH reads the user's normal keys and host configuration and requires an already trusted server host key.
-- Stopping auth-agent cancels and joins all SSH and active `yc` operations. A tunnel loss interrupts token requests from its server; other server tunnels continue to work. Reconnection permits subsequent requests. Interrupted tool calls are not resumed automatically.
+- Auth-agent restarts SSH five seconds after a connection attempt ends. OpenSSH uses `ServerAliveInterval=15`, `ServerAliveCountMax=3`, `ConnectTimeout=10`, `BatchMode=yes`, and `ExitOnForwardFailure=yes`. SSH reads the user's normal keys and host configuration and requires an already trusted server host key.
+- Stopping auth-agent cancels and joins SSH and active `yc` operations. A connection loss interrupts affected token requests; reconnection permits subsequent requests. Interrupted tool calls are not resumed automatically.
 
 Request path:
 
@@ -51,7 +51,7 @@ Auth-agent does not proxy Wiki or Tracker API calls. The browser callback remain
 
 ### D5. Token exchange and protection
 
-Auth-agent accepts `POST /token` on IPv4 loopback. The same configurable port, default 18765, is used on the workstation and every server. Each server has its own loopback address, so the reverse tunnels can use the same port. The bind address is fixed to `127.0.0.1`; SSH server policy must preserve loopback-only forwarding.
+Auth-agent accepts `POST /token` on IPv4 loopback. The same configurable port, default 18765, is used on the workstation and the server. The bind address is fixed to `127.0.0.1`; SSH server policy must preserve loopback-only forwarding.
 
 - Both machines and their local processes are trusted. There is no HTTP authorization or profile allowlist. Any process with access to a listener can request a workstation profile.
 - The request specifies the profile. Auth-agent executes only `yc iam create-token --profile <profile>`, without a shell or caller-supplied commands.
@@ -90,8 +90,8 @@ Token requests are not automatically retried. A subsequent tool call can request
 ### D7. Configuration boundaries
 
 - Remote MCP requires `YANDEX_MCP_TOKEN_SOURCE=remote`, `YANDEX_CLI_PROFILE`, and `YANDEX_CLOUD_ORG_ID`. Local mode permits the active `yc` profile.
-- Workstation auth-agent requires `YANDEX_MCP_SSH_TARGETS`, a comma-separated list of SSH aliases or `user@host` targets. Empty and duplicate targets are rejected. It does not load organization or Wiki/Tracker settings.
-- `YANDEX_MCP_AUTH_AGENT_PORT` defaults to 18765 on the workstation and every server. Different port numbers at opposite tunnel ends are not supported.
+- Workstation auth-agent requires `YANDEX_MCP_SSH_TARGET`, an SSH alias or `user@host`. It does not load organization or Wiki/Tracker settings.
+- `YANDEX_MCP_AUTH_AGENT_PORT` defaults to 18765 on both machines. Different port numbers at opposite tunnel ends are not supported.
 - Native `yc` is found through `PATH`. `YANDEX_MCP_AUTH_AGENT_YC_PATH` overrides the command. OpenSSH is found through `PATH`.
 - Installers locate `yandex-mcp` through `PATH` unless `YANDEX_MCP_BINARY` overrides it. They persist executable paths and the installation session's `PATH` in the single user-session startup entry. Auth-agent itself has no configuration-file parser.
 
@@ -105,7 +105,7 @@ The [README](../../../README.md#remote-authentication) contains the connection e
 
 ## Solution verification
 
-Verification covers token caching, the overall deadline across refresh and API retry, independent waiter cancellation, native process cleanup, arbitrary requested profiles, original diagnostics in MCP results and logs, concurrent SSH tunnels, independent tunnel restart, and joined shutdown.
+Verification covers token caching, the overall deadline across refresh and API retry, independent waiter cancellation, native process cleanup, arbitrary requested profiles, original diagnostics in MCP results and logs, and native SSH restart and shutdown.
 
 A Linux ARM64 workstation container and Linux AMD64 server exercised auth-agent with its own native SSH child and no container restart policy. Token exchange recovered after killing SSH and after disconnecting and reconnecting the container network. Auth-agent stayed in the same process with zero container restarts. Two MCP processes shared one acquisition; cancellation preserved the other waiter, and final-waiter cancellation stopped native `yc`. Full diagnostics reached the tool result and MCP log. Auth-agent shutdown exited normally and released the server listener. The check used a test native `yc` executable, not browser login.
 
