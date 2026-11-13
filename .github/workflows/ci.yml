@@ -31,6 +31,9 @@ jobs:
       - name: Run tests
         run: task test
 
+      - name: Run installer tests
+        run: python3 -I scripts/remote-auth/macos/test_install.py
+
       - name: Run tests with coverage
         run: task test-coverage
 

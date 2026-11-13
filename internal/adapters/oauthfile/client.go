@@ -17,8 +17,7 @@ import (
 	"github.com/n-r-w/yandex-mcp/internal/server/authagent"
 )
 
-// Source reads a token file on every acquisition, so a replaced token is used without a restart.
-// A source is bound either to one file or to a directory of files named after profiles.
+// Source reads one token file, or the file of the requested profile in a directory, at every acquisition.
 type Source struct {
 	path    string
 	dir     string
@@ -30,13 +29,12 @@ var (
 	_ authagent.ITokenSource = (*Source)(nil)
 )
 
-// New constructs a source for one absolute token file path. The requested profile is ignored.
+// New constructs a source that reads the absolute token file path for any requested profile.
 func New(path string) *Source {
 	return &Source{path: path, dir: "", pattern: nil}
 }
 
-// NewProfiles constructs a source that resolves a profile name to the file of that name in dir.
-// An empty dir makes every acquisition fail explicitly.
+// NewProfiles constructs a source that reads the file named after the requested profile in dir.
 func NewProfiles(dir string) *Source {
 	return &Source{path: "", dir: dir, pattern: regexp.MustCompile(profilePattern)}
 }

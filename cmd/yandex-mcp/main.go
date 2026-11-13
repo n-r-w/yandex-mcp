@@ -111,9 +111,7 @@ func newAuthAgent(cfg *authagent.Config) *authagent.Service {
 	return authagent.New(yc.New(cfg.YCPath), oauthfile.NewProfiles(cfg.OAuthDir))
 }
 
-// newTokenProvider selects the acquisition location and the token type independently.
-// Remote acquisition forwards the token type to auth-agent; local acquisition runs yc
-// for IAM tokens and reads the configured file for OAuth tokens.
+// newTokenProvider builds the token provider whose source matches the configured acquisition location and token type.
 func newTokenProvider(cfg *config.Config) (*ytoken.Provider, func(), error) {
 	var source ytoken.ITokenSource
 	closeSource := func() {}

@@ -11,9 +11,13 @@ const (
 	// TokenTypeOAuth selects Yandex OAuth tokens, read from a file.
 	TokenTypeOAuth = "oauth"
 
+	// headerCloudOrgID carries the ID of a Yandex Cloud organization.
 	headerCloudOrgID = "X-Cloud-Org-Id"
-	headerOrgID      = "X-Org-Id"
+	// headerOrgID carries the ID of a Yandex 360 organization.
+	headerOrgID = "X-Org-Id"
 
+	// authSchemeBearer is the Authorization scheme of IAM tokens.
 	authSchemeBearer = "Bearer"
-	authSchemeOAuth  = "OAuth"
+	// authSchemeOAuth is the Authorization scheme of OAuth tokens.
+	authSchemeOAuth = "OAuth"
 )
