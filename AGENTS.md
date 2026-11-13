@@ -1,9 +1,6 @@
-# Project Specific Rules and Information
+# Project Specific Rules
 
 Project: Yandex MCP Server
-
-NO BACKWARDS COMPATIBILITY! NO FALLBACK! NO DEPRECATIONS! JUST REMOVE OLD CODE/DOCUMENTATION AS NEEDED.
-THIS IS A NEW PROJECT, NOT IN PRODUCTION YET. NO DATA IN DATABASE YET. FEEL FREE TO MAKE BREAKING CHANGES AS NEEDED.
 
 ## Tech stack
 1. go 1.27
@@ -40,3 +37,8 @@ THIS IS A NEW PROJECT, NOT IN PRODUCTION YET. NO DATA IN DATABASE YET. FEEL FREE
 2. Yandex Tracker Tools: `docs/tracker-tools.md`
 3. Yandex Wiki Tools: `docs/wiki-tools.md`
 4. Yandex API reference, golang MCP SDK: `docs/research/`
+5. Each feature and each bug fix has a specification directory `docs/specs/{name}/`, where `{name}` names the feature or the bug in kebab case, for example `docs/specs/remote-authentication/`. The directory holds these files:
+    1) `problem.md` describes what is wrong now, for whom, and what it costs, with the current behavior and the boundary of the problem. It holds no requirements and no solution.
+    2) `requirements.md` lists the requirements under which the problem disappears, the scope and the non-scope, and the scenarios that show that the requirements hold. Each requirement is verifiable without knowledge of the implementation.
+    3) `solution.md` describes how the requirements are met, each trade-off with its cost, and how the result is verified.
+    4) `glossary.md` defines each term that the specification introduces, one item per term in the form `term: definition`. The directory has this file only when the specification introduces terms.
