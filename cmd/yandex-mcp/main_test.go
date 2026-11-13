@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -71,6 +72,46 @@ func TestRemoteMCPPreservesErrorAndLogs(t *testing.T) {
 	text, ok := result.Content[0].(*mcp.TextContent)
 	require.True(t, ok)
 	require.Contains(t, text.Text, diagnostic)
+	require.NoError(t, session.Close())
+	require.Contains(t, logs.String(), diagnostic)
+}
+
+// A separate MCP process in oauth mode has no yc in PATH and no auth-agent. Its real
+// stdio request must read the configured token file. The file is absent, so the tool
+// result names that exact path and the stderr log carries the file source diagnostic.
+// Without the oauth source selection the process would fail on the missing yc instead.
+func TestOAuthMCPReadsConfiguredTokenFile(t *testing.T) {
+	const diagnostic = "read OAuth token file"
+	tokenFile := filepath.Join(t.TempDir(), "absent-oauth-token")
+	t.Setenv("YANDEX_MCP_TEST_PROCESS", "1")
+	t.Setenv("YANDEX_MCP_TOKEN_SOURCE", "oauth")
+	t.Setenv("YANDEX_OAUTH_TOKEN_FILE", tokenFile)
+	t.Setenv("YANDEX_ORG_ID", "1234567")
+	t.Setenv("YANDEX_CLOUD_ORG_ID", "")
+	t.Setenv("PATH", "")
+	executable, err := os.Executable()
+	require.NoError(t, err)
+	command := exec.CommandContext(t.Context(), executable)
+	var logs bytes.Buffer
+	command.Stderr = &logs
+	//nolint:exhaustruct_v5 // test client identity
+	client := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "test"}, nil)
+	//nolint:exhaustruct_v5 // default process shutdown duration
+	session, err := client.Connect(t.Context(), &mcp.CommandTransport{Command: command}, nil)
+	require.NoError(t, err)
+	defer func() { _ = session.Close() }()
+	//nolint:exhaustruct_v5 // no request metadata
+	result, err := session.CallTool(
+		t.Context(),
+		&mcp.CallToolParams{Name: "wiki_page_get_by_id", Arguments: map[string]any{"page_id": "1"}},
+	)
+	require.NoError(t, err)
+	require.True(t, result.IsError)
+	require.NotEmpty(t, result.Content)
+	text, ok := result.Content[0].(*mcp.TextContent)
+	require.True(t, ok)
+	require.Contains(t, text.Text, diagnostic)
+	require.Contains(t, text.Text, tokenFile)
 	require.NoError(t, session.Close())
 	require.Contains(t, logs.String(), diagnostic)
 }
