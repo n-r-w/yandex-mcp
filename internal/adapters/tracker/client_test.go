@@ -86,11 +86,23 @@ func TestClient_HeaderInjection_OAuth(t *testing.T) {
 
 	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return(testToken, nil)
 
-	cfg := &config.Config{ //nolint:exhaustruct_v5 // test helper
-		TrackerBaseURL:       server.URL,
-		OrgID:                testOrgID,
-		TokenType:            config.TokenTypeOAuth,
-		AttachInlineMaxBytes: testAttachInlineMaxBytes,
+	cfg := &config.Config{
+		WikiBaseURL:             "",
+		TrackerBaseURL:          server.URL,
+		CloudOrgID:              "",
+		OrgID:                   testOrgID,
+		OAuthTokenFile:          "",
+		OAuthProfile:            "",
+		TokenType:               config.TokenTypeOAuth,
+		CLIProfile:              "",
+		IAMTokenRefreshPeriod:   0,
+		ToolTimeout:             0,
+		TokenSource:             "",
+		AuthAgentPort:           0,
+		AttachAllowedExtensions: nil,
+		AttachViewExtensions:    nil,
+		AttachAllowedDirs:       nil,
+		AttachInlineMaxBytes:    testAttachInlineMaxBytes,
 	}
 
 	_, err := NewClient(cfg, tokenProvider).GetIssue(t.Context(), "TEST-1", domain.TrackerGetIssueOpts{})

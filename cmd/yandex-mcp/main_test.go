@@ -185,15 +185,23 @@ func TestTokenProviderCombinations(t *testing.T) {
 		{"remote oauth failure keeps yc unused", remote, oauth, "work", "absent", "", "", "unknown OAuth profile"},
 	}
 	for _, tt := range tests {
-		//nolint:exhaustruct_v5 // only token acquisition settings matter
 		cfg := &config.Config{
-			TokenSource:           tt.source,
-			TokenType:             tt.tokenType,
-			CLIProfile:            tt.cliProfile,
-			OAuthProfile:          tt.oauthProfile,
-			OAuthTokenFile:        tt.file,
-			AuthAgentPort:         port,
-			IAMTokenRefreshPeriod: time.Hour,
+			WikiBaseURL:             "",
+			TrackerBaseURL:          "",
+			CloudOrgID:              "",
+			OrgID:                   "",
+			OAuthTokenFile:          tt.file,
+			OAuthProfile:            tt.oauthProfile,
+			TokenType:               tt.tokenType,
+			CLIProfile:              tt.cliProfile,
+			IAMTokenRefreshPeriod:   time.Hour,
+			ToolTimeout:             0,
+			TokenSource:             tt.source,
+			AuthAgentPort:           port,
+			AttachAllowedExtensions: nil,
+			AttachViewExtensions:    nil,
+			AttachAllowedDirs:       nil,
+			AttachInlineMaxBytes:    0,
 		}
 		provider, closeProvider, providerErr := newTokenProvider(cfg)
 		require.NoError(t, providerErr, tt.name)
