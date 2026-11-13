@@ -37,9 +37,10 @@ func post(ctx context.Context, service *Service, body string) *httptest.Response
 	return response
 }
 
-// Protocol validation rejects malformed bodies, missing or unsupported token types, and missing
-// profiles before invoking any source. A valid request reaches only the source of the requested
-// token type and returns its token or its diagnostic: the other source is never substituted.
+// Protocol validation rejects malformed bodies, unsupported token types, and missing profiles
+// before invoking any source. A request without a token type asks for an IAM token, as released
+// MCP versions send it. A valid request reaches only the source of the requested token type and
+// returns its token or its diagnostic: the other source is never substituted.
 func TestTokenProtocol(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -80,16 +81,8 @@ func TestTokenProtocol(t *testing.T) {
 			"absent",
 			"unknown OAuth profile",
 		},
-		{"missing token type", `{"profile":"work"}`, 400, `"message":"token_type is required"`, "", "", ""},
-		{
-			"empty token type",
-			`{"token_type":"","profile":"work"}`,
-			400,
-			`"message":"token_type is required"`,
-			"",
-			"",
-			"",
-		},
+		{"missing token type", `{"profile":"work"}`, 200, `"token":"iam-token"`, "iam", "work", ""},
+		{"empty token type", `{"token_type":"","profile":"work"}`, 200, `"token":"iam-token"`, "iam", "work", ""},
 		{"unsupported token type", `{"token_type":"jwt","profile":"work"}`, 400, `unsupported token_type`, "", "", ""},
 		{"token type case", `{"token_type":"OAuth","profile":"work"}`, 400, `unsupported token_type`, "", "", ""},
 		{"missing profile", `{"token_type":"oauth"}`, 400, `"message":"profile is required"`, "", "", ""},
@@ -170,8 +163,9 @@ func TestTokenTypesDoNotShareAcquisitions(t *testing.T) {
 	})
 }
 
-// Separate requests share one source acquisition. Canceling the first leaves
-// the second running. Canceling the last stops the source. No network is used.
+// Separate requests share one source acquisition, also when only one of them names the IAM token
+// type. Canceling the first leaves the second running. Canceling the last stops the source.
+// No network is used.
 func TestRequestCancellation(t *testing.T) {
 	t.Parallel()
 	synctest.Test(t, func(t *testing.T) {
@@ -187,10 +181,9 @@ func TestRequestCancellation(t *testing.T) {
 		defer cancelFirst()
 		second, cancelSecond := context.WithCancel(t.Context())
 		defer cancelSecond()
-		request := func(ctx context.Context) { post(ctx, service, `{"token_type":"iam","profile":"work"}`) }
-		go request(first)
+		go post(first, service, `{"token_type":"iam","profile":"work"}`)
 		synctest.Wait()
-		go request(second)
+		go post(second, service, `{"profile":"work"}`)
 		synctest.Wait()
 		cancelFirst()
 		synctest.Wait()

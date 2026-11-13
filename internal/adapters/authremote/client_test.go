@@ -14,7 +14,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestAcquire checks token exchange, original diagnostics, and malformed responses.
+// TestAcquire checks token exchange, original diagnostics, and malformed responses. The IAM
+// request holds only the profile, the format that released auth-agent versions accept.
 func TestAcquire(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -44,7 +45,7 @@ func TestAcquire(t *testing.T) {
 				assert.Equal(t, "/token", r.URL.Path)
 				body, err := io.ReadAll(r.Body)
 				assert.NoError(t, err)
-				assert.JSONEq(t, `{"token_type":"iam","profile":"work"}`, string(body))
+				assert.JSONEq(t, `{"profile":"work"}`, string(body))
 				w.Header().Set("Content-Type", "application/json")
 				w.Header().Set("Location", "http://127.0.0.1:1/redirect-target")
 				w.WriteHeader(tt.status)
@@ -69,8 +70,8 @@ func TestAcquire(t *testing.T) {
 	}
 }
 
-// TestTokenTypeInRequest sends the configured token type with the profile and refuses
-// to send a request that names no token type.
+// TestTokenTypeInRequest sends the OAuth token type with the profile and refuses to send a
+// request for a source configured without a token type.
 func TestTokenTypeInRequest(t *testing.T) {
 	t.Parallel()
 	requests := make(chan string, 1)

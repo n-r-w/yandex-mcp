@@ -56,7 +56,12 @@ func (s *Source) request(ctx context.Context, profile string) (string, error) {
 	if strings.TrimSpace(profile) == "" || s.tokenType == "" {
 		return "", errInvalidRequest
 	}
-	body, err := json.Marshal(tokenRequest{TokenType: s.tokenType, Profile: profile})
+	// Released auth-agent versions reject unknown members, so an IAM request holds only the profile.
+	requestType := s.tokenType
+	if requestType == config.TokenTypeIAM {
+		requestType = ""
+	}
+	body, err := json.Marshal(tokenRequest{TokenType: requestType, Profile: profile})
 	if err != nil {
 		return "", fmt.Errorf("%w: %w", errInvalidRequest, err)
 	}

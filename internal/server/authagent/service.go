@@ -2,6 +2,7 @@
 package authagent
 
 import (
+	"cmp"
 	"context"
 	"encoding/json/v2"
 	"io"
@@ -52,13 +53,11 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.respond(w, http.StatusBadRequest, "", err.Error())
 		return
 	}
-	if input.TokenType == "" {
-		s.respond(w, http.StatusBadRequest, "", "token_type is required")
-		return
-	}
-	source, supported := s.sources[input.TokenType]
+	// Released MCP versions send no token type and ask for an IAM token.
+	tokenType := cmp.Or(input.TokenType, config.TokenTypeIAM)
+	source, supported := s.sources[tokenType]
 	if !supported {
-		s.respond(w, http.StatusBadRequest, "", "unsupported token_type "+strconv.Quote(input.TokenType))
+		s.respond(w, http.StatusBadRequest, "", "unsupported token_type "+strconv.Quote(tokenType))
 		return
 	}
 	if input.Profile == "" {
@@ -68,7 +67,7 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Equal profile names of different token types identify different tokens.
 	token, err := s.acquisitions.Do(
 		r.Context(),
-		input.TokenType+":"+input.Profile,
+		tokenType+":"+input.Profile,
 		func(ctx context.Context) (string, error) { return source.Acquire(ctx, input.Profile) },
 	)
 	if r.Context().Err() != nil {
