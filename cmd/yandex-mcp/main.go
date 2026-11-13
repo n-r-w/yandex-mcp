@@ -99,8 +99,8 @@ func run(serverVersion string, args []string) error {
 		}
 		service := authagent.New(yc.New(cfg.YCPath))
 		defer service.Close()
-		slog.InfoContext(ctx, "starting workstation auth-agent", "port", cfg.Port)
-		return service.Run(ctx, cfg.Port, cfg.SSHTarget)
+		slog.InfoContext(ctx, "starting workstation auth-agent", "port", cfg.Port, "ssh_targets", cfg.SSHTargets)
+		return service.Run(ctx, cfg.Port, cfg.SSHTargets)
 	}
 	return runMCP(ctx, serverVersion)
 }

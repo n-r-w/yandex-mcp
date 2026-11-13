@@ -8,10 +8,11 @@ import unittest
 
 
 class InstallTest(unittest.TestCase):
-    def run_install(self, loaded=False, list_status=0, bootout_status=0, bootstrap_status=0):
+    def run_install(self, loaded=False, list_status=0, bootout_status=0, bootstrap_status=0, bootstrap_failures=0):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             calls = root / "calls"
+            bootstrap_failures_file = root / "bootstrap-failures"
             commands = {
                 "mkdir": "exit 0",
                 "cp": "exit 0",
@@ -19,6 +20,7 @@ class InstallTest(unittest.TestCase):
                 "yandex-mcp": "exit 0",
                 "yc": "exit 0",
                 "ssh": "exit 0",
+                "sleep": "exit 0",
                 "launchctl": '''echo "$1" >> "$TEST_CALLS"
 case "$1" in
   list)
@@ -39,6 +41,12 @@ case "$1" in
     fi
     ;;
   bootstrap)
+    failures=$(cat "$TEST_BOOTSTRAP_FAILURES_FILE" 2>/dev/null || printf '0')
+    if [ "$failures" -lt "$TEST_BOOTSTRAP_FAILURES" ]; then
+      printf '%s\n' "$((failures + 1))" > "$TEST_BOOTSTRAP_FAILURES_FILE"
+      echo 'bootstrap failed' >&2
+      exit 5
+    fi
     if [ "$TEST_BOOTSTRAP_STATUS" != 0 ]; then
       echo 'bootstrap failed' >&2
       exit "$TEST_BOOTSTRAP_STATUS"
@@ -58,23 +66,29 @@ esac
                 "YANDEX_MCP_BINARY": str(root / "yandex-mcp"),
                 "YANDEX_MCP_AUTH_AGENT_YC_PATH": str(root / "yc"),
                 "YANDEX_MCP_AUTH_AGENT_PORT": "18765",
-                "YANDEX_MCP_SSH_TARGET": "test@example.invalid",
+                "YANDEX_MCP_SSH_TARGETS": "first@example.invalid,second@example.invalid",
                 "TEST_CALLS": str(calls),
                 "TEST_LOADED": str(int(loaded)),
                 "TEST_LIST_STATUS": str(list_status),
                 "TEST_BOOTOUT_STATUS": str(bootout_status),
                 "TEST_BOOTSTRAP_STATUS": str(bootstrap_status),
+                "TEST_BOOTSTRAP_FAILURES": str(bootstrap_failures),
+                "TEST_BOOTSTRAP_FAILURES_FILE": str(bootstrap_failures_file),
             })
             result = subprocess.run(
                 ["/bin/sh", str(Path(__file__).with_name("install.sh"))],
                 env=env, capture_output=True, text=True, timeout=10,
             )
-            return result, calls.read_text().splitlines()
+            recorded_calls = calls.read_text().splitlines() if calls.exists() else []
+            return result, recorded_calls
 
     def test_first_install(self):
         result, calls = self.run_install()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(calls, ["list", "bootstrap"])
+        plist = Path(__file__).with_name("auth-agent.plist").read_text()
+        self.assertIn("YANDEX_MCP_SSH_TARGETS", plist)
+        self.assertNotIn("YANDEX_MCP_SSH_TARGET</key>", plist)
 
     def test_reinstall(self):
         result, calls = self.run_install(loaded=True)
@@ -93,11 +107,16 @@ esac
         self.assertIn("bootout failed", result.stderr)
         self.assertEqual(calls, ["list", "bootout"])
 
-    def test_bootstrap_failure(self):
+    def test_transient_bootstrap_failure(self):
+        result, calls = self.run_install(bootstrap_failures=1)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(calls, ["list", "bootstrap", "bootstrap"])
+
+    def test_persistent_bootstrap_failure(self):
         result, calls = self.run_install(bootstrap_status=5)
         self.assertEqual(result.returncode, 5)
         self.assertIn("bootstrap failed", result.stderr)
-        self.assertEqual(calls, ["list", "bootstrap"])
+        self.assertEqual(calls, ["list", "bootstrap", "bootstrap", "bootstrap"])
 
 
 if __name__ == "__main__":

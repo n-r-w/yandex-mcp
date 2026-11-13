@@ -10,7 +10,7 @@ import (
 )
 
 // Run serves loopback HTTP, maintains SSH, and joins both process lifecycles on shutdown.
-func (s *Service) Run(ctx context.Context, port int, sshTarget string) error {
+func (s *Service) Run(ctx context.Context, port int, sshTargets []string) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	address, err := config.AuthAgentAddress(port)
@@ -30,7 +30,7 @@ func (s *Service) Run(ctx context.Context, port int, sshTarget string) error {
 		BaseContext:       func(net.Listener) context.Context { return ctx },
 	}
 	sshDone := make(chan struct{})
-	go func() { defer close(sshDone); s.runTunnel(ctx, sshTarget, address) }()
+	go func() { defer close(sshDone); s.runTunnels(ctx, sshTargets, address) }()
 	stopped := make(chan struct{})
 	go func() {
 		select {

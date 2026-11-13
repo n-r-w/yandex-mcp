@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os/exec"
+	"sync"
 	"time"
 
 	"github.com/n-r-w/yandex-mcp/internal/domain"
@@ -34,6 +35,15 @@ func runSSH(ctx context.Context, target, address string) error {
 	return err
 }
 
+// runTunnels runs one independently reconnecting SSH tunnel per target and joins their shutdown.
+func (s *Service) runTunnels(ctx context.Context, targets []string, address string) {
+	var tunnels sync.WaitGroup
+	for _, target := range targets {
+		tunnels.Go(func() { s.runTunnel(ctx, target, address) })
+	}
+	tunnels.Wait()
+}
+
 // runTunnel restarts SSH after a disconnect and waits for process exit on cancellation.
 func (s *Service) runTunnel(ctx context.Context, target, address string) {
 	for ctx.Err() == nil {
@@ -42,9 +52,9 @@ func (s *Service) runTunnel(ctx context.Context, target, address string) {
 			return
 		}
 		if err != nil {
-			_ = domain.LogError(ctx, "ssh tunnel", err)
+			_ = domain.LogError(ctx, "ssh tunnel", fmt.Errorf("target %q: %w", target, err))
 		} else {
-			slog.InfoContext(ctx, "SSH tunnel closed")
+			slog.InfoContext(ctx, "SSH tunnel closed", "target", target)
 		}
 		select {
 		case <-ctx.Done():

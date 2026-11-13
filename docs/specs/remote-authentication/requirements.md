@@ -21,7 +21,7 @@ The user completes login on the workstation without repeated manual setup for to
 
 ## Scope and non-scope
 
-The scope includes remote authentication, its initial setup, automatic startup, connection recovery, and one overall tool timeout. Workstations running macOS, Linux with a graphical desktop, or Windows are supported. The agent and remote-mode MCP run on a Linux server. Local MCP execution also remains available.
+The scope includes remote authentication for one or more Linux servers, its initial setup, automatic startup, connection recovery, and one overall tool timeout. Workstations running macOS, Linux with a graphical desktop, or Windows are supported. The agents and remote-mode MCP processes run on Linux servers. Local MCP execution also remains available.
 
 The scope excludes password and MFA automation, running ordinary server-side `yc` commands through the workstation, and indefinite operation without the workstation. Both machines and their local processes are trusted. HTTP authorization and connection-secret management are outside the scope.
 
@@ -41,9 +41,9 @@ The scope excludes password and MFA automation, running ordinary server-side `yc
 - **FRQ-04:** Cancellation or timeout ends that call's wait. Token acquisition stops only after the last waiter leaves.
   - Goal: Stop work that has no waiter without disrupting other calls.
   - Goal achievement: Full. Cancellation accounts for all waiters.
-- **FRQ-05:** After initial setup, one auth-agent startup entry runs when the user logs in to the workstation's graphical desktop session. Auth-agent manages the SSH tunnel. After sleep or network loss, the connection recovers without manual tunnel creation.
+- **FRQ-05:** After initial setup, one auth-agent startup entry runs when the user logs in to the workstation's graphical desktop session. Auth-agent manages one independent SSH tunnel for each configured server. After sleep or network loss, each tunnel recovers without manual creation and without stopping tunnels to other servers.
   - Goal: Remove repeated technical actions by the user.
-  - Goal achievement: Full when the workstation, network, and server SSH are available.
+  - Goal achievement: Full when the workstation, network, and configured server SSH endpoints are available.
 - **FRQ-06:** Local mode obtains tokens through local `yc` without the remote authentication programs.
   - Goal: Preserve the local usage scenario.
   - Goal achievement: Full. Moving the agent to a server is not mandatory.
@@ -56,9 +56,9 @@ The scope excludes password and MFA automation, running ordinary server-side `yc
 - **NRQ-01:** Every tool call has one configurable overall timeout, defaulting to 300 seconds. Token acquisition, login, and API requests are included. Lower layers do not restart the timeout.
   - Goal: Limit the full duration of a call.
   - Goal achievement: Full. Waiting for authentication does not bypass the overall deadline.
-- **NRQ-02:** Auth-agent accepts an explicitly specified workstation profile through its IPv4 loopback listener. A reverse SSH tunnel carries requests between the trusted machines using the same port number on both sides. There is no profile allowlist, HTTP authorization, or connection secret.
+- **NRQ-02:** Auth-agent accepts an explicitly specified workstation profile through its IPv4 loopback listener. A reverse SSH tunnel carries requests between the workstation and each configured server using the same port number at both ends. There is no profile allowlist, HTTP authorization, or connection secret.
   - Goal: Use the requested workstation profile without additional credentials or duplicated profile configuration.
-  - Goal achievement: Full within the trusted-machine scope. Any process with access to either loopback listener can request a workstation profile's token.
+  - Goal achievement: Full within the trusted-machine scope. Any process with access to the workstation listener or a configured server listener can request a workstation profile's token.
 - **NRQ-03:** Federated credentials remain on the workstation. MCP does not persist IAM tokens. Successful `yc` output is not logged. Auth-agent returns original errors and the complete `stderr` of a failed `yc` process. MCP preserves these diagnostics in both its tool error and structured `stderr` log.
   - Goal: Retain the actual failure reason for the agent and user.
   - Goal achievement: Full for failed token acquisitions. Diagnostic text is not redacted and can contain login URLs or account details.

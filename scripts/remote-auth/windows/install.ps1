@@ -1,6 +1,6 @@
 # Run as the desktop user. Administrator privileges are not required.
 $ErrorActionPreference = 'Stop'
-if (-not $env:YANDEX_MCP_SSH_TARGET) { throw 'Set YANDEX_MCP_SSH_TARGET before installation' }
+if (-not $env:YANDEX_MCP_SSH_TARGETS) { throw 'Set comma-separated YANDEX_MCP_SSH_TARGETS before installation' }
 $binaryCommand = 'yandex-mcp'
 if ($env:YANDEX_MCP_BINARY) { $binaryCommand = $env:YANDEX_MCP_BINARY }
 $binary = (Get-Command -Name $binaryCommand -CommandType Application -ErrorAction Stop).Source
@@ -17,7 +17,7 @@ $values = @{
     '@PORT@' = [string]$port
     '@YC_PATH@' = $ycPath
     '@BINARY@' = $binary
-    '@SSH_TARGET@' = $env:YANDEX_MCP_SSH_TARGET
+    '@SSH_TARGETS@' = $env:YANDEX_MCP_SSH_TARGETS
     '@PATH@' = $env:PATH
 }
 $content = Get-Content -Raw -LiteralPath (Join-Path $PSScriptRoot 'auth-agent.ps1')

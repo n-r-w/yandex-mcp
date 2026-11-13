@@ -229,7 +229,7 @@ From the extracted release archive or repository, run in your graphical desktop 
 
 ```sh
 export YANDEX_MCP_BINARY=/absolute/workstation/path/to/yandex-mcp
-export YANDEX_MCP_SSH_TARGET=user@server.example
+export YANDEX_MCP_SSH_TARGETS=user@server-one.example,user@server-two.example
 sh scripts/remote-auth/macos/install.sh
 ```
 
@@ -237,13 +237,13 @@ On a systemd-integrated Linux desktop, replace `macos` with `linux`. On Windows,
 
 ```powershell
 $env:YANDEX_MCP_BINARY = 'C:\Tools\yandex-mcp.exe'
-$env:YANDEX_MCP_SSH_TARGET = 'user@server.example'
+$env:YANDEX_MCP_SSH_TARGETS = 'user@server-one.example,user@server-two.example'
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\remote-auth\windows\install.ps1
 ```
 
-Replace the workstation executable path and SSH destination. The installer configures one auth-agent startup entry. Auth-agent starts and reconnects SSH. The executable path overrides are optional when `yandex-mcp` and `yc` are in `PATH`; use `YANDEX_MCP_AUTH_AGENT_YC_PATH` to override the `yc` path.
+Replace the workstation executable path and SSH destinations. The installer configures one auth-agent startup entry. Auth-agent starts one SSH tunnel for each destination and reconnects each tunnel independently. Empty and duplicate destinations are rejected. The executable path overrides are optional when `yandex-mcp` and `yc` are in `PATH`; use `YANDEX_MCP_AUTH_AGENT_YC_PATH` to override the `yc` path.
 
-Use the same `YANDEX_MCP_AUTH_AGENT_PORT` on both machines, default `18765`.
+Use the same `YANDEX_MCP_AUTH_AGENT_PORT` on the workstation and every server, default `18765`.
 
 Restart the MCP connection and call a Wiki or Tracker tool. Complete login in the workstation browser when prompted. Keep the workstation awake and connected when a new token is needed. The tool timeout defaults to 300 seconds; change `YANDEX_MCP_TOOL_TIMEOUT` in the server configuration if needed.
 
