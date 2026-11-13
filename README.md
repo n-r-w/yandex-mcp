@@ -121,10 +121,24 @@ After these steps, the executable will be permanently allowed to run on your sys
 
 ## Environment variables
 
-- `YANDEX_CLOUD_ORG_ID` (required)
-  * Yandex Cloud Organization ID.
-  * Used to set the organization header required by Yandex APIs.
+Set exactly one organization ID: `YANDEX_CLOUD_ORG_ID` or `YANDEX_ORG_ID`.
+
+- `YANDEX_CLOUD_ORG_ID`
+  * Yandex Cloud Organization ID, sent as `X-Cloud-Org-Id`.
   * Run `yc organization-manager organization list` to get your organization ID.
+
+- `YANDEX_ORG_ID`
+  * Yandex 360 for Business organization ID, sent as `X-Org-Id`.
+  * Requires `YANDEX_MCP_TOKEN_SOURCE=oauth`: IAM tokens are accepted only by Yandex Cloud organizations.
+
+- `YANDEX_MCP_TOKEN_SOURCE` (optional, default: `local`)
+  * `local` obtains IAM tokens through `yc` on this machine.
+  * `remote` obtains IAM tokens from the workstation auth-agent, see [Remote authentication](#remote-authentication).
+  * `oauth` reads a Yandex OAuth token from `YANDEX_OAUTH_TOKEN_FILE`, see [OAuth token authentication](#oauth-token-authentication).
+
+- `YANDEX_OAUTH_TOKEN_FILE` (required in `oauth` mode)
+  * Absolute path to a file that contains one Yandex OAuth token.
+  * The file is read again when the cached token expires or the API answers `401`/`403`, so a replaced token is used without a restart.
 
 - `YANDEX_CLI_PROFILE` (optional)
   * yc CLI profile used to retrieve IAM tokens.
@@ -168,7 +182,7 @@ After these steps, the executable will be permanently allowed to run on your sys
 
 ## Authentication
 
-The project obtains IAM tokens through Yandex Cloud CLI `yc`. Local mode runs `yc` on the MCP machine. [Remote mode](#remote-authentication) runs it on the workstation.
+The project obtains IAM tokens through Yandex Cloud CLI `yc`. Local mode runs `yc` on the MCP machine. [Remote mode](#remote-authentication) runs it on the workstation. [OAuth mode](#oauth-token-authentication) needs no `yc` and is the only mode that works with a Yandex 360 for Business organization.
 
 **IAM token acquisition (`yc` prerequisites)**
 
@@ -194,6 +208,34 @@ Official references:
 
 - Tracker IAM token auth + lifetime: https://yandex.ru/support/tracker/en/concepts/access#iam-token
 - Wiki IAM token auth + lifetime: https://yandex.ru/support/wiki/en/api-ref/access#iam-token
+
+## OAuth token authentication
+
+OAuth mode sends `Authorization: OAuth <token>` and works with both organization types. An organization member can set it up without administrator rights.
+
+1. Create an application at https://oauth.yandex.ru: choose "For API access or debugging" and add the `tracker:read` and `wiki:read` permissions.
+2. Open `https://oauth.yandex.ru/authorize?response_type=token&client_id=<ClientID>` under the account that works with Tracker and Wiki, and copy the token.
+3. Save the token as a single line in a file outside any repository, for example `~/.yandex-oauth-token`.
+4. Configure the server:
+
+```json
+"yandex": {
+  "command": "/path/to/yandex-mcp",
+  "env": {
+    "YANDEX_MCP_TOKEN_SOURCE": "oauth",
+    "YANDEX_OAUTH_TOKEN_FILE": "/absolute/path/to/.yandex-oauth-token",
+    "YANDEX_ORG_ID": "yandex 360 organization id"
+  }
+}
+```
+
+For a Yandex Cloud organization, set `YANDEX_CLOUD_ORG_ID` instead of `YANDEX_ORG_ID`.
+
+Notes:
+
+- The token never appears in the MCP client configuration; only the file path does.
+- When the token expires, the API answers `401`. Issue a new token with the same link and replace the file contents.
+- Official references: https://yandex.ru/support/tracker/en/concepts/access and https://yandex.ru/support/wiki/en/api-ref/access
 
 ## Remote authentication
 
