@@ -31,6 +31,12 @@ type Config struct {
 	// CloudOrgID is the Yandex Cloud Organization ID for X-Cloud-Org-Id header.
 	CloudOrgID string
 
+	// OrgID is the Yandex 360 for Business organization ID for X-Org-Id header.
+	OrgID string
+
+	// OAuthTokenFile is the absolute path to a file holding a Yandex OAuth token.
+	OAuthTokenFile string
+
 	// CLIProfile is the optional yc CLI profile used for IAM token retrieval.
 	CLIProfile string
 
@@ -63,7 +69,9 @@ type Config struct {
 type envConfig struct {
 	WikiBaseURL          string `env:"YANDEX_WIKI_BASE_URL"`
 	TrackerBaseURL       string `env:"YANDEX_TRACKER_BASE_URL"`
-	CloudOrgID           string `env:"YANDEX_CLOUD_ORG_ID,required"`
+	CloudOrgID           string `env:"YANDEX_CLOUD_ORG_ID"`
+	OrgID                string `env:"YANDEX_ORG_ID"`
+	OAuthTokenFile       string `env:"YANDEX_OAUTH_TOKEN_FILE"`
 	CLIProfile           string `env:"YANDEX_CLI_PROFILE"`
 	RefreshPeriodHours   int    `env:"YANDEX_IAM_TOKEN_REFRESH_PERIOD"    envDefault:"10"`
 	ToolTimeoutSeconds   int    `env:"YANDEX_MCP_TOOL_TIMEOUT"            envDefault:"300"`
@@ -111,7 +119,9 @@ func Load() (*Config, error) {
 	cfg := &Config{
 		WikiBaseURL:             applyDefault(ec.WikiBaseURL, defaultWikiBaseURL),
 		TrackerBaseURL:          applyDefault(ec.TrackerBaseURL, defaultTrackerBaseURL),
-		CloudOrgID:              ec.CloudOrgID,
+		CloudOrgID:              strings.TrimSpace(ec.CloudOrgID),
+		OrgID:                   strings.TrimSpace(ec.OrgID),
+		OAuthTokenFile:          strings.TrimSpace(ec.OAuthTokenFile),
 		CLIProfile:              ec.CLIProfile,
 		IAMTokenRefreshPeriod:   resolveRefreshPeriod(ec.RefreshPeriodHours),
 		ToolTimeout:             time.Duration(ec.ToolTimeoutSeconds) * time.Second,
@@ -280,8 +290,11 @@ func resolveRefreshPeriod(hours int) time.Duration {
 func (c *Config) validate() error {
 	var errs []error
 
-	if c.TokenSource != "local" && c.TokenSource != tokenSourceRemote {
-		errs = append(errs, errors.New("YANDEX_MCP_TOKEN_SOURCE must be local or remote"))
+	if c.TokenSource != tokenSourceLocal && c.TokenSource != tokenSourceRemote && c.TokenSource != TokenSourceOAuth {
+		errs = append(errs, errors.New("YANDEX_MCP_TOKEN_SOURCE must be local, remote or oauth"))
+	}
+	if c.TokenSource == TokenSourceOAuth && !filepath.IsAbs(c.OAuthTokenFile) {
+		errs = append(errs, errors.New("YANDEX_OAUTH_TOKEN_FILE must be an absolute path in oauth mode"))
 	}
 	if c.TokenSource == tokenSourceRemote {
 		if strings.TrimSpace(c.CLIProfile) == "" {
@@ -300,8 +313,8 @@ func (c *Config) validate() error {
 		errs = append(errs, err)
 	}
 
-	if c.CloudOrgID == "" {
-		errs = append(errs, errors.New("YANDEX_CLOUD_ORG_ID is required"))
+	if err := c.validateOrganization(); err != nil {
+		errs = append(errs, err)
 	}
 	if len(c.AttachAllowedExtensions) == 0 {
 		errs = append(errs, errors.New("YANDEX_MCP_ATTACH_EXT resolved to an empty list"))
@@ -314,6 +327,36 @@ func (c *Config) validate() error {
 	}
 
 	return errors.Join(errs...)
+}
+
+// validateOrganization requires one organization type that the token source can authenticate.
+func (c *Config) validateOrganization() error {
+	switch {
+	case c.CloudOrgID == "" && c.OrgID == "":
+		return errors.New("YANDEX_CLOUD_ORG_ID or YANDEX_ORG_ID is required")
+	case c.CloudOrgID != "" && c.OrgID != "":
+		return errors.New("YANDEX_CLOUD_ORG_ID and YANDEX_ORG_ID are mutually exclusive")
+	case c.OrgID != "" && c.TokenSource != TokenSourceOAuth:
+		// IAM tokens are accepted only by Yandex Cloud organizations.
+		return errors.New("YANDEX_ORG_ID requires YANDEX_MCP_TOKEN_SOURCE=oauth")
+	}
+	return nil
+}
+
+// OrgHeader returns the organization header name and value for the configured organization type.
+func (c *Config) OrgHeader() (name, value string) {
+	if c.OrgID != "" {
+		return headerOrgID, c.OrgID
+	}
+	return headerCloudOrgID, c.CloudOrgID
+}
+
+// AuthScheme returns the Authorization header scheme for the configured token source.
+func (c *Config) AuthScheme() string {
+	if c.TokenSource == TokenSourceOAuth {
+		return authSchemeOAuth
+	}
+	return authSchemeBearer
 }
 
 func validateHTTPSURL(rawURL, envName string) error {

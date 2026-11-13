@@ -61,6 +61,46 @@ func TestClient_HeaderInjection(t *testing.T) {
 	assert.Equal(t, "en", capturedHeaders.Get(headerAcceptLanguage))
 }
 
+// TestClient_HeaderInjection_OAuth verifies OAuth token and Yandex 360 organization headers.
+func TestClient_HeaderInjection_OAuth(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
+
+	const (
+		testToken = "test-oauth-token"
+		testOrgID = "1234567"
+	)
+
+	var capturedHeaders http.Header
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedHeaders = r.Header.Clone()
+		w.Header().Set("Content-Type", "application/json")
+		//nolint:errcheck,exhaustruct_v5 // test helper
+		json.MarshalWrite(w, issueDTO{ID: "1", Key: "TEST-1"})
+	}))
+	t.Cleanup(func() {
+		server.Close()
+	})
+
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return(testToken, nil)
+
+	cfg := &config.Config{ //nolint:exhaustruct_v5 // test helper
+		TrackerBaseURL:       server.URL,
+		OrgID:                testOrgID,
+		TokenSource:          config.TokenSourceOAuth,
+		AttachInlineMaxBytes: testAttachInlineMaxBytes,
+	}
+
+	_, err := NewClient(cfg, tokenProvider).GetIssue(t.Context(), "TEST-1", domain.TrackerGetIssueOpts{})
+	require.NoError(t, err)
+
+	assert.Equal(t, "OAuth "+testToken, capturedHeaders.Get(apihelpers.HeaderAuthorization))
+	assert.Equal(t, testOrgID, capturedHeaders.Get("X-Org-Id"))
+	assert.Empty(t, capturedHeaders.Get(apihelpers.HeaderCloudOrgID))
+}
+
 func TestClient_HeaderInjection_POST(t *testing.T) {
 	t.Parallel()
 

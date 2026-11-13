@@ -13,6 +13,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/n-r-w/yandex-mcp/internal/adapters/authremote"
+	"github.com/n-r-w/yandex-mcp/internal/adapters/oauthfile"
 	"github.com/n-r-w/yandex-mcp/internal/adapters/tracker"
 	"github.com/n-r-w/yandex-mcp/internal/adapters/wiki"
 	"github.com/n-r-w/yandex-mcp/internal/adapters/yc"
@@ -118,14 +119,17 @@ func runMCP(ctx context.Context, serverVersion string) error {
 	)
 
 	var tokenProvider *ytoken.Provider
-	if cfg.TokenSource == "remote" {
+	switch cfg.TokenSource {
+	case "remote":
 		source, sourceErr := authremote.New(cfg.AuthAgentPort)
 		if sourceErr != nil {
 			return sourceErr
 		}
 		defer source.Close()
 		tokenProvider = ytoken.New(source, cfg.CLIProfile, cfg.IAMTokenRefreshPeriod)
-	} else {
+	case config.TokenSourceOAuth:
+		tokenProvider = ytoken.New(oauthfile.New(cfg.OAuthTokenFile), "", cfg.IAMTokenRefreshPeriod)
+	default:
 		tokenProvider = ytoken.New(yc.New("yc"), cfg.CLIProfile, cfg.IAMTokenRefreshPeriod)
 	}
 	defer tokenProvider.Close()

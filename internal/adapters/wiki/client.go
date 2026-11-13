@@ -30,11 +30,15 @@ func NewClient(cfg *config.Config, tokenProvider apihelpers.ITokenProvider) *Cli
 		apiClient: nil, // set below
 	}
 
+	orgHeader, orgID := cfg.OrgHeader()
+
 	client.apiClient = apihelpers.NewAPIClient(apihelpers.APIClientConfig{
 		HTTPClient:          nil, // uses default
 		TokenProvider:       tokenProvider,
 		BaseURL:             strings.TrimSuffix(cfg.WikiBaseURL, "/"),
-		OrgID:               cfg.CloudOrgID,
+		OrgID:               orgID,
+		OrgHeader:           orgHeader,
+		AuthScheme:          cfg.AuthScheme(),
 		ExtraHeaders:        nil,
 		ServiceName:         string(domain.ServiceWiki),
 		ParseError:          client.parseError,

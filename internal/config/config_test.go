@@ -1,6 +1,7 @@
 package config
 
 import (
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -66,6 +67,80 @@ func TestLoad_MissingCloudOrgID(t *testing.T) {
 	require.Error(t, err)
 	assert.Nil(t, cfg)
 	assert.Contains(t, err.Error(), "YANDEX_CLOUD_ORG_ID")
+}
+
+// TestLoad_OAuthOrganization covers the Yandex 360 organization with a file-based OAuth token.
+func TestLoad_OAuthOrganization(t *testing.T) {
+	tokenFile := filepath.Join(t.TempDir(), "token")
+	t.Setenv("YANDEX_CLOUD_ORG_ID", "")
+	t.Setenv("YANDEX_ORG_ID", " 1234567 ")
+	t.Setenv("YANDEX_MCP_TOKEN_SOURCE", "oauth")
+	t.Setenv("YANDEX_OAUTH_TOKEN_FILE", tokenFile)
+
+	cfg, err := Load()
+
+	require.NoError(t, err)
+	assert.Equal(t, "1234567", cfg.OrgID)
+	assert.Empty(t, cfg.CloudOrgID)
+	assert.Equal(t, tokenFile, cfg.OAuthTokenFile)
+	headerName, headerValue := cfg.OrgHeader()
+	assert.Equal(t, "X-Org-Id", headerName)
+	assert.Equal(t, "1234567", headerValue)
+	assert.Equal(t, "OAuth", cfg.AuthScheme())
+}
+
+// TestLoad_CloudOrganizationHeaders keeps IAM authentication on the Cloud organization header.
+func TestLoad_CloudOrganizationHeaders(t *testing.T) {
+	t.Setenv("YANDEX_CLOUD_ORG_ID", "cloud-org")
+
+	cfg, err := Load()
+
+	require.NoError(t, err)
+	headerName, headerValue := cfg.OrgHeader()
+	assert.Equal(t, "X-Cloud-Org-Id", headerName)
+	assert.Equal(t, "cloud-org", headerValue)
+	assert.Equal(t, "Bearer", cfg.AuthScheme())
+}
+
+// TestLoad_OAuthWithCloudOrganization allows an OAuth token for a Cloud organization.
+func TestLoad_OAuthWithCloudOrganization(t *testing.T) {
+	t.Setenv("YANDEX_CLOUD_ORG_ID", "cloud-org")
+	t.Setenv("YANDEX_MCP_TOKEN_SOURCE", "oauth")
+	t.Setenv("YANDEX_OAUTH_TOKEN_FILE", filepath.Join(t.TempDir(), "token"))
+
+	cfg, err := Load()
+
+	require.NoError(t, err)
+	headerName, _ := cfg.OrgHeader()
+	assert.Equal(t, "X-Cloud-Org-Id", headerName)
+	assert.Equal(t, "OAuth", cfg.AuthScheme())
+}
+
+// TestLoad_OrganizationAndOAuthValidation rejects ambiguous or unusable authentication settings.
+func TestLoad_OrganizationAndOAuthValidation(t *testing.T) {
+	tokenFile := filepath.Join(t.TempDir(), "token")
+	tests := []struct {
+		name, cloudOrgID, orgID, source, tokenFile, want string
+	}{
+		{"both organizations", "cloud-org", "1234567", "oauth", tokenFile, "mutually exclusive"},
+		{"360 organization with IAM", "", "1234567", "local", "", "YANDEX_ORG_ID requires"},
+		{"missing token file", "", "1234567", "oauth", "", "YANDEX_OAUTH_TOKEN_FILE"},
+		{"relative token file", "", "1234567", "oauth", "token", "YANDEX_OAUTH_TOKEN_FILE"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("YANDEX_CLOUD_ORG_ID", tt.cloudOrgID)
+			t.Setenv("YANDEX_ORG_ID", tt.orgID)
+			t.Setenv("YANDEX_MCP_TOKEN_SOURCE", tt.source)
+			t.Setenv("YANDEX_OAUTH_TOKEN_FILE", tt.tokenFile)
+
+			cfg, err := Load()
+
+			require.Error(t, err)
+			assert.Nil(t, cfg)
+			assert.Contains(t, err.Error(), tt.want)
+		})
+	}
 }
 
 func TestLoad_WikiBaseURLNotHTTPS(t *testing.T) {
