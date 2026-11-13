@@ -1,4 +1,4 @@
-// Package ytoken caches IAM tokens obtained from an injected source.
+// Package ytoken caches IAM or OAuth tokens obtained from an injected source.
 package ytoken
 
 import (

@@ -6,7 +6,7 @@ on:
       - "v*"
 
 env:
-  GO_VERSION: "1.27.1"
+  GO_VERSION: "1.27.4"
 
 permissions:
   contents: write
@@ -31,17 +31,10 @@ jobs:
         uses: arduino/setup-task@v1
         with:
           version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run tests
         run: task test
-
-      - name: Install golangci-lint
-        run: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
-
-      - name: Install ifaceguard
-        run: |
-          go install github.com/n-r-w/ifaceguard/cmd/ifaceguard@latest
-          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
       - name: Run linter
         run: task lint

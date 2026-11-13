@@ -4,97 +4,26 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/n-r-w/yandex-mcp/internal/domain"
 )
 
-func TestToSafeError(t *testing.T) {
+func TestWrapError(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name         string
-		err          error
-		serviceName  domain.Service
-		wantContains string
-	}{
-		{
-			name: "upstream error",
-			err: domain.NewUpstreamError(
-				domain.ServiceTracker,
-				"search_issues",
-				500,
-				"",
-				"server error",
-				"",
-			),
-			serviceName:  domain.ServiceTracker,
-			wantContains: "HTTP 500",
-		},
-		{
-			name: "decode response error",
-			err: errors.New(
-				"decode response: json: cannot unmarshal number into Go struct field Queue.id of type string",
-			),
-			serviceName:  domain.ServiceTracker,
-			wantContains: "decode response:",
-		},
-		{
-			name:         "read response body error",
-			err:          errors.New("read response body: unexpected EOF"),
-			serviceName:  domain.ServiceWiki,
-			wantContains: "read response body:",
-		},
-		{
-			name:         "parse base URL error",
-			err:          errors.New("parse base URL: invalid URL"),
-			serviceName:  domain.ServiceTracker,
-			wantContains: "parse base URL:",
-		},
-		{
-			name:         "create request error",
-			err:          errors.New("create request: invalid method"),
-			serviceName:  domain.ServiceWiki,
-			wantContains: "create request:",
-		},
-		{
-			name:         "marshal request body error",
-			err:          errors.New("marshal request body: unsupported type"),
-			serviceName:  domain.ServiceTracker,
-			wantContains: "marshal request body:",
-		},
-		{
-			name:         "execute request error",
-			err:          errors.New("execute request: connection refused"),
-			serviceName:  domain.ServiceTracker,
-			wantContains: "execute request:",
-		},
-		{
-			name:         "get token error",
-			err:          errors.New("get token: token expired"),
-			serviceName:  domain.ServiceTracker,
-			wantContains: "get token:",
-		},
-		{
-			name:         "unknown error",
-			err:          errors.New("something went wrong"),
-			serviceName:  domain.ServiceTracker,
-			wantContains: "internal error",
-		},
-	}
+	originalErr := errors.New("connection failed: Authorization header: Bearer secret-token-123")
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			result := ToSafeError(t.Context(), tt.serviceName, tt.err)
-			assert.Contains(t, result.Error(), tt.wantContains)
-		})
-	}
+	result := WrapError(t.Context(), domain.ServiceTracker, originalErr)
+
+	require.EqualError(t, result, "tracker: "+originalErr.Error())
+	require.ErrorIs(t, result, originalErr)
 }
 
-func TestToSafeError_WithNilError(t *testing.T) {
+func TestWrapError_WithNilError(t *testing.T) {
 	t.Parallel()
 
-	result := ToSafeError(t.Context(), "test-service", nil)
-	assert.NoError(t, result, "ToSafeError should return nil when given nil error")
+	result := WrapError(t.Context(), "test-service", nil)
+
+	require.NoError(t, result)
 }

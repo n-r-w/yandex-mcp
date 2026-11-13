@@ -3,57 +3,18 @@ package helpers
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/n-r-w/yandex-mcp/internal/domain"
 )
 
-// ToSafeError converts errors to safe tool errors that do not leak sensitive information.
-func ToSafeError(ctx context.Context, serviceName domain.Service, err error) (errOut error) {
+// WrapError adds the service name while preserving the original error.
+func WrapError(ctx context.Context, serviceName domain.Service, err error) error {
 	if err == nil {
 		return nil
 	}
 
-	if _, ok := errors.AsType[domain.AuthenticationError](err); ok {
-		return domain.LogError(ctx, string(serviceName), err)
-	}
-
-	if upstreamErr, ok := errors.AsType[domain.UpstreamError](err); ok {
-		return fmt.Errorf("%s %s: %s (HTTP %d)",
-			upstreamErr.Service,
-			upstreamErr.Operation,
-			upstreamErr.Message,
-			upstreamErr.HTTPStatus,
-		)
-	}
-
-	errMsg := err.Error()
-	lowerMsg := strings.ToLower(errMsg)
-
-	if isSafeError(lowerMsg) {
-		return fmt.Errorf("%s: %s", serviceName, errMsg)
-	}
-
 	_ = domain.LogError(ctx, string(serviceName), err)
 
-	return fmt.Errorf("%s: internal error", serviceName)
-}
-
-// isSafeError checks if the error message matches known safe patterns.
-func isSafeError(lowerMsg string) bool {
-	for _, prefix := range safePrefixes {
-		if strings.HasPrefix(lowerMsg, prefix) {
-			return true
-		}
-	}
-
-	for _, substr := range safeContains {
-		if strings.Contains(lowerMsg, substr) {
-			return true
-		}
-	}
-
-	return false
+	return fmt.Errorf("%s: %w", serviceName, err)
 }

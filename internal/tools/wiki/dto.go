@@ -6,7 +6,7 @@ package wiki
 // getPageBySlugInputDTO is the input for wiki_page_get tool.
 type getPageBySlugInputDTO struct {
 	Slug            string   `json:"slug"                        jsonschema:"Page slug (URL path). Required"`
-	Fields          []string `json:"fields,omitempty"            jsonschema:"Additional fields to include in the response. Allowed values: attributes, breadcrumbs, content, redirect"`
+	Fields          []string `json:"fields,omitempty"            jsonschema:"Additional fields to include in the response. Allowed values: attributes, breadcrumbs, content, redirect. Request only fields that task needs"`
 	RevisionID      string   `json:"revision_id,omitempty"       jsonschema:"Fetch specific page revision by ID (string)"`
 	RaiseOnRedirect bool     `json:"raise_on_redirect,omitempty" jsonschema:"Return error if page redirects instead of following redirect"`
 }
@@ -14,7 +14,7 @@ type getPageBySlugInputDTO struct {
 // getPageByIDInputDTO is the input for wiki_page_get_by_id tool.
 type getPageByIDInputDTO struct {
 	PageID          string   `json:"page_id"                     jsonschema:"Page ID (string). Required"`
-	Fields          []string `json:"fields,omitempty"            jsonschema:"Additional fields to include in the response. Allowed values: attributes, breadcrumbs, content, redirect"`
+	Fields          []string `json:"fields,omitempty"            jsonschema:"Additional fields to include in the response. Allowed values: attributes, breadcrumbs, content, redirect. Request only fields that task needs"`
 	RevisionID      string   `json:"revision_id,omitempty"       jsonschema:"Fetch specific page revision by ID (string)"`
 	RaiseOnRedirect bool     `json:"raise_on_redirect,omitempty" jsonschema:"Return error if page redirects instead of following redirect"`
 }

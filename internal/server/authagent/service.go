@@ -2,29 +2,33 @@
 package authagent
 
 import (
+	"cmp"
 	"context"
 	"encoding/json/v2"
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/n-r-w/yandex-mcp/internal/adapters/authwait"
+	"github.com/n-r-w/yandex-mcp/internal/config"
 )
 
 // Service shares active acquisitions between remote MCP processes.
 type Service struct {
-	source       ITokenSource
+	sources      map[string]ITokenSource
 	acquisitions authwait.Group
 }
 
 var _ http.Handler = (*Service)(nil)
 
-// New constructs the workstation token handler.
-func New(source ITokenSource) *Service {
+// New constructs the workstation token handler with one source per supported token type.
+func New(iam, oauth ITokenSource) *Service {
 	//nolint:exhaustruct_v5 // acquisitions start empty
-	return &Service{source: source}
+	return &Service{sources: map[string]ITokenSource{config.TokenTypeIAM: iam, config.TokenTypeOAuth: oauth}}
 }
 
-// ServeHTTP waits for the requested profile's token or request cancellation.
+// ServeHTTP waits for the token of the requested type and profile or for request cancellation.
+// The requested type selects the only source that may answer: there is no fallback.
 func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/token" {
 		http.NotFound(w, r)
@@ -49,14 +53,22 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.respond(w, http.StatusBadRequest, "", err.Error())
 		return
 	}
+	// Released MCP versions send no token type and ask for an IAM token.
+	tokenType := cmp.Or(input.TokenType, config.TokenTypeIAM)
+	source, supported := s.sources[tokenType]
+	if !supported {
+		s.respond(w, http.StatusBadRequest, "", "unsupported token_type "+strconv.Quote(tokenType))
+		return
+	}
 	if input.Profile == "" {
 		s.respond(w, http.StatusBadRequest, "", "profile is required")
 		return
 	}
+	// Equal profile names of different token types identify different tokens.
 	token, err := s.acquisitions.Do(
 		r.Context(),
-		input.Profile,
-		func(ctx context.Context) (string, error) { return s.source.Acquire(ctx, input.Profile) },
+		tokenType+":"+input.Profile,
+		func(ctx context.Context) (string, error) { return source.Acquire(ctx, input.Profile) },
 	)
 	if r.Context().Err() != nil {
 		return

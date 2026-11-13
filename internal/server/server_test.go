@@ -99,6 +99,9 @@ func TestServer_ToolsRegistered(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = session.Close() })
 
+	// Tool descriptions carry usage rules, because subagents of some clients do not receive server instructions.
+	assert.Empty(t, session.InitializeResult().Instructions)
+
 	// List tools.
 	toolNames := make([]string, 0, 11)
 	for tool, err := range session.Tools(ctx, nil) {

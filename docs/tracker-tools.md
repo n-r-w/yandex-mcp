@@ -344,7 +344,7 @@ Notes:
 - The extension is validated using the `save_path` file name.
 - `file_name` and `save_path` must not contain leading or trailing whitespace.
 - The allowlist can be replaced via `YANDEX_MCP_ATTACH_EXT` (comma-separated, without dots).
-- By default, `save_path` must be inside the user home directory, must not point to the home root, and must not be within a hidden top-level home subdirectory (for example, `~/.ssh`).
+- By default, `save_path` must be inside the system temporary directory (`os.TempDir()`, for example `/tmp`), or inside the user home directory. In the home directory, `save_path` must not point to the home root and must not be within a hidden top-level home subdirectory (for example, `~/.ssh`).
 - The directory restriction can be fully replaced via `YANDEX_MCP_ATTACH_DIR` (comma-separated absolute paths). When it is set, only the provided directories (and their subdirectories) are allowed.
 - When `save_path` is used, the attachment is streamed to disk and not fully loaded into memory.
 - When `get_content` is used, the file extension is validated against the text allowlist. By default: txt, json, jsonc, yaml, yml, md, csv, tsv, rtf.

@@ -71,7 +71,7 @@ func (r *Registrator) saveAttachment(
 ) (*attachmentContentOutputDTO, error) {
 	stream, err := r.adapter.GetIssueAttachmentStream(ctx, input.IssueID, input.AttachmentID, input.FileName)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+		return nil, helpers.WrapError(ctx, domain.ServiceTracker, err)
 	}
 
 	return r.saveAttachmentStreamOutput(ctx, fullPath, savedPath, input.Override, stream)
@@ -86,7 +86,7 @@ func (r *Registrator) saveGlobalAttachment(
 ) (*attachmentContentOutputDTO, error) {
 	stream, err := r.adapter.GetAttachmentStream(ctx, input.AttachmentID, input.FileName)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+		return nil, helpers.WrapError(ctx, domain.ServiceTracker, err)
 	}
 
 	return r.saveAttachmentStreamOutput(ctx, fullPath, savedPath, input.Override, stream)
@@ -130,7 +130,7 @@ func (r *Registrator) loadAttachmentContent(
 ) (*attachmentContentOutputDTO, error) {
 	content, err := r.adapter.GetIssueAttachment(ctx, input.IssueID, input.AttachmentID, input.FileName)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+		return nil, helpers.WrapError(ctx, domain.ServiceTracker, err)
 	}
 
 	inlineContent := ""
@@ -149,7 +149,7 @@ func (r *Registrator) loadGlobalAttachmentContent(
 ) (*attachmentContentOutputDTO, error) {
 	content, err := r.adapter.GetAttachment(ctx, input.AttachmentID, input.FileName)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+		return nil, helpers.WrapError(ctx, domain.ServiceTracker, err)
 	}
 
 	inlineContent := ""
@@ -248,7 +248,7 @@ func (r *Registrator) getIssue(ctx context.Context, input getIssueInputDTO) (*is
 
 	issue, err := r.adapter.GetIssue(ctx, input.IssueID, opts)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+		return nil, helpers.WrapError(ctx, domain.ServiceTracker, err)
 	}
 
 	return mapIssueToOutput(issue), nil
@@ -294,7 +294,7 @@ func (r *Registrator) searchIssues(ctx context.Context, input searchIssuesInputD
 
 	result, err := r.adapter.SearchIssues(ctx, opts)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+		return nil, helpers.WrapError(ctx, domain.ServiceTracker, err)
 	}
 
 	return mapSearchResultToOutput(result), nil
@@ -332,7 +332,7 @@ func (r *Registrator) getEntity(ctx context.Context, input getEntityInputDTO) (*
 		Expand: input.Expand,
 	})
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+		return nil, helpers.WrapError(ctx, domain.ServiceTracker, err)
 	}
 
 	return mapEntityToOutput(entity), nil
@@ -381,7 +381,7 @@ func (r *Registrator) searchEntities(
 		Page:     input.Page,
 	})
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+		return nil, helpers.WrapError(ctx, domain.ServiceTracker, err)
 	}
 
 	return mapEntitiesPageToOutput(result), nil
@@ -398,7 +398,7 @@ func (r *Registrator) countIssues(ctx context.Context, input countIssuesInputDTO
 
 	count, err := r.adapter.CountIssues(ctx, opts)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+		return nil, helpers.WrapError(ctx, domain.ServiceTracker, err)
 	}
 
 	return &countIssuesOutputDTO{Count: count}, nil
@@ -416,7 +416,7 @@ func (r *Registrator) listTransitions(
 
 	transitions, err := r.adapter.ListIssueTransitions(ctx, input.IssueID)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+		return nil, helpers.WrapError(ctx, domain.ServiceTracker, err)
 	}
 
 	return mapTransitionsToOutput(transitions), nil
@@ -456,7 +456,7 @@ func (r *Registrator) listQueues(ctx context.Context, input listQueuesInputDTO) 
 
 	result, err := r.adapter.ListQueues(ctx, opts)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+		return nil, helpers.WrapError(ctx, domain.ServiceTracker, err)
 	}
 
 	return mapQueuesResultToOutput(result), nil
@@ -466,7 +466,7 @@ func (r *Registrator) listQueues(ctx context.Context, input listQueuesInputDTO) 
 func (r *Registrator) listBoards(ctx context.Context, _ listBoardsInputDTO) (*boardsListOutputDTO, error) {
 	boards, err := r.adapter.ListBoards(ctx)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+		return nil, helpers.WrapError(ctx, domain.ServiceTracker, err)
 	}
 
 	return mapBoardsToOutput(boards), nil
@@ -485,7 +485,7 @@ func (r *Registrator) listBoardSprints(
 
 	sprints, err := r.adapter.ListBoardSprints(ctx, input.BoardID)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+		return nil, helpers.WrapError(ctx, domain.ServiceTracker, err)
 	}
 
 	return mapSprintsToOutput(sprints), nil
@@ -514,7 +514,7 @@ func (r *Registrator) listComments(ctx context.Context, input listCommentsInputD
 
 	result, err := r.adapter.ListIssueComments(ctx, input.IssueID, opts)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+		return nil, helpers.WrapError(ctx, domain.ServiceTracker, err)
 	}
 
 	return mapCommentsResultToOutput(result), nil
@@ -532,7 +532,7 @@ func (r *Registrator) listAttachments(
 
 	attachments, err := r.adapter.ListIssueAttachments(ctx, input.IssueID)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+		return nil, helpers.WrapError(ctx, domain.ServiceTracker, err)
 	}
 
 	return mapAttachmentsToOutput(attachments), nil
@@ -608,7 +608,7 @@ func (r *Registrator) getAttachmentPreview(
 	}
 	stream, err := r.adapter.GetIssueAttachmentPreviewStream(ctx, input.IssueID, input.AttachmentID)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+		return nil, helpers.WrapError(ctx, domain.ServiceTracker, err)
 	}
 
 	return r.saveAttachmentStreamOutput(ctx, fullPath, savedPath, input.Override, stream)
@@ -701,11 +701,15 @@ func formatAllowedDirs(allowedDirs []string) string {
 	return strings.Join(normalized, ", ")
 }
 
-func formatHomeAllowedPaths(homeDir string) string {
+func formatDefaultAllowedPaths(homeDir string) string {
+	tempDir := filepath.Clean(os.TempDir())
 	if homeDir == "" {
-		return "within the home directory (excluding home root and hidden top-level directories)"
+		return "within the home directory (excluding home root and hidden top-level directories), or within " + tempDir
 	}
-	return fmt.Sprintf("within %s (excluding %s and hidden top-level directories)", homeDir, homeDir)
+	return fmt.Sprintf(
+		"within %s (excluding %s and hidden top-level directories), or within %s",
+		homeDir, homeDir, tempDir,
+	)
 }
 
 func (r *Registrator) allowedPathsSummary() string {
@@ -714,10 +718,10 @@ func (r *Registrator) allowedPathsSummary() string {
 	}
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return formatHomeAllowedPaths("")
+		return formatDefaultAllowedPaths("")
 	}
 	homeDir = filepath.Clean(homeDir)
-	return formatHomeAllowedPaths(homeDir)
+	return formatDefaultAllowedPaths(homeDir)
 }
 
 // prepareSavePath validates the destination path and checks overwrite rules.
@@ -796,6 +800,14 @@ func (r *Registrator) validateAttachmentDirectory(ctx context.Context, cleanPath
 		return r.validateWithinAllowedDirs(ctx, cleanPath, resolvedPath)
 	}
 
+	withinTempDir, err := isWithinTempDir(resolvedPath)
+	if err != nil {
+		return r.logError(ctx, fmt.Errorf("resolve temporary directory: %w", err))
+	}
+	if withinTempDir {
+		return nil
+	}
+
 	return r.validateWithinHomeDir(ctx, resolvedPath)
 }
 
@@ -828,7 +840,7 @@ func (r *Registrator) validateWithinHomeDir(ctx context.Context, resolvedPath st
 		return r.logError(ctx, fmt.Errorf("resolve home directory: %w", err))
 	}
 	homeDir = filepath.Clean(homeDir)
-	allowedPaths := formatHomeAllowedPaths(homeDir)
+	allowedPaths := formatDefaultAllowedPaths(homeDir)
 	resolvedHomeDir, err := resolvePathForContainment(homeDir)
 	if err != nil {
 		return r.logError(ctx, fmt.Errorf("resolve home directory: %w", err))
@@ -970,6 +982,18 @@ func buildResolvedPath(existingPath, absPath string) (string, error) {
 	return filepath.Join(resolvedCurrent, rel), nil
 }
 
+// isWithinTempDir reports whether resolved save path is inside system temporary directory.
+func isWithinTempDir(resolvedPath string) (bool, error) {
+	resolvedTempDir, err := resolvePathForContainment(os.TempDir())
+	if err != nil {
+		return false, err
+	}
+	if resolvedPath == resolvedTempDir {
+		return false, nil
+	}
+	return isWithinResolvedRoot(resolvedPath, resolvedTempDir)
+}
+
 // isWithinResolvedRoot checks if resolvedPath is inside resolvedRoot.
 func isWithinResolvedRoot(resolvedPath, resolvedRoot string) (bool, error) {
 	cleanPath := filepath.Clean(resolvedPath)
@@ -1050,7 +1074,7 @@ func (r *Registrator) getQueue(ctx context.Context, input getQueueInputDTO) (*qu
 
 	queue, err := r.adapter.GetQueue(ctx, input.QueueID, opts)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+		return nil, helpers.WrapError(ctx, domain.ServiceTracker, err)
 	}
 
 	return mapQueueDetailToOutput(queue), nil
@@ -1060,7 +1084,7 @@ func (r *Registrator) getQueue(ctx context.Context, input getQueueInputDTO) (*qu
 func (r *Registrator) getCurrentUser(ctx context.Context, _ getCurrentUserInputDTO) (*userDetailOutputDTO, error) {
 	user, err := r.adapter.GetCurrentUser(ctx)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+		return nil, helpers.WrapError(ctx, domain.ServiceTracker, err)
 	}
 
 	return mapUserDetailToOutput(user), nil
@@ -1082,7 +1106,7 @@ func (r *Registrator) listUsers(ctx context.Context, input listUsersInputDTO) (*
 
 	result, err := r.adapter.ListUsers(ctx, opts)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+		return nil, helpers.WrapError(ctx, domain.ServiceTracker, err)
 	}
 
 	return mapUsersPageToOutput(result), nil
@@ -1098,7 +1122,7 @@ func (r *Registrator) getUser(ctx context.Context, input getUserInputDTO) (*user
 
 	user, err := r.adapter.GetUser(ctx, input.UserID)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+		return nil, helpers.WrapError(ctx, domain.ServiceTracker, err)
 	}
 
 	return mapUserDetailToOutput(user), nil
@@ -1114,7 +1138,7 @@ func (r *Registrator) listLinks(ctx context.Context, input listLinksInputDTO) (*
 
 	links, err := r.adapter.ListIssueLinks(ctx, input.IssueID)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+		return nil, helpers.WrapError(ctx, domain.ServiceTracker, err)
 	}
 
 	return mapLinksToOutput(links), nil
@@ -1137,7 +1161,7 @@ func (r *Registrator) getChangelog(ctx context.Context, input getChangelogInputD
 
 	entries, err := r.adapter.GetIssueChangelog(ctx, input.IssueID, opts)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+		return nil, helpers.WrapError(ctx, domain.ServiceTracker, err)
 	}
 
 	return mapChangelogToOutput(entries), nil
@@ -1171,7 +1195,7 @@ func (r *Registrator) listProjectComments(
 
 	comments, err := r.adapter.ListProjectComments(ctx, input.ProjectID, opts)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, domain.ServiceTracker, err)
+		return nil, helpers.WrapError(ctx, domain.ServiceTracker, err)
 	}
 
 	return mapProjectCommentsToOutput(comments), nil

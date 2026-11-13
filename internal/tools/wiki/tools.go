@@ -35,7 +35,7 @@ func (r *Registrator) getPageBySlug(ctx context.Context, input getPageBySlugInpu
 
 	page, err := r.adapter.GetPageBySlug(ctx, slug, opts)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, domain.ServiceWiki, err)
+		return nil, helpers.WrapError(ctx, domain.ServiceWiki, err)
 	}
 
 	return mapPageToOutput(page), nil
@@ -50,7 +50,7 @@ func (r *Registrator) getPageByID(ctx context.Context, input getPageByIDInputDTO
 
 	page, err := r.adapter.GetPageByID(ctx, pageID, opts)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, domain.ServiceWiki, err)
+		return nil, helpers.WrapError(ctx, domain.ServiceWiki, err)
 	}
 
 	return mapPageToOutput(page), nil
@@ -90,7 +90,7 @@ func (r *Registrator) listResources(ctx context.Context, input listResourcesInpu
 
 	result, err := r.adapter.ListPageResources(ctx, input.PageID, opts)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, domain.ServiceWiki, err)
+		return nil, helpers.WrapError(ctx, domain.ServiceWiki, err)
 	}
 
 	return mapResourcesPageToOutput(result), nil
@@ -121,7 +121,7 @@ func (r *Registrator) listGrids(ctx context.Context, input listGridsInputDTO) (*
 
 	result, err := r.adapter.ListPageGrids(ctx, input.PageID, opts)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, domain.ServiceWiki, err)
+		return nil, helpers.WrapError(ctx, domain.ServiceWiki, err)
 	}
 
 	return mapGridsPageToOutput(result), nil
@@ -159,7 +159,7 @@ func (r *Registrator) listDescendants(
 
 	result, err := r.adapter.ListDescendantsBySlug(ctx, input.Slug, opts)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, domain.ServiceWiki, err)
+		return nil, helpers.WrapError(ctx, domain.ServiceWiki, err)
 	}
 
 	return mapDescendantsPageToOutput(result), nil
@@ -182,7 +182,7 @@ func (r *Registrator) listDescendantsByID(
 
 	result, err := r.adapter.ListDescendantsByID(ctx, input.PageID, opts)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, domain.ServiceWiki, err)
+		return nil, helpers.WrapError(ctx, domain.ServiceWiki, err)
 	}
 
 	return mapDescendantsPageToOutput(result), nil
@@ -215,7 +215,7 @@ func (r *Registrator) getGrid(ctx context.Context, input getGridInputDTO) (*grid
 
 	grid, err := r.adapter.GetGridByID(ctx, input.GridID, opts)
 	if err != nil {
-		return nil, helpers.ToSafeError(ctx, domain.ServiceWiki, err)
+		return nil, helpers.WrapError(ctx, domain.ServiceWiki, err)
 	}
 
 	return mapGridToOutput(grid), nil

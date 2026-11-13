@@ -63,8 +63,9 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 		r.enabledTools[domain.TrackerToolIssueGet],
 		srv,
 		&mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
-			Name:        domain.TrackerToolIssueGet.String(),
-			Description: "Retrieves a Yandex Tracker issue by its ID or key",
+			Name: domain.TrackerToolIssueGet.String(),
+			Description: "Retrieves a Yandex Tracker issue by its ID or key. " +
+				"Load each page of tracker.yandex.* with this tool: https://tracker.yandex.ru/CP-269 -> issue_id_or_key CP-269",
 		},
 		r.getIssue,
 	)
