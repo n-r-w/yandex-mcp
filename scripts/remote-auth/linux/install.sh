@@ -12,7 +12,7 @@ binary=$(command -v "${YANDEX_MCP_BINARY:-yandex-mcp}") || { echo 'yandex-mcp no
 # Positional parameters hold the executables that must exist before installation.
 set -- "$binary"
 if [ -n "${YANDEX_MCP_AUTH_AGENT_YC_PATH:-}" ] || command -v yc >/dev/null; then
-  yc_path=$(command -v "${YANDEX_MCP_AUTH_AGENT_YC_PATH:-yc}") || { echo 'yc not found; set YANDEX_MCP_AUTH_AGENT_YC_PATH' >&2; exit 1; }
+  yc_path=$(command -v "${YANDEX_MCP_AUTH_AGENT_YC_PATH:-yc}") || { echo "YANDEX_MCP_AUTH_AGENT_YC_PATH does not name an executable: $YANDEX_MCP_AUTH_AGENT_YC_PATH" >&2; exit 1; }
   set -- "$@" "$yc_path"
 else
   # Auth-agent looks up yc through the saved PATH at each IAM request.

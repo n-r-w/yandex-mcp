@@ -139,6 +139,7 @@ esac
     def test_missing_explicit_yc_fails(self):
         result, calls, _ = self.run_install(yc_path="/nonexistent/yc")
         self.assertNotEqual(result.returncode, 0)
+        self.assertIn("YANDEX_MCP_AUTH_AGENT_YC_PATH does not name an executable: /nonexistent/yc", result.stderr)
         self.assertEqual(calls, [])
 
     def test_absolute_oauth_dir_is_stored(self):
