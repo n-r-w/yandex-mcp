@@ -62,6 +62,46 @@ func TestClient_HeaderInjection(t *testing.T) {
 	assert.Contains(t, capturedHeaders.Get(apihelpers.HeaderContentType), "application/json")
 }
 
+// TestClient_HeaderInjection_OAuth verifies OAuth token and Yandex 360 organization headers.
+func TestClient_HeaderInjection_OAuth(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	tokenProvider := apihelpers.NewMockITokenProvider(ctrl)
+
+	const (
+		testToken = "test-oauth-token"
+		testOrgID = "1234567"
+	)
+
+	var capturedHeaders http.Header
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedHeaders = r.Header.Clone()
+		w.Header().Set("Content-Type", "application/json")
+		//nolint:errcheck,exhaustruct // test helper
+		json.MarshalWrite(w, pageDTO{ID: "1", Title: "Test"})
+	}))
+	t.Cleanup(func() {
+		server.Close()
+	})
+
+	tokenProvider.EXPECT().Token(gomock.Any(), gomock.Any()).Return(testToken, nil)
+
+	cfg := &config.Config{
+		WikiBaseURL:          server.URL,
+		OrgID:                testOrgID,
+		TokenSource:          config.TokenSourceOAuth,
+		AttachInlineMaxBytes: testAttachInlineMaxBytes,
+	}
+
+	_, err := NewClient(cfg, tokenProvider).GetPageBySlug(t.Context(), "test/page", domain.WikiGetPageOpts{})
+	require.NoError(t, err)
+
+	assert.Equal(t, "OAuth "+testToken, capturedHeaders.Get(apihelpers.HeaderAuthorization))
+	assert.Equal(t, testOrgID, capturedHeaders.Get("X-Org-Id"))
+	assert.Empty(t, capturedHeaders.Get(apihelpers.HeaderCloudOrgID))
+}
+
 func TestClient_Non2xx_ReturnsUpstreamError_Sanitized(t *testing.T) {
 	t.Parallel()
 
