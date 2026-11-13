@@ -37,7 +37,7 @@ The local OAuth source reads `YANDEX_OAUTH_TOKEN_FILE` at each acquisition, so a
 ### S4. OAuth profiles on the workstation (FRQ.04)
 
 - An OAuth profile is a file in the OAuth directory whose name is the profile name. The default OAuth directory is `<user config dir>/yandex-mcp/oauth`, where Go `os.UserConfigDir` gives the user config dir; `YANDEX_MCP_AUTH_AGENT_OAUTH_DIR` replaces it with an absolute path.
-- A profile name starts with a letter or digit and contains only letters, digits, `.`, `_`, and `-`, so a request cannot read a file outside the OAuth directory. Auth-agent reports a profile without a file as an unknown OAuth profile.
+- A profile name starts with a letter or digit and contains only letters, digits, `.`, `_`, and `-`, so a profile name in a request cannot address a file outside the OAuth directory. Auth-agent follows a symbolic link that the workstation user places in the OAuth directory, so the user can keep a token file elsewhere. Auth-agent reports a profile without a file as an unknown OAuth profile.
 - One auth-agent serves any number of OAuth profiles; yc profiles stay in `yc` and are not duplicated in auth-agent configuration.
 
 ### S5. Strict source selection (FRQ.05)
@@ -93,7 +93,8 @@ README describes the token type choice, the four combinations, local OAuth, remo
 ## Overengineering and Overspecification Considerations
 
 - S7 default token type: NRQ.01 requires mixed-version IAM acquisition, and the released auth-agent rejects unknown request members.
-- S4 profile name restriction: profile names come from MCP requests over the tunnel, and the restriction keeps a request inside the OAuth directory.
+- S4 profile name restriction: profile names come from MCP requests over the tunnel, and the restriction keeps a profile name inside the OAuth directory. Symbolic links stay allowed, because only the trusted workstation user creates them.
+- Token files are read as regular files. A special file, for example a FIFO whose writer stays open, blocks the acquisition of its profile and the shutdown of auth-agent; no component creates such files, so the sources do not guard against them.
 - S8 validation of an explicit `yc` path and a relative OAuth directory: both come from user input at installation, and auth-agent would otherwise fail at each startup.
 - The installers compute no default OAuth directory; S8 names the cost.
 - Left to the implementer: error texts, the structure of tests, and the way each installer writes an empty value to its startup configuration.
