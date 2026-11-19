@@ -4,9 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
-	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 
@@ -56,7 +53,7 @@ func (r *Registrator) validateAttachmentDownloadInput(
 		return errors.New("save_path and get_content cannot be used together")
 	}
 	if getContent {
-		return r.validateAttachmentViewExtension(fileName)
+		return r.delivery.ValidateViewExtension(fileName, "file_name")
 	}
 
 	return nil
@@ -67,14 +64,13 @@ func (r *Registrator) saveAttachment(
 	ctx context.Context,
 	input getAttachmentInputDTO,
 	fullPath string,
-	savedPath string,
 ) (*attachmentContentOutputDTO, error) {
 	stream, err := r.adapter.GetIssueAttachmentStream(ctx, input.IssueID, input.AttachmentID, input.FileName)
 	if err != nil {
 		return nil, helpers.WrapError(ctx, domain.ServiceTracker, err)
 	}
 
-	return r.saveAttachmentStreamOutput(ctx, fullPath, savedPath, input.Override, stream)
+	return r.saveAttachmentStreamOutput(ctx, fullPath, input.Override, stream)
 }
 
 // saveGlobalAttachment streams a global attachment to disk after the destination path is prepared.
@@ -82,21 +78,19 @@ func (r *Registrator) saveGlobalAttachment(
 	ctx context.Context,
 	input getGlobalAttachmentInputDTO,
 	fullPath string,
-	savedPath string,
 ) (*attachmentContentOutputDTO, error) {
 	stream, err := r.adapter.GetAttachmentStream(ctx, input.AttachmentID, input.FileName)
 	if err != nil {
 		return nil, helpers.WrapError(ctx, domain.ServiceTracker, err)
 	}
 
-	return r.saveAttachmentStreamOutput(ctx, fullPath, savedPath, input.Override, stream)
+	return r.saveAttachmentStreamOutput(ctx, fullPath, input.Override, stream)
 }
 
 // saveAttachmentStreamOutput persists a fetched attachment stream and maps the saved-file response.
 func (r *Registrator) saveAttachmentStreamOutput(
 	ctx context.Context,
 	fullPath string,
-	savedPath string,
 	override bool,
 	stream *domain.TrackerAttachmentStream,
 ) (*attachmentContentOutputDTO, error) {
@@ -104,7 +98,7 @@ func (r *Registrator) saveAttachmentStreamOutput(
 		return nil, r.logError(ctx, errors.New("attachment stream is empty"))
 	}
 
-	bytesWritten, writeErr := r.writeAttachmentStream(fullPath, override, stream.Stream)
+	bytesWritten, writeErr := r.delivery.Write(fullPath, override, stream.Stream)
 	closeErr := stream.Stream.Close()
 	if writeErr != nil {
 		return nil, r.logError(ctx, writeErr)
@@ -116,7 +110,7 @@ func (r *Registrator) saveAttachmentStreamOutput(
 	return &attachmentContentOutputDTO{
 		FileName:    stream.FileName,
 		ContentType: stream.ContentType,
-		SavedPath:   savedPath,
+		SavedPath:   fullPath,
 		Content:     "",
 		Size:        bytesWritten,
 	}, nil
@@ -549,12 +543,12 @@ func (r *Registrator) getAttachment(
 	}
 
 	if strings.TrimSpace(input.SavePath) != "" {
-		fullPath, savedPath, err := r.prepareSavePath(ctx, input.SavePath, input.Override)
+		fullPath, err := r.delivery.PrepareSavePath(ctx, domain.ServiceTracker, input.SavePath, input.Override)
 		if err != nil {
 			return nil, err
 		}
 
-		return r.saveAttachment(ctx, input, fullPath, savedPath)
+		return r.saveAttachment(ctx, input, fullPath)
 	}
 
 	return r.loadAttachmentContent(ctx, input, "")
@@ -571,12 +565,12 @@ func (r *Registrator) getGlobalAttachment(
 	}
 
 	if strings.TrimSpace(input.SavePath) != "" {
-		fullPath, savedPath, err := r.prepareSavePath(ctx, input.SavePath, input.Override)
+		fullPath, err := r.delivery.PrepareSavePath(ctx, domain.ServiceTracker, input.SavePath, input.Override)
 		if err != nil {
 			return nil, err
 		}
 
-		return r.saveGlobalAttachment(ctx, input, fullPath, savedPath)
+		return r.saveGlobalAttachment(ctx, input, fullPath)
 	}
 
 	return r.loadGlobalAttachmentContent(ctx, input, "")
@@ -602,7 +596,7 @@ func (r *Registrator) getAttachmentPreview(
 		return nil, errors.New("save_path must not have leading or trailing whitespace")
 	}
 
-	fullPath, savedPath, err := r.prepareSavePath(ctx, input.SavePath, input.Override)
+	fullPath, err := r.delivery.PrepareSavePath(ctx, domain.ServiceTracker, input.SavePath, input.Override)
 	if err != nil {
 		return nil, err
 	}
@@ -611,438 +605,12 @@ func (r *Registrator) getAttachmentPreview(
 		return nil, helpers.WrapError(ctx, domain.ServiceTracker, err)
 	}
 
-	return r.saveAttachmentStreamOutput(ctx, fullPath, savedPath, input.Override, stream)
-}
-
-// resolveSavePath validates the absolute save path against attachment safety rules.
-func (r *Registrator) resolveSavePath(ctx context.Context, savePath string) (fullPath, savedPath string, err error) {
-	cleanPath := filepath.Clean(savePath)
-	if !filepath.IsAbs(cleanPath) {
-		return "", "", fmt.Errorf("save_path must be absolute; allowed paths: %s", r.allowedPathsSummary())
-	}
-	if cleanPath == "." || cleanPath == string(os.PathSeparator) {
-		return "", "", fmt.Errorf("save_path must point to a file; allowed paths: %s", r.allowedPathsSummary())
-	}
-	if validateErr := r.validateAttachmentExtension(cleanPath); validateErr != nil {
-		return "", "", validateErr
-	}
-	if validateErr := r.validateAttachmentDirectory(ctx, cleanPath); validateErr != nil {
-		return "", "", validateErr
-	}
-
-	return cleanPath, cleanPath, nil
-}
-
-// normalizeAllowedExtensions keeps extension rules consistent for safety checks.
-func normalizeAllowedExtensions(allowedExtensions []string) []string {
-	normalized := make([]string, 0, len(allowedExtensions))
-	for _, ext := range allowedExtensions {
-		trimmed := strings.TrimSpace(ext)
-		if trimmed == "" {
-			continue
-		}
-		trimmed = strings.ToLower(trimmed)
-		trimmed = strings.TrimPrefix(trimmed, ".")
-		if trimmed == "" {
-			continue
-		}
-		normalized = append(normalized, "."+trimmed)
-	}
-	return normalized
-}
-
-// normalizeAllowedDirs keeps allowlists comparable for path containment checks.
-func normalizeAllowedDirs(allowedDirs []string) []string {
-	normalized := make([]string, 0, len(allowedDirs))
-	for _, dir := range allowedDirs {
-		trimmed := strings.TrimSpace(dir)
-		if trimmed == "" {
-			continue
-		}
-		normalized = append(normalized, filepath.Clean(trimmed))
-	}
-	return normalized
-}
-
-func formatAllowedExtensions(allowedExtensions []string) string {
-	if len(allowedExtensions) == 0 {
-		return emptyAllowlistLabel
-	}
-	normalized := make([]string, 0, len(allowedExtensions))
-	for _, ext := range allowedExtensions {
-		trimmed := strings.TrimSpace(ext)
-		trimmed = strings.TrimPrefix(trimmed, ".")
-		if trimmed == "" {
-			continue
-		}
-		normalized = append(normalized, trimmed)
-	}
-	if len(normalized) == 0 {
-		return emptyAllowlistLabel
-	}
-	return strings.Join(normalized, ", ")
-}
-
-func formatAllowedDirs(allowedDirs []string) string {
-	if len(allowedDirs) == 0 {
-		return emptyAllowlistLabel
-	}
-	normalized := make([]string, 0, len(allowedDirs))
-	for _, dir := range allowedDirs {
-		trimmed := strings.TrimSpace(dir)
-		if trimmed == "" {
-			continue
-		}
-		normalized = append(normalized, trimmed)
-	}
-	if len(normalized) == 0 {
-		return emptyAllowlistLabel
-	}
-	return strings.Join(normalized, ", ")
-}
-
-func formatDefaultAllowedPaths(homeDir string) string {
-	tempDir := filepath.Clean(os.TempDir())
-	if homeDir == "" {
-		return "within the home directory (excluding home root and hidden top-level directories), or within " + tempDir
-	}
-	return fmt.Sprintf(
-		"within %s (excluding %s and hidden top-level directories), or within %s",
-		homeDir, homeDir, tempDir,
-	)
-}
-
-func (r *Registrator) allowedPathsSummary() string {
-	if len(r.allowedDirs) > 0 {
-		return formatAllowedDirs(r.allowedDirs)
-	}
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return formatDefaultAllowedPaths("")
-	}
-	homeDir = filepath.Clean(homeDir)
-	return formatDefaultAllowedPaths(homeDir)
-}
-
-// prepareSavePath validates the destination path and checks overwrite rules.
-func (r *Registrator) prepareSavePath(
-	ctx context.Context,
-	savePath string,
-	override bool,
-) (fullPath, savedPath string, err error) {
-	fullPath, savedPath, err = r.resolveSavePath(ctx, savePath)
-	if err != nil {
-		return "", "", err
-	}
-	if override {
-		return fullPath, savedPath, nil
-	}
-	if _, statErr := os.Stat(fullPath); statErr == nil {
-		return "", "", errors.New("save_path already exists")
-	} else if !os.IsNotExist(statErr) {
-		return "", "", r.logError(ctx, fmt.Errorf("check save_path: %w", statErr))
-	}
-
-	return fullPath, savedPath, nil
-}
-
-// validateAttachmentExtension blocks unsupported file types to reduce risk.
-func (r *Registrator) validateAttachmentExtension(cleanPath string) error {
-	allowedExtensions := formatAllowedExtensions(r.allowedExtensions)
-	if len(r.allowedExtensions) == 0 {
-		return fmt.Errorf("save_path extensions list is empty; allowed extensions: %s", allowedExtensions)
-	}
-	baseName := strings.ToLower(filepath.Base(cleanPath))
-	for _, ext := range r.allowedExtensions {
-		if strings.HasSuffix(baseName, ext) {
-			return nil
-		}
-	}
-	return fmt.Errorf(
-		"save_path extension %q is not allowed; allowed extensions: %s",
-		rejectedPathExtension(cleanPath),
-		allowedExtensions,
-	)
-}
-
-// rejectedPathExtension returns the suffix that failed extension allowlist validation.
-func rejectedPathExtension(path string) string {
-	ext := filepath.Ext(path)
-	if ext == "" {
-		return emptyAllowlistLabel
-	}
-	return strings.ToLower(ext)
-}
-
-// validateAttachmentViewExtension blocks unsupported file types for inline viewing.
-func (r *Registrator) validateAttachmentViewExtension(fileName string) error {
-	allowedExtensions := formatAllowedExtensions(r.allowedViewExts)
-	if len(r.allowedViewExts) == 0 {
-		return fmt.Errorf("get_content extensions list is empty; allowed extensions: %s", allowedExtensions)
-	}
-	baseName := strings.ToLower(filepath.Base(fileName))
-	for _, ext := range r.allowedViewExts {
-		if strings.HasSuffix(baseName, ext) {
-			return nil
-		}
-	}
-	return fmt.Errorf("file_name extension is not allowed for get_content; allowed extensions: %s", allowedExtensions)
-}
-
-// validateAttachmentDirectory enforces the write scope to prevent unintended writes.
-func (r *Registrator) validateAttachmentDirectory(ctx context.Context, cleanPath string) error {
-	resolvedPath, err := resolvePathForContainment(cleanPath)
-	if err != nil {
-		return r.logError(ctx, fmt.Errorf("resolve save_path: %w", err))
-	}
-
-	if len(r.allowedDirs) > 0 {
-		return r.validateWithinAllowedDirs(ctx, cleanPath, resolvedPath)
-	}
-
-	withinTempDir, err := isWithinTempDir(resolvedPath)
-	if err != nil {
-		return r.logError(ctx, fmt.Errorf("resolve temporary directory: %w", err))
-	}
-	if withinTempDir {
-		return nil
-	}
-
-	return r.validateWithinHomeDir(ctx, resolvedPath)
-}
-
-// validateWithinAllowedDirs enforces both direct and resolved path containment for explicit allowlists.
-func (r *Registrator) validateWithinAllowedDirs(ctx context.Context, cleanPath, resolvedPath string) error {
-	allowedDirs := formatAllowedDirs(r.allowedDirs)
-	withinAllowedDirs, err := isWithinAllowedDirs(cleanPath, r.allowedDirs)
-	if err != nil {
-		return r.logError(ctx, err)
-	}
-	if !withinAllowedDirs {
-		return fmt.Errorf("save_path must be within allowed directories: %s", allowedDirs)
-	}
-
-	withinResolvedAllowedDirs, err := isWithinResolvedAllowedDirs(resolvedPath, r.allowedDirs)
-	if err != nil {
-		return r.logError(ctx, err)
-	}
-	if !withinResolvedAllowedDirs {
-		return fmt.Errorf("save_path must be within allowed directories: %s", allowedDirs)
-	}
-
-	return nil
-}
-
-// validateWithinHomeDir enforces containment rules when the home directory fallback policy is active.
-func (r *Registrator) validateWithinHomeDir(ctx context.Context, resolvedPath string) error {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return r.logError(ctx, fmt.Errorf("resolve home directory: %w", err))
-	}
-	homeDir = filepath.Clean(homeDir)
-	allowedPaths := formatDefaultAllowedPaths(homeDir)
-	resolvedHomeDir, err := resolvePathForContainment(homeDir)
-	if err != nil {
-		return r.logError(ctx, fmt.Errorf("resolve home directory: %w", err))
-	}
-	if resolvedPath == resolvedHomeDir {
-		return fmt.Errorf("save_path must not be home directory; allowed paths: %s", allowedPaths)
-	}
-	withinResolvedRoot, err := isWithinResolvedRoot(resolvedPath, resolvedHomeDir)
-	if err != nil {
-		return r.logError(ctx, fmt.Errorf("resolve save_path: %w", err))
-	}
-	if !withinResolvedRoot {
-		return fmt.Errorf("save_path must be within home directory; allowed paths: %s", allowedPaths)
-	}
-
-	return r.validateHomeTopLevelDir(ctx, resolvedHomeDir, resolvedPath, allowedPaths)
-}
-
-// validateHomeTopLevelDir rejects writes into hidden top-level home subdirectories.
-func (r *Registrator) validateHomeTopLevelDir(
-	ctx context.Context,
-	resolvedHomeDir string,
-	resolvedPath string,
-	allowedPaths string,
-) error {
-	relativePath, err := filepath.Rel(resolvedHomeDir, resolvedPath)
-	if err != nil {
-		return r.logError(ctx, fmt.Errorf("resolve save_path: %w", err))
-	}
-
-	segments := strings.Split(relativePath, string(os.PathSeparator))
-	if len(segments) > 0 {
-		topLevelName := segments[0]
-		topLevelPath := filepath.Join(resolvedHomeDir, topLevelName)
-		hidden, hiddenErr := isHiddenTopLevelDir(topLevelName, topLevelPath)
-		if hiddenErr != nil {
-			return r.logError(ctx, fmt.Errorf("resolve save_path: %w", hiddenErr))
-		}
-		if hidden {
-			return fmt.Errorf(
-				"save_path must not be within hidden top-level home directory; allowed paths: %s",
-				allowedPaths,
-			)
-		}
-	}
-
-	return nil
+	return r.saveAttachmentStreamOutput(ctx, fullPath, input.Override, stream)
 }
 
 // logError ensures system errors are recorded with tracker context.
 func (r *Registrator) logError(ctx context.Context, err error) error {
 	return domain.LogError(ctx, string(domain.ServiceTracker), err)
-}
-
-// isWithinAllowedDirs prevents writes outside the explicit allowlist.
-func isWithinAllowedDirs(cleanPath string, allowedDirs []string) (bool, error) {
-	for _, dir := range allowedDirs {
-		if dir == "" {
-			continue
-		}
-		if !filepath.IsAbs(dir) {
-			return false, errors.New("allowed directories must be absolute")
-		}
-		if !strings.EqualFold(filepath.VolumeName(cleanPath), filepath.VolumeName(dir)) {
-			continue
-		}
-		relativePath, err := filepath.Rel(dir, cleanPath)
-		if err != nil {
-			return false, fmt.Errorf("resolve save_path: %w", err)
-		}
-		if relativePath == "." ||
-			relativePath == parentDirMarker ||
-			strings.HasPrefix(relativePath, parentDirMarker+string(os.PathSeparator)) {
-			continue
-		}
-		return true, nil
-	}
-	return false, nil
-}
-
-// isWithinResolvedAllowedDirs verifies containment after resolving symlinks.
-func isWithinResolvedAllowedDirs(resolvedPath string, allowedDirs []string) (bool, error) {
-	for _, dir := range allowedDirs {
-		if dir == "" {
-			continue
-		}
-		if !filepath.IsAbs(dir) {
-			return false, errors.New("allowed directories must be absolute")
-		}
-		resolvedDir, err := resolvePathForContainment(dir)
-		if err != nil {
-			return false, fmt.Errorf("resolve save_path: %w", err)
-		}
-		ok, err := isWithinResolvedRoot(resolvedPath, resolvedDir)
-		if err != nil {
-			return false, err
-		}
-		if ok {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-// resolvePathForContainment resolves symlinks for existing parents and rebuilds the full path.
-func resolvePathForContainment(path string) (string, error) {
-	absPath, err := filepath.Abs(path)
-	if err != nil {
-		return "", err
-	}
-	absPath = filepath.Clean(absPath)
-	current := absPath
-	for {
-		_, statErr := os.Lstat(current)
-		if statErr == nil {
-			return buildResolvedPath(current, absPath)
-		}
-		if !os.IsNotExist(statErr) {
-			return "", statErr
-		}
-		parent := filepath.Dir(current)
-		if parent == current {
-			return "", statErr
-		}
-		current = parent
-	}
-}
-
-// buildResolvedPath rebuilds the target path with symlinks resolved for an existing parent.
-func buildResolvedPath(existingPath, absPath string) (string, error) {
-	resolvedCurrent, err := filepath.EvalSymlinks(existingPath)
-	if err != nil {
-		return "", err
-	}
-	rel, err := filepath.Rel(existingPath, absPath)
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(resolvedCurrent, rel), nil
-}
-
-// isWithinTempDir reports whether resolved save path is inside system temporary directory.
-func isWithinTempDir(resolvedPath string) (bool, error) {
-	resolvedTempDir, err := resolvePathForContainment(os.TempDir())
-	if err != nil {
-		return false, err
-	}
-	if resolvedPath == resolvedTempDir {
-		return false, nil
-	}
-	return isWithinResolvedRoot(resolvedPath, resolvedTempDir)
-}
-
-// isWithinResolvedRoot checks if resolvedPath is inside resolvedRoot.
-func isWithinResolvedRoot(resolvedPath, resolvedRoot string) (bool, error) {
-	cleanPath := filepath.Clean(resolvedPath)
-	cleanRoot := filepath.Clean(resolvedRoot)
-	if !strings.EqualFold(filepath.VolumeName(cleanPath), filepath.VolumeName(cleanRoot)) {
-		return false, nil
-	}
-	rel, err := filepath.Rel(cleanRoot, cleanPath)
-	if err != nil {
-		return false, err
-	}
-	if rel == "." {
-		return true, nil
-	}
-	if rel == parentDirMarker || strings.HasPrefix(rel, parentDirMarker+string(os.PathSeparator)) {
-		return false, nil
-	}
-	return true, nil
-}
-
-// writeAttachmentStream writes streamed attachment data to disk.
-func (r *Registrator) writeAttachmentStream(fullPath string, override bool, reader io.Reader) (int64, error) {
-	if err := os.MkdirAll(filepath.Dir(fullPath), attachmentDirPerm); err != nil {
-		return 0, fmt.Errorf("create attachment directory: %w", err)
-	}
-
-	flags := os.O_WRONLY | os.O_CREATE
-	if override {
-		flags |= os.O_TRUNC
-	} else {
-		flags |= os.O_EXCL
-	}
-
-	//nolint:gosec // save_path is validated and constrained to allowed locations
-	file, err := os.OpenFile(fullPath, flags, attachmentFilePerm)
-	if err != nil {
-		return 0, fmt.Errorf("open save_path: %w", err)
-	}
-
-	bytesWritten, err := io.Copy(file, reader)
-	if err != nil {
-		_ = file.Close()
-		return 0, fmt.Errorf("write attachment: %w", err)
-	}
-	if closeErr := file.Close(); closeErr != nil {
-		return 0, fmt.Errorf("close attachment: %w", closeErr)
-	}
-
-	return bytesWritten, nil
 }
 
 // getQueue gets a queue by ID or key.

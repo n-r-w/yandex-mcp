@@ -19,7 +19,7 @@ func newWikiToolsTestSetup(t *testing.T) (*Registrator, *MockIWikiAdapter) {
 
 	ctrl := gomock.NewController(t)
 	mockAdapter := NewMockIWikiAdapter(ctrl)
-	reg := NewRegistrator(mockAdapter, domain.WikiAllTools())
+	reg := NewRegistrator(mockAdapter, domain.WikiAllTools(), nil, 1)
 
 	return reg, mockAdapter
 }

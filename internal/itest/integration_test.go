@@ -11,6 +11,7 @@ import (
 
 	"github.com/n-r-w/yandex-mcp/internal/domain"
 	"github.com/n-r-w/yandex-mcp/internal/server"
+	"github.com/n-r-w/yandex-mcp/internal/tools/attachments"
 	trackertools "github.com/n-r-w/yandex-mcp/internal/tools/tracker"
 	wikitools "github.com/n-r-w/yandex-mcp/internal/tools/wiki"
 )
@@ -60,13 +61,11 @@ func TestServerIntegration_ReadOnlyToolsRegistered(t *testing.T) {
 	trackerMock := trackertools.NewMockITrackerAdapter(ctrl)
 
 	registrators := []server.IToolsRegistrator{
-		wikitools.NewRegistrator(wikiMock, domain.WikiAllTools()),
+		wikitools.NewRegistrator(wikiMock, domain.WikiAllTools(), nil, 1),
 		trackertools.NewRegistrator(
 			trackerMock,
 			domain.TrackerAllTools(),
-			defaultAttachExtensions,
-			defaultAttachViewExts,
-			defaultAttachDirs,
+			attachments.New(defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs),
 		),
 	}
 
@@ -97,13 +96,11 @@ func TestServerIntegration_AllowlistGating_ReducedList(t *testing.T) {
 	trackerTools := []domain.TrackerTool{domain.TrackerToolIssueGet}
 
 	registrators := []server.IToolsRegistrator{
-		wikitools.NewRegistrator(wikiMock, wikiTools),
+		wikitools.NewRegistrator(wikiMock, wikiTools, nil, 1),
 		trackertools.NewRegistrator(
 			trackerMock,
 			trackerTools,
-			defaultAttachExtensions,
-			defaultAttachViewExts,
-			defaultAttachDirs,
+			attachments.New(defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs),
 		),
 	}
 
@@ -129,13 +126,11 @@ func TestServerIntegration_EmptyAllowlist_NoToolsRegistered(t *testing.T) {
 	trackerMock := trackertools.NewMockITrackerAdapter(ctrl)
 
 	registrators := []server.IToolsRegistrator{
-		wikitools.NewRegistrator(wikiMock, nil),
+		wikitools.NewRegistrator(wikiMock, nil, nil, 1),
 		trackertools.NewRegistrator(
 			trackerMock,
 			nil,
-			defaultAttachExtensions,
-			defaultAttachViewExts,
-			defaultAttachDirs,
+			attachments.New(defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs),
 		),
 	}
 

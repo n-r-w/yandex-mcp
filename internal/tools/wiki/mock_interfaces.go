@@ -11,6 +11,7 @@ package wiki
 
 import (
 	context "context"
+	io "io"
 	reflect "reflect"
 
 	domain "github.com/n-r-w/yandex-mcp/internal/domain"
@@ -39,6 +40,21 @@ func NewMockIWikiAdapter(ctrl *gomock.Controller) *MockIWikiAdapter {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockIWikiAdapter) EXPECT() *MockIWikiAdapterMockRecorder {
 	return m.recorder
+}
+
+// DownloadAttachment mocks base method.
+func (m *MockIWikiAdapter) DownloadAttachment(ctx context.Context, attachmentPath string) (io.ReadCloser, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DownloadAttachment", ctx, attachmentPath)
+	ret0, _ := ret[0].(io.ReadCloser)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DownloadAttachment indicates an expected call of DownloadAttachment.
+func (mr *MockIWikiAdapterMockRecorder) DownloadAttachment(ctx, attachmentPath any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DownloadAttachment", reflect.TypeOf((*MockIWikiAdapter)(nil).DownloadAttachment), ctx, attachmentPath)
 }
 
 // GetGridByID mocks base method.

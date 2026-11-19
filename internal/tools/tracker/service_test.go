@@ -11,6 +11,7 @@ import (
 
 	"github.com/n-r-w/yandex-mcp/internal/domain"
 	mcpserver "github.com/n-r-w/yandex-mcp/internal/server"
+	"github.com/n-r-w/yandex-mcp/internal/tools/attachments"
 )
 
 // TestRegistrator_Register_RegistersOnlyEnabledTrackerTools verifies the real tracker registrator wiring.
@@ -27,9 +28,7 @@ func TestRegistrator_Register_RegistersOnlyEnabledTrackerTools(t *testing.T) {
 			domain.TrackerToolAttachmentGet,
 			domain.TrackerToolEntityGet,
 		},
-		defaultAttachExtensions,
-		defaultAttachViewExts,
-		defaultAttachDirs,
+		attachments.New(defaultAttachExtensions, defaultAttachViewExts, defaultAttachDirs),
 	)
 
 	srv, err := mcpserver.New("v1.0.0", []mcpserver.IToolsRegistrator{registrator}, 300*time.Second)

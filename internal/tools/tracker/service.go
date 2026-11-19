@@ -7,15 +7,14 @@ import (
 
 	"github.com/n-r-w/yandex-mcp/internal/domain"
 	"github.com/n-r-w/yandex-mcp/internal/server"
+	"github.com/n-r-w/yandex-mcp/internal/tools/attachments"
 )
 
 // Registrator registers tracker tools with an MCP server.
 type Registrator struct {
-	adapter           ITrackerAdapter
-	enabledTools      map[domain.TrackerTool]bool
-	allowedExtensions []string
-	allowedViewExts   []string
-	allowedDirs       []string
+	adapter      ITrackerAdapter
+	enabledTools map[domain.TrackerTool]bool
+	delivery     *attachments.Service
 }
 
 // Compile-time assertion that Registrator implements server.IToolsRegistrator.
@@ -25,9 +24,7 @@ var _ server.IToolsRegistrator = (*Registrator)(nil)
 func NewRegistrator(
 	adapter ITrackerAdapter,
 	enabledTools []domain.TrackerTool,
-	allowedExtensions []string,
-	allowedViewExts []string,
-	allowedDirs []string,
+	delivery *attachments.Service,
 ) *Registrator {
 	toolMap := make(map[domain.TrackerTool]bool, len(enabledTools))
 	for _, t := range enabledTools {
@@ -35,11 +32,9 @@ func NewRegistrator(
 	}
 
 	return &Registrator{
-		adapter:           adapter,
-		enabledTools:      toolMap,
-		allowedExtensions: normalizeAllowedExtensions(allowedExtensions),
-		allowedViewExts:   normalizeAllowedExtensions(allowedViewExts),
-		allowedDirs:       normalizeAllowedDirs(allowedDirs),
+		adapter:      adapter,
+		enabledTools: toolMap,
+		delivery:     delivery,
 	}
 }
 

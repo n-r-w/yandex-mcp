@@ -15,6 +15,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/n-r-w/yandex-mcp/internal/domain"
+	"github.com/n-r-w/yandex-mcp/internal/tools/attachments"
 )
 
 var (
@@ -24,7 +25,7 @@ var (
 )
 
 // newTrackerToolsTestSetup keeps repeated registrator wiring in one place for handler subtests.
-func newTrackerToolsTestSetup(t *testing.T) (*Registrator, *MockITrackerAdapter) {
+func newTrackerToolsTestSetup(t *testing.T, allowedDirs ...string) (*Registrator, *MockITrackerAdapter) {
 	t.Helper()
 
 	ctrl := gomock.NewController(t)
@@ -32,9 +33,7 @@ func newTrackerToolsTestSetup(t *testing.T) (*Registrator, *MockITrackerAdapter)
 	reg := NewRegistrator(
 		mockAdapter,
 		domain.TrackerAllTools(),
-		defaultAttachExtensions,
-		defaultAttachViewExts,
-		defaultAttachDirs,
+		attachments.New(defaultAttachExtensions, defaultAttachViewExts, allowedDirs),
 	)
 
 	return reg, mockAdapter
@@ -948,9 +947,8 @@ func TestTools_GetAttachment(t *testing.T) {
 
 	t.Run("validation/save_path_boundary_whitespace", func(t *testing.T) {
 		t.Parallel()
-		reg, _ := newTrackerToolsTestSetup(t)
 		baseDir := t.TempDir()
-		reg.allowedDirs = []string{baseDir}
+		reg, _ := newTrackerToolsTestSetup(t, baseDir)
 		savePath := filepath.Join(baseDir, "attachments", "attachment.txt")
 
 		_, err := reg.getAttachment(t.Context(), getAttachmentInputDTO{
@@ -1010,9 +1008,8 @@ func TestTools_GetAttachment(t *testing.T) {
 
 	t.Run("validation/save_path_extension_not_allowed", func(t *testing.T) {
 		t.Parallel()
-		reg, _ := newTrackerToolsTestSetup(t)
 		tmpDir := t.TempDir()
-		reg.allowedDirs = []string{tmpDir}
+		reg, _ := newTrackerToolsTestSetup(t, tmpDir)
 
 		_, err := reg.getAttachment(t.Context(), getAttachmentInputDTO{
 			IssueID:      "TEST-1",
@@ -1028,10 +1025,9 @@ func TestTools_GetAttachment(t *testing.T) {
 
 	t.Run("validation/save_path_outside_allowed_dirs", func(t *testing.T) {
 		t.Parallel()
-		reg, _ := newTrackerToolsTestSetup(t)
 		allowedDir := t.TempDir()
 		outsideDir := t.TempDir()
-		reg.allowedDirs = []string{allowedDir}
+		reg, _ := newTrackerToolsTestSetup(t, allowedDir)
 
 		_, err := reg.getAttachment(t.Context(), getAttachmentInputDTO{
 			IssueID:      "TEST-1",
@@ -1047,10 +1043,9 @@ func TestTools_GetAttachment(t *testing.T) {
 
 	t.Run("validation/save_path_symlink_outside_allowed_dirs", func(t *testing.T) {
 		t.Parallel()
-		reg, _ := newTrackerToolsTestSetup(t)
 		allowedDir := t.TempDir()
 		outsideDir := t.TempDir()
-		reg.allowedDirs = []string{allowedDir}
+		reg, _ := newTrackerToolsTestSetup(t, allowedDir)
 
 		linkPath := filepath.Join(allowedDir, "link")
 		if err := os.Symlink(outsideDir, linkPath); err != nil {
@@ -1137,9 +1132,8 @@ func TestTools_GetAttachment(t *testing.T) {
 
 	t.Run("adapter/call_and_returns_content", func(t *testing.T) {
 		t.Parallel()
-		reg, mockAdapter := newTrackerToolsTestSetup(t)
 		baseDir := t.TempDir()
-		reg.allowedDirs = []string{baseDir}
+		reg, mockAdapter := newTrackerToolsTestSetup(t, baseDir)
 		savePath := filepath.Join(baseDir, "attachments", "attachment.txt")
 
 		payload := []byte("hello world")
@@ -1201,9 +1195,8 @@ func TestTools_GetAttachment(t *testing.T) {
 
 	t.Run("adapter/override_replaces_existing_file_after_successful_download", func(t *testing.T) {
 		t.Parallel()
-		reg, mockAdapter := newTrackerToolsTestSetup(t)
 		baseDir := t.TempDir()
-		reg.allowedDirs = []string{baseDir}
+		reg, mockAdapter := newTrackerToolsTestSetup(t, baseDir)
 		savePath := filepath.Join(baseDir, "attachments", "attachment.txt")
 		require.NoError(t, os.MkdirAll(filepath.Dir(savePath), 0o755))
 		require.NoError(t, os.WriteFile(savePath, []byte("old-data"), 0o644))
@@ -1239,9 +1232,8 @@ func TestTools_GetAttachment(t *testing.T) {
 
 	t.Run("validation/save_path_exists_without_override", func(t *testing.T) {
 		t.Parallel()
-		reg, _ := newTrackerToolsTestSetup(t)
 		baseDir := t.TempDir()
-		reg.allowedDirs = []string{baseDir}
+		reg, _ := newTrackerToolsTestSetup(t, baseDir)
 		savePath := filepath.Join(baseDir, "attachments", "existing.txt")
 		fullPath := savePath
 		require.NoError(t, os.MkdirAll(filepath.Dir(fullPath), 0o755))
@@ -1260,9 +1252,8 @@ func TestTools_GetAttachment(t *testing.T) {
 
 	t.Run("error/upstream_error_shaped", func(t *testing.T) {
 		t.Parallel()
-		reg, mockAdapter := newTrackerToolsTestSetup(t)
 		baseDir := t.TempDir()
-		reg.allowedDirs = []string{baseDir}
+		reg, mockAdapter := newTrackerToolsTestSetup(t, baseDir)
 
 		upstreamErr := domain.NewUpstreamError(
 			domain.ServiceTracker,
@@ -1362,9 +1353,8 @@ func TestTools_GetAttachmentPreview(t *testing.T) {
 
 	t.Run("validation/save_path_boundary_whitespace", func(t *testing.T) {
 		t.Parallel()
-		reg, _ := newTrackerToolsTestSetup(t)
 		baseDir := t.TempDir()
-		reg.allowedDirs = []string{baseDir}
+		reg, _ := newTrackerToolsTestSetup(t, baseDir)
 		savePath := filepath.Join(baseDir, "attachments", "preview.png")
 
 		_, err := reg.getAttachmentPreview(t.Context(), getAttachmentPreviewInputDTO{
@@ -1378,9 +1368,8 @@ func TestTools_GetAttachmentPreview(t *testing.T) {
 
 	t.Run("adapter/call_and_returns_preview", func(t *testing.T) {
 		t.Parallel()
-		reg, mockAdapter := newTrackerToolsTestSetup(t)
 		baseDir := t.TempDir()
-		reg.allowedDirs = []string{baseDir}
+		reg, mockAdapter := newTrackerToolsTestSetup(t, baseDir)
 		savePath := filepath.Join(baseDir, "attachments", "preview.png")
 
 		payload := []byte{0x1, 0x2, 0x3}
@@ -1410,9 +1399,8 @@ func TestTools_GetAttachmentPreview(t *testing.T) {
 
 	t.Run("error/upstream_error_shaped", func(t *testing.T) {
 		t.Parallel()
-		reg, mockAdapter := newTrackerToolsTestSetup(t)
 		baseDir := t.TempDir()
-		reg.allowedDirs = []string{baseDir}
+		reg, mockAdapter := newTrackerToolsTestSetup(t, baseDir)
 
 		upstreamErr := domain.NewUpstreamError(
 			domain.ServiceTracker,
@@ -2135,9 +2123,8 @@ func TestTools_GetGlobalAttachment(t *testing.T) {
 
 	t.Run("validation/save_path_extension_not_allowed_lists_allowed_extensions", func(t *testing.T) {
 		t.Parallel()
-		reg, _ := newTrackerToolsTestSetup(t)
 		tmpDir := t.TempDir()
-		reg.allowedDirs = []string{tmpDir}
+		reg, _ := newTrackerToolsTestSetup(t, tmpDir)
 
 		_, err := reg.getGlobalAttachment(t.Context(), getGlobalAttachmentInputDTO{
 			AttachmentID: "5",

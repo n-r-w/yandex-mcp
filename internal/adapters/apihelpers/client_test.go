@@ -22,6 +22,7 @@ func newTestAPIClient(doer IHTTPDoer, provider ITokenProvider) *APIClient {
 
 	return &APIClient{
 		httpDoer:            doer,
+		downloadDoer:        nil,
 		tokenProvider:       provider,
 		baseURL:             parsedBaseURL,
 		baseURLParseErr:     nil,
@@ -88,6 +89,7 @@ func TestResolveRequestURL_Validation(t *testing.T) {
 
 	client := &APIClient{
 		httpDoer:            nil,
+		downloadDoer:        nil,
 		tokenProvider:       nil,
 		baseURL:             parsedBaseURL,
 		baseURLParseErr:     nil,
@@ -138,6 +140,7 @@ func TestResolveRequestURL_Validation(t *testing.T) {
 
 		clientWithParseError := &APIClient{
 			httpDoer:            nil,
+			downloadDoer:        nil,
 			tokenProvider:       nil,
 			baseURL:             parsedBaseURL,
 			baseURLParseErr:     errors.New("invalid base URL"),
@@ -159,6 +162,7 @@ func TestResolveRequestURL_Validation(t *testing.T) {
 
 		clientWithNilBase := &APIClient{
 			httpDoer:            nil,
+			downloadDoer:        nil,
 			tokenProvider:       nil,
 			baseURL:             nil,
 			baseURLParseErr:     nil,
