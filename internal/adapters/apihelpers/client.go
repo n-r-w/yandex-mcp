@@ -21,6 +21,7 @@ type ErrorParseFunc func(ctx context.Context, statusCode int, body []byte, opera
 // APIClient provides shared HTTP request methods for Yandex API adapters.
 type APIClient struct {
 	httpDoer            IHTTPDoer
+	downloadDoer        IHTTPDoer
 	tokenProvider       ITokenProvider
 	baseURL             *url.URL
 	baseURLParseErr     error
@@ -58,8 +59,14 @@ func NewAPIClient(cfg APIClientConfig) *APIClient {
 
 	parsedBaseURL, baseURLParseErr := parseBaseURL(cfg.BaseURL)
 
+	downloadClient := *httpClient
+	downloadClient.CheckRedirect = func(*http.Request, []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+
 	return &APIClient{
 		httpDoer:            httpClient,
+		downloadDoer:        &downloadClient,
 		tokenProvider:       cfg.TokenProvider,
 		baseURL:             parsedBaseURL,
 		baseURLParseErr:     baseURLParseErr,
@@ -81,7 +88,7 @@ func (c *APIClient) DoRequest(
 	result any,
 	operation string,
 ) (http.Header, error) {
-	resp, err := c.executeRequestWithAuthRetry(ctx, method, endpointPath, body)
+	resp, err := c.executeRequestWithAuthRetry(ctx, c.httpDoer, method, endpointPath, body)
 	if err != nil {
 		return nil, c.ErrorLogWrapper(ctx, err)
 	}
@@ -102,7 +109,7 @@ func (c *APIClient) DoRequestRaw(
 	body any,
 	operation string,
 ) (http.Header, []byte, error) {
-	resp, err := c.executeRequestWithAuthRetry(ctx, method, endpointPath, body)
+	resp, err := c.executeRequestWithAuthRetry(ctx, c.httpDoer, method, endpointPath, body)
 	if err != nil {
 		return nil, nil, c.ErrorLogWrapper(ctx, err)
 	}
@@ -133,7 +140,7 @@ func (c *APIClient) DoRequestStream(
 	body any,
 	operation string,
 ) (http.Header, io.ReadCloser, error) {
-	resp, err := c.executeRequestWithAuthRetry(ctx, method, endpointPath, body)
+	resp, err := c.executeRequestWithAuthRetry(ctx, c.httpDoer, method, endpointPath, body)
 	if err != nil {
 		return nil, nil, c.ErrorLogWrapper(ctx, err)
 	}
@@ -188,6 +195,16 @@ func (c *APIClient) DoGETStream(
 	return c.DoRequestStream(ctx, http.MethodGet, endpointPath, nil, operation)
 }
 
+// DoGETDownload returns the final status and unread body without following redirects; the caller closes the body.
+func (c *APIClient) DoGETDownload(ctx context.Context, endpointPath string) (int, io.ReadCloser, error) {
+	resp, err := c.executeRequestWithAuthRetry(ctx, c.downloadDoer, http.MethodGet, endpointPath, nil)
+	if err != nil {
+		// Transport and token-source errors can contain credentials or request details.
+		return 0, nil, c.ErrorLogWrapper(ctx, errors.New("attachment download request failed"))
+	}
+	return resp.StatusCode, resp.Body, nil
+}
+
 // DoPOST executes a POST request with token injection.
 func (c *APIClient) DoPOST(
 	ctx context.Context,
@@ -239,10 +256,11 @@ func (c *APIClient) handleResponse(ctx context.Context, resp *http.Response, res
 // when the upstream responds with authentication/authorization errors.
 func (c *APIClient) executeRequestWithAuthRetry(
 	ctx context.Context,
+	doer IHTTPDoer,
 	method, endpointPath string,
 	body any,
 ) (*http.Response, error) {
-	resp, err := c.executeHTTPRequest(ctx, method, endpointPath, body, false)
+	resp, err := c.executeHTTPRequest(ctx, doer, method, endpointPath, body, false)
 	if err != nil {
 		return nil, err
 	}
@@ -255,7 +273,7 @@ func (c *APIClient) executeRequestWithAuthRetry(
 		slog.WarnContext(ctx, "failed to close response body before retry", "error", closeErr)
 	}
 
-	resp, err = c.executeHTTPRequest(ctx, method, endpointPath, body, true)
+	resp, err = c.executeHTTPRequest(ctx, doer, method, endpointPath, body, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed retry after token refresh: %w", err)
 	}
@@ -353,6 +371,7 @@ func (c *APIClient) resolveRequestURL(endpointPath string) (string, error) {
 // executeHTTPRequest performs a single HTTP request with token injection and optional body encoding.
 func (c *APIClient) executeHTTPRequest(
 	ctx context.Context,
+	doer IHTTPDoer,
 	method, endpointPath string,
 	body any,
 	tokenForceRefresh bool,
@@ -389,7 +408,7 @@ func (c *APIClient) executeHTTPRequest(
 		req.Header.Set(key, value)
 	}
 
-	resp, err := c.httpDoer.Do(req)
+	resp, err := doer.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("execute request: %w", err)
 	}

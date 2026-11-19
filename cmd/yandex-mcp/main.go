@@ -12,6 +12,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/n-r-w/yandex-mcp/internal/adapters/apihelpers"
 	"github.com/n-r-w/yandex-mcp/internal/adapters/authremote"
 	"github.com/n-r-w/yandex-mcp/internal/adapters/oauthfile"
 	"github.com/n-r-w/yandex-mcp/internal/adapters/tracker"
@@ -22,6 +23,7 @@ import (
 	"github.com/n-r-w/yandex-mcp/internal/domain"
 	"github.com/n-r-w/yandex-mcp/internal/server"
 	"github.com/n-r-w/yandex-mcp/internal/server/authagent"
+	"github.com/n-r-w/yandex-mcp/internal/tools/attachments"
 	trackertools "github.com/n-r-w/yandex-mcp/internal/tools/tracker"
 	wikitools "github.com/n-r-w/yandex-mcp/internal/tools/wiki"
 )
@@ -150,24 +152,7 @@ func runMCP(ctx context.Context, serverVersion string) error {
 	}
 	defer closeTokenProvider()
 
-	wikiClient := wiki.NewClient(cfg, tokenProvider)
-	trackerClient := tracker.NewClient(cfg, tokenProvider)
-
-	wikiTools := domain.WikiAllTools()
-	trackerTools := domain.TrackerAllTools()
-
-	registrators := []server.IToolsRegistrator{
-		wikitools.NewRegistrator(wikiClient, wikiTools),
-		trackertools.NewRegistrator(
-			trackerClient,
-			trackerTools,
-			cfg.AttachAllowedExtensions,
-			cfg.AttachViewExtensions,
-			cfg.AttachAllowedDirs,
-		),
-	}
-
-	srv, err := server.New(serverVersion, registrators, cfg.ToolTimeout)
+	srv, err := newMCPServer(serverVersion, cfg, tokenProvider)
 	if err != nil {
 		return err
 	}
@@ -176,4 +161,25 @@ func runMCP(ctx context.Context, serverVersion string) error {
 
 	transport := &mcp.StdioTransport{}
 	return srv.Run(ctx, transport)
+}
+
+// newMCPServer assembles the tools and their dependencies.
+func newMCPServer(
+	serverVersion string,
+	cfg *config.Config,
+	tokenProvider apihelpers.ITokenProvider,
+) (*server.Server, error) {
+	wikiClient := wiki.NewClient(cfg, tokenProvider)
+	trackerClient := tracker.NewClient(cfg, tokenProvider)
+
+	wikiTools := domain.WikiAllTools()
+	trackerTools := domain.TrackerAllTools()
+
+	delivery := attachments.New(cfg.AttachAllowedExtensions, cfg.AttachViewExtensions, cfg.AttachAllowedDirs)
+	registrators := []server.IToolsRegistrator{
+		wikitools.NewRegistrator(wikiClient, wikiTools, delivery, cfg.AttachInlineMaxBytes),
+		trackertools.NewRegistrator(trackerClient, trackerTools, delivery),
+	}
+
+	return server.New(serverVersion, registrators, cfg.ToolTimeout)
 }

@@ -9,7 +9,7 @@ Input/output schemas are derived from the MCP handler layer DTOs in `internal/to
 
 - Types are described using JSON-compatible terms (string, number/integer, boolean, array, object).
 - “Required” means the tool validates the parameter as required (and/or marks it required in the schema).
-- Tool handlers trim boundary-managed identifier and option strings once before validation and downstream use.
+- Tool handlers trim boundary-managed identifier and option strings once before validation and downstream use. `wiki_attachment_get` preserves the copied attachment path except for one optional initial slash.
 - Timestamp fields are strings as returned by the upstream Yandex Wiki API.
 
 ## wiki_page_get
@@ -61,6 +61,26 @@ Retrieves a Yandex Wiki page by its numeric ID.
 ### Output
 
 Returns `PageOutput` (same shape as `wiki_page_get`).
+
+## wiki_attachment_get
+
+Downloads an attachment from a link in a Yandex Wiki page. Pass the copied path directly; no page ID or resource list is needed. Wiki authorizes the download using the configured Wiki credentials.
+
+### Input
+
+- `attachment_path` (string, required): Copy only the path in the form `slug/.files/filename`. For example, pass `/team/project/.files/report.csv` for a link that ends with `/team/project/.files/report.csv?download=1`. Omit any origin, query string, or fragment. Leave percent escapes unchanged.
+- `get_content` (boolean, optional): Set to `true` to return text inline. MCP checks the suffix of the copied filename against `YANDEX_MCP_ATTACH_VIEW_EXT` without decoding percent escapes. With `csv` allowed, `report.CSV` passes and `report%2Ecsv` fails.
+- `save_path` (string, optional): Absolute destination on the machine running MCP, without surrounding whitespace. The destination filename must have a suffix allowed by `YANDEX_MCP_ATTACH_EXT`. The resolved path must stay within the allowed directory scope. If you set `YANDEX_MCP_ATTACH_DIR`, both the supplied and resolved paths must be within that scope. See the [environment settings](../README.md#environment-variables) for defaults.
+- `override` (boolean, optional): Set to `true` to replace an existing destination in disk mode. If the destination is a permitted symbolic link, MCP replaces the target contents and keeps the link.
+
+Choose exactly one mode: set `get_content` to `true` or provide `save_path`. For disk delivery, choose a destination the agent can read. Only trusted users should be able to change its path components, and those components must stay stable during the call.
+
+### Output
+
+- Inline: `content` contains the complete UTF-8 text, including `""` for an empty file. `size` is the byte count. If the attachment is not valid UTF-8 or exceeds `YANDEX_MCP_ATTACH_INLINE_MAX_BYTES` (default: 10 MiB), MCP returns an error without partial text. To save the bytes instead, make a separate call with `save_path`.
+- Disk: `saved_path` is the destination, and `size` is the byte count written. The inline limit does not apply. If copying fails after MCP opens the file, the file can be empty or contain only part of the attachment. If you allowed an overwrite, MCP does not restore the previous contents.
+
+If Wiki returns HTTP 401 or 403 after MCP refreshes the token and retries, MCP reports access denial. MCP also rejects redirects and HTTP 206 partial responses. In all these cases, MCP returns no attachment contents and does not write a file.
 
 ## wiki_page_resources_list
 

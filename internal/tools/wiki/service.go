@@ -5,27 +5,34 @@ import (
 
 	"github.com/n-r-w/yandex-mcp/internal/domain"
 	"github.com/n-r-w/yandex-mcp/internal/server"
+	"github.com/n-r-w/yandex-mcp/internal/tools/attachments"
 )
 
 // Registrator registers wiki tools with an MCP server.
 type Registrator struct {
-	adapter      IWikiAdapter
-	enabledTools map[domain.WikiTool]bool
+	adapter        IWikiAdapter
+	enabledTools   map[domain.WikiTool]bool
+	delivery       *attachments.Service
+	inlineMaxBytes int64
 }
 
 // Compile-time assertion that Registrator implements server.IToolsRegistrator.
 var _ server.IToolsRegistrator = (*Registrator)(nil)
 
 // NewRegistrator creates a new wiki tools registrator.
-func NewRegistrator(adapter IWikiAdapter, enabledTools []domain.WikiTool) *Registrator {
+func NewRegistrator(
+	adapter IWikiAdapter, enabledTools []domain.WikiTool, delivery *attachments.Service, inlineMaxBytes int64,
+) *Registrator {
 	toolMap := make(map[domain.WikiTool]bool, len(enabledTools))
 	for _, t := range enabledTools {
 		toolMap[t] = true
 	}
 
 	return &Registrator{
-		adapter:      adapter,
-		enabledTools: toolMap,
+		adapter:        adapter,
+		enabledTools:   toolMap,
+		delivery:       delivery,
+		inlineMaxBytes: inlineMaxBytes,
 	}
 }
 
@@ -79,6 +86,14 @@ func (r *Registrator) Register(srv *mcp.Server) error {
 			Name:        domain.WikiToolPageDescendantsByID.String(),
 			Description: "Lists subpages (descendants) of a Yandex Wiki page by its numeric ID",
 		}, server.MakeHandler(r.listDescendantsByID))
+	}
+
+	if r.enabledTools[domain.WikiToolAttachmentGet] {
+		mcp.AddTool(srv, &mcp.Tool{ //nolint:exhaustruct_v5 // optional fields use defaults
+			Name: domain.WikiToolAttachmentGet.String(),
+			Description: "Downloads a Yandex Wiki attachment by its path from a page link. " +
+				"Choose inline UTF-8 text or save the file on the MCP server.",
+		}, server.MakeHandler(r.getAttachment))
 	}
 
 	return nil

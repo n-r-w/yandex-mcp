@@ -1,6 +1,6 @@
 //go:build windows
 
-package tracker
+package attachments
 
 import (
 	"os"
@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestIsHiddenTopLevelDir_WindowsHiddenAttribute checks a directory hidden by its Windows file attribute.
 func TestIsHiddenTopLevelDir_WindowsHiddenAttribute(t *testing.T) {
 	t.Parallel()
 	baseDir := t.TempDir()

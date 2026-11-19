@@ -1,6 +1,21 @@
 //nolint:lll // long JSON schema tags keep tool descriptions self-contained
 package wiki
 
+// getAttachmentInput selects a Wiki attachment and one delivery mode.
+type getAttachmentInput struct {
+	AttachmentPath string `json:"attachment_path"       jsonschema:"Path copied from a Wiki attachment link: slug/.files/filename, optionally starting with one slash"`
+	GetContent     bool   `json:"get_content,omitempty" jsonschema:"Return the complete attachment as UTF-8 text within the inline limit; mutually exclusive with save_path"`
+	SavePath       string `json:"save_path,omitempty"   jsonschema:"Absolute destination on the MCP server; mutually exclusive with get_content"`
+	Override       bool   `json:"override,omitempty"    jsonschema:"Permit replacing an existing file when using save_path"`
+}
+
+// getAttachmentOutput reports the complete attachment in the selected delivery mode.
+type getAttachmentOutput struct {
+	Content   *string `json:"content,omitempty"`
+	SavedPath string  `json:"saved_path,omitempty"`
+	Size      int64   `json:"size"`
+}
+
 // Input DTOs for wiki tools.
 
 // getPageBySlugInputDTO is the input for wiki_page_get tool.

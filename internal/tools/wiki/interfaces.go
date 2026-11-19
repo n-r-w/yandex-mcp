@@ -3,6 +3,7 @@ package wiki
 
 import (
 	"context"
+	"io"
 
 	"github.com/n-r-w/yandex-mcp/internal/domain"
 )
@@ -11,6 +12,8 @@ import (
 
 // IWikiAdapter defines the interface for Wiki adapter operations consumed by tools.
 type IWikiAdapter interface {
+	// DownloadAttachment returns a stream that the caller must close.
+	DownloadAttachment(ctx context.Context, attachmentPath string) (io.ReadCloser, error)
 	GetPageBySlug(ctx context.Context, slug string, opts domain.WikiGetPageOpts) (*domain.WikiPage, error)
 	GetPageByID(ctx context.Context, id string, opts domain.WikiGetPageOpts) (*domain.WikiPage, error)
 	ListPageResources(

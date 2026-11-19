@@ -5,7 +5,7 @@ An MCP (Model Context Protocol) server that lets MCP-capable clients work with:
 - Yandex Tracker (issues, queues, transitions, comments)
 - Yandex Wiki (pages, attachments/resources, dynamic tables)
 
-The server operates in read-only mode. Modification operations are not supported due to the risk of allowing LLMs to perform such operations.
+The server reads from Yandex Wiki and Tracker. Attachment tools can write files on the machine running MCP when the caller supplies a destination.
 
 The project is not an official MCP from Yandex.
 
@@ -23,6 +23,7 @@ Exact JSON schemas (including validation rules) are also available via MCP tool 
 - `wiki_page_get` — Retrieves a Yandex Wiki page by its slug (URL path)
 - `wiki_page_get_by_id` — Retrieves a Yandex Wiki page by its numeric ID
 - `wiki_page_resources_list` — Lists resources (attachments, grids) for a Yandex Wiki page
+- `wiki_attachment_get`: Downloads an attachment by its path from a Wiki page
 - `wiki_page_grids_list` — Lists dynamic tables (grids) for a Yandex Wiki page
 - `wiki_grid_get` — Retrieves a Yandex Wiki dynamic table (grid) by its ID
 

@@ -1,6 +1,6 @@
 //go:build !windows
 
-package tracker
+package attachments
 
 import "strings"
 

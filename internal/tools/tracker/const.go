@@ -6,10 +6,6 @@ const (
 	entityTypeProject   = "project"
 	maxPerScroll        = 1000
 	maxEntitiesPerPage  = 50
-	attachmentDirPerm   = 0o750
-	attachmentFilePerm  = 0o600
-	emptyAllowlistLabel = "(none)"
-	parentDirMarker     = ".."
 )
 
 func emptyObjectInputSchema() map[string]any {
