@@ -4,8 +4,8 @@ package wiki
 // getAttachmentInput selects a Wiki attachment and one delivery mode.
 type getAttachmentInput struct {
 	AttachmentPath string `json:"attachment_path"       jsonschema:"Path copied from a Wiki attachment link: slug/.files/filename, optionally starting with one slash"`
-	GetContent     bool   `json:"get_content,omitempty" jsonschema:"Return the complete attachment as UTF-8 text within the inline limit; mutually exclusive with save_path"`
-	SavePath       string `json:"save_path,omitempty"   jsonschema:"Absolute destination on the MCP server; mutually exclusive with get_content"`
+	GetContent     bool   `json:"get_content,omitempty" jsonschema:"Return the complete attachment as UTF-8 text within the inline limit. Choose exactly one: set get_content to true or provide save_path."`
+	SavePath       string `json:"save_path,omitempty"   jsonschema:"Absolute path to save the attachment"`
 	Override       bool   `json:"override,omitempty"    jsonschema:"Permit replacing an existing file when using save_path"`
 }
 
